@@ -1,0 +1,94 @@
+@model Bar_QR.Models.AdminAjustesViewModel
+
+@{
+    ViewData["Title"] = "Ajustes";
+}
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-secondary text-white">
+            <h4 class="mb-0">?? Ajustes del Sistema</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Correos permitidos para personal</h5>
+                    <form asp-action="AgregarEmail" method="post" class="d-flex mb-3">
+                        <input type="email" name="email" class="form-control me-2" placeholder="nuevo@correo.com" required />
+                        <button class="btn btn-primary">Añadir</button>
+                    </form>
+
+                    <ul class="list-group">
+                        @foreach(var email in Model.Emails)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>@email</span>
+                                <form asp-action="EliminarEmail" method="post" class="m-0">
+                                    <input type="hidden" name="email" value="@email" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                    <hr />
+                    <h5>Tokens para QR</h5>
+                    <form asp-action="AgregarToken" method="post" class="d-flex mb-3">
+                        <input type="text" name="token" class="form-control me-2" placeholder="token-por-mesa-o-global" required />
+                        <button class="btn btn-primary">Añadir Token</button>
+                    </form>
+                    <ul class="list-group">
+                        @foreach(var t in Model.Tokens)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>@t</span>
+                                <form asp-action="EliminarToken" method="post" class="m-0">
+                                    <input type="hidden" name="token" value="@t" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                </div>
+
+                <div class="col-md-6">
+                    <h5>IPs permitidas (whitelist)</h5>
+                    <form asp-action="AgregarIP" method="post" class="d-flex mb-3">
+                        <input type="text" name="ip" class="form-control me-2" placeholder="127.0.0.1" required />
+                        <button class="btn btn-primary">Añadir IP</button>
+                    </form>
+
+                    <ul class="list-group">
+                        @foreach(var ip in Model.Ips)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>@ip</span>
+                                <form asp-action="EliminarIP" method="post" class="m-0">
+                                    <input type="hidden" name="ip" value="@ip" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                    <hr />
+                    <h5>Proxies confiables (pueden inyectar X-Forwarded-For)</h5>
+                    <form asp-action="AgregarProxy" method="post" class="d-flex mb-3">
+                        <input type="text" name="proxy" class="form-control me-2" placeholder="ip.del.proxy" required />
+                        <button class="btn btn-primary">Añadir Proxy</button>
+                    </form>
+                    <ul class="list-group">
+                        @foreach(var p in Model.Proxies)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>@p</span>
+                                <form asp-action="EliminarProxy" method="post" class="m-0">
+                                    <input type="hidden" name="proxy" value="@p" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

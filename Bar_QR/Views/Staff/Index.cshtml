@@ -1,0 +1,25 @@
+@model IEnumerable<Bar_QR.Models.Mesa>
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white text-center">
+            <h3>??? Mapa de Mesas - Personal</h3>
+        </div>
+        <div class="card-body">
+            <div class="row row-cols-3 g-3">
+                @foreach(var mesa in Model)
+                {
+                    <div class="col">
+                        <form asp-action="Toggle" method="post">
+                            <input type="hidden" name="numero" value="@mesa.Numero" />
+                            <button type="submit" class="btn w-100 py-4 shadow-sm @(mesa.Ocupada ? "btn-danger" : "btn-success")">
+                                <div class="h4 mb-0">Mesa @mesa.Numero</div>
+                                <small class="text-white">@((mesa.Ocupada) ? "Ocupada" : "Libre")</small>
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

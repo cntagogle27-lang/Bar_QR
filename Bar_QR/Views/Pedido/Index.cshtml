@@ -1,0 +1,51 @@
+﻿@model IEnumerable<Bar_QR.Models.Producto>
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white text-center">
+            <h3>🛒 Mi Comanda</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th class="text-end">Precio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Nombre</td>
+                            <td class="text-end">@item.Precio.ToString("C")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center bg-light">
+            <span class="h4 mb-0">TOTAL:</span>
+            <span class="h4 mb-0 text-success fw-bold">@Model.Sum(x => x.Precio).ToString("C")</span>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+        <a asp-controller="Carta" asp-action="Index" class="btn btn-secondary">⬅️ Volver a la Carta</a>
+        <button onclick="confirmarPedido()" class="btn btn-success btn-lg shadow">Confirmar Pedido</button>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    function confirmarPedido() {
+        if (confirm('¿Quieres enviar este pedido a cocina?')) {
+            $.post('/Pedido/Confirmar', function (data) {
+                alert('¡Marchando! Tu pedido se ha enviado.');
+                location.reload();
+            }).fail(function () {
+                alert('Error: No se pudo conectar con el servidor.');
+            });
+        }
+    }
+</script>
