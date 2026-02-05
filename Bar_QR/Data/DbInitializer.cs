@@ -1,4 +1,5 @@
 using Bar_QR.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bar_QR.Data;
 
@@ -6,7 +7,8 @@ public static class DbInitializer
 {
     public static void Initialize(AppDbContext context)
     {
-        context.Database.EnsureCreated();
+        // Aplicar migraciones en runtime (Opción A)
+        context.Database.Migrate();
 
         if (!context.Productos.Any())
         {

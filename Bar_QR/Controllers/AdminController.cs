@@ -29,7 +29,14 @@ public class AdminController : Controller
     // Tokens para QR del cliente (pueden ser uno por local o por mesa según se genere)
     public static List<string> ListaSiteTokens = new List<string>();
 
-	public IActionResult NuevoProducto()
+    private readonly AppDbContext _db;
+
+    public AdminController(AppDbContext db)
+    {
+        _db = db;
+    }
+
+    public IActionResult NuevoProducto()
 	{
 		return View(); // Esto le dice: "busca el archivo NuevoProducto.cshtml"
 	}
@@ -60,17 +67,7 @@ public class AdminController : Controller
         return View(vm);
     }
 
-    // Ajustes: gestionar correos del personal
-    public IActionResult Ajustes()
-    {
-        var vm = new Models.AdminAjustesViewModel {
-            Emails = ListaEmailsStaff.ToList(),
-            Ips = ListaIPsStaff.ToList()
-        };
-        vm.Proxies = ListaProxies.ToList();
-        vm.Tokens = ListaSiteTokens.ToList();
-        return View(vm);
-    }
+    // Ajustes: gestionar correos del personal (gestión desde BD en el método Ajustes anterior)
 
     [HttpPost]
     public IActionResult AgregarEmail(string email)
