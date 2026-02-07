@@ -367,4 +367,4 @@ Bar_QR/*.db
 *.db
 
 # Fody - auto-generated XML schema
-FodyWeavers.xsd
+FodyWeavers.xsdBar_QR/barqr.db

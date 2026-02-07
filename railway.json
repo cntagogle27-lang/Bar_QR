@@ -1,9 +1,1 @@
-﻿{
-  "build": {
-    "builder": "docker",
-    "dockerfilePath": "./Bar_QR/Dockerfile"
-  },
-  "deploy": {
-    "port": 80
-  }
-}
+{ "build": { "builder": "docker", "dockerfilePath": "./Bar_QR/Dockerfile" }, "deploy": { "port": 80 } }
