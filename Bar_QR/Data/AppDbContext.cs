@@ -19,7 +19,8 @@ public class AppDbContext : DbContext
         {
             b.HasKey(p => p.Id);
             b.Property(p => p.Nombre).IsRequired();
-            b.Property(p => p.Precio).HasColumnType("decimal(10,2)");
+            // SQLite no soporta bien "decimal(10,2)" como tipo SQL. Usamos conversión a double para persistencia.
+            b.Property(p => p.Precio).HasConversion<double>();
         });
 
         base.OnModelCreating(modelBuilder);

@@ -7,8 +7,17 @@ public static class DbInitializer
 {
     public static void Initialize(AppDbContext context)
     {
-        // Aplicar migraciones en runtime (Opción A)
-        context.Database.Migrate();
+        // Intentar aplicar migraciones en runtime. Si no hay migraciones (p. ej. no están commiteadas),
+        // usar EnsureCreated() como fallback para evitar crash en entornos de desarrollo/ci.
+        var pending = context.Database.GetPendingMigrations();
+        if (pending != null && pending.Any())
+        {
+            context.Database.Migrate();
+        }
+        else
+        {
+            context.Database.EnsureCreated();
+        }
 
         if (!context.Productos.Any())
         {

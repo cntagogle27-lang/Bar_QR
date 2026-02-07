@@ -1,23 +1,23 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# copy csproj and restore as distinct layers
+# Copiar proyecto y restaurar
 COPY ["Bar_QR/Bar_QR.csproj", "Bar_QR/"]
 RUN dotnet restore "Bar_QR/Bar_QR.csproj"
 
-# copy everything else and build
+# Copiar todo y publicar
 COPY . .
 WORKDIR "/src/Bar_QR"
 RUN dotnet publish "Bar_QR.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+# Imagen final de ejecución
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Set environment variables for Railway
+# Variables para Railway
 ENV ASPNETCORE_URLS=http://*:${PORT}
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 
 EXPOSE ${PORT}
-
 ENTRYPOINT ["dotnet", "Bar_QR.dll"]
