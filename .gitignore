@@ -359,5 +359,12 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 
+# Ignore local SQLite DB used for development
+Bar_QR/barqr.db
+Bar_QR/barqr.db-wal
+Bar_QR/barqr.db-shm
+Bar_QR/*.db
+*.db
+
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
