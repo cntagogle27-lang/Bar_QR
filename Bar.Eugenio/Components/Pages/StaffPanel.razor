@@ -1,0 +1,115 @@
+@page "/panel"
+@inject RestaurantService Restaurant
+@inject StaffSession Session
+@inject NavigationManager Navigation
+
+<PageTitle>Panel Staff</PageTitle>
+
+@if (Session.CurrentStaff is null)
+{
+    <section class="page-heading">
+        <h1>Necesitas acceder como staff</h1>
+        <a class="btn-main inline" href="/staff">Ir al acceso staff</a>
+    </section>
+}
+else
+{
+    <section class="page-heading">
+        <h1>Panel de @Session.CurrentStaff.Name</h1>
+        <p>@RoleSummary</p>
+    </section>
+
+    <div class="table-grid">
+        @foreach (var table in Restaurant.GetTables())
+        {
+            <button class="table-tile @(selectedTable == table.Number ? "selected" : "") @(table.Status == TableStatus.Activa ? "active" : "")"
+                    @onclick="() => selectedTable = table.Number">
+                <strong>Mesa @table.Number</strong>
+                <span>@table.Status</span>
+                @if (table.AccessCode is not null)
+                {
+                    <small>Codigo @table.AccessCode</small>
+                }
+            </button>
+        }
+    </div>
+
+    @if (SelectedTable is not null)
+    {
+        <div class="split-layout">
+            <section class="panel">
+                <h2>Mesa @SelectedTable.Number</h2>
+                @if (SelectedTable.Items.Count == 0)
+                {
+                    <p class="muted">Todavia no hay productos.</p>
+                }
+                @foreach (var item in SelectedTable.Items)
+                {
+                    <div class="staff-item">
+                        <div>
+                            <strong>@item.Name</strong>
+                            <span>@item.TablePrice.ToString("0.00") € · @item.CreatedBy</span>
+                        </div>
+                        @if (CanManageTable)
+                        {
+                            <input class="price-input" type="number" step="0.01" value="@item.TablePrice" @onchange="args => ChangePrice(item.Id, args.Value?.ToString())" />
+                            <button class="icon-action danger" title="Eliminar" @onclick="() => Restaurant.RemoveOrderItem(SelectedTable.Number, item.Id)">Eliminar</button>
+                        }
+                    </div>
+                }
+                <div class="total-row">Total <strong>@SelectedTable.Total.ToString("0.00") €</strong></div>
+                @if (CanManageTable)
+                {
+                    <button class="btn-secondary-action" @onclick="() => CloseTable(SelectedTable.Number)">Cerrar mesa y caducar codigo</button>
+                }
+            </section>
+
+            <section class="panel">
+                <h2>Tomar nota</h2>
+                @foreach (var product in Restaurant.Products)
+                {
+                    <button class="list-button" @onclick="() => AddProduct(product.Id)">
+                        <span>@product.Name</span>
+                        <strong>@product.Price.ToString("0.00") €</strong>
+                    </button>
+                }
+            </section>
+        </div>
+    }
+}
+
+@code {
+    private int selectedTable = 1;
+    private RestaurantTable? SelectedTable => Restaurant.FindTable(selectedTable);
+    private bool CanManageTable => Session.CurrentRole is StaffRole.Encargado or StaffRole.Admin;
+    private string RoleSummary => Session.CurrentRole switch
+    {
+        StaffRole.Empleado => "Puede tomar nota para las mesas.",
+        StaffRole.Encargado => "Puede tomar nota, eliminar productos y ajustar precios por item.",
+        StaffRole.Admin => "Puede operar y configurar el panel.",
+        _ => string.Empty
+    };
+
+    private void AddProduct(int productId)
+    {
+        if (SelectedTable is not null && Session.CurrentStaff is not null)
+        {
+            Restaurant.AddOrderItem(SelectedTable.Number, productId, Session.CurrentStaff.Name);
+        }
+    }
+
+    private void ChangePrice(int itemId, string? value)
+    {
+        if (SelectedTable is null || !decimal.TryParse(value, out var price))
+        {
+            return;
+        }
+
+        Restaurant.ChangeItemPrice(SelectedTable.Number, itemId, price);
+    }
+
+    private void CloseTable(int tableNumber)
+    {
+        Restaurant.CloseTable(tableNumber);
+    }
+}

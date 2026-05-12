@@ -1,0 +1,67 @@
+@page "/mesa/{TableNumber:int}"
+@inject RestaurantService Restaurant
+
+<PageTitle>Mesa @TableNumber</PageTitle>
+
+<section class="page-heading">
+    <h1>Mesa @TableNumber</h1>
+    <p>Introduce el codigo temporal que te ha comunicado el camarero.</p>
+</section>
+
+@if (!authorized)
+{
+    <div class="panel narrow">
+        <label class="form-label">Codigo de acceso</label>
+        <input class="form-control form-control-lg code-input" maxlength="4" @bind="code" />
+        <button class="btn-main" @onclick="ValidateCode">Entrar</button>
+        @if (!string.IsNullOrWhiteSpace(error))
+        {
+            <p class="error-text">@error</p>
+        }
+    </div>
+}
+else
+{
+    <div class="split-layout">
+        <section class="panel">
+            <h2>Pedido de la mesa</h2>
+            @foreach (var item in Restaurant.FindTable(TableNumber)?.Items ?? [])
+            {
+                <div class="product-row">
+                    <span>@item.Name</span>
+                    <strong>@item.TablePrice.ToString("0.00") €</strong>
+                </div>
+            }
+            <div class="total-row">Total <strong>@(Restaurant.FindTable(TableNumber)?.Total.ToString("0.00")) €</strong></div>
+        </section>
+
+        <section class="panel">
+            <h2>Anadir producto</h2>
+            @foreach (var product in Restaurant.Products)
+            {
+                <button class="list-button" @onclick="() => AddProduct(product.Id)">
+                    <span>@product.Name</span>
+                    <strong>@product.Price.ToString("0.00") €</strong>
+                </button>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public int TableNumber { get; set; }
+    private string code = string.Empty;
+    private string? error;
+    private bool authorized;
+
+    private void ValidateCode()
+    {
+        authorized = Restaurant.CanCustomerEnter(TableNumber, code);
+        error = authorized ? null : "Codigo no valido o mesa cerrada.";
+    }
+
+    private void AddProduct(int productId)
+    {
+        Restaurant.AddOrderItem(TableNumber, productId, "Cliente");
+    }
+}

@@ -1,0 +1,74 @@
+@page "/admin"
+@inject RestaurantService Restaurant
+@inject StaffSession Session
+@inject NavigationManager Navigation
+
+<PageTitle>Administracion</PageTitle>
+
+@if (Session.CurrentRole != StaffRole.Admin)
+{
+    <section class="page-heading">
+        <h1>Acceso admin requerido</h1>
+        <a class="btn-main inline" href="/staff">Ir al acceso staff</a>
+    </section>
+}
+else
+{
+    <section class="page-heading">
+        <h1>Panel de administracion</h1>
+        <p>Configura mesas, activa codigos temporales y prepara los QR para imprimir.</p>
+    </section>
+
+    <section class="panel admin-tools">
+        <label>
+            Numero de mesas
+            <input class="form-control" type="number" min="1" max="200" @bind="tableCount" />
+        </label>
+        <button class="btn-main inline" @onclick="SaveTableCount">Guardar mesas</button>
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <span class="success-text">@message</span>
+        }
+    </section>
+
+    <div class="qr-grid">
+        @foreach (var table in Restaurant.GetTables())
+        {
+            <section class="panel qr-card">
+                <h2>Mesa @table.Number</h2>
+                <img src="@Restaurant.BuildQrSvgDataUri(table.Number, Navigation.BaseUri)" alt="QR Mesa @table.Number" />
+                <p class="status-line">@table.Status</p>
+                @if (table.AccessCode is not null)
+                {
+                    <p class="access-code">Codigo: @table.AccessCode</p>
+                }
+                <div class="button-row">
+                    <button class="btn-main inline" @onclick="() => Activate(table.Number)">Activar</button>
+                    <button class="btn-secondary-action inline" @onclick="() => Restaurant.CloseTable(table.Number)">Forzar cierre</button>
+                </div>
+            </section>
+        }
+    </div>
+}
+
+@code {
+    private int tableCount;
+    private string? message;
+
+    protected override void OnInitialized()
+    {
+        tableCount = Restaurant.GetTables().Count;
+    }
+
+    private void SaveTableCount()
+    {
+        Restaurant.SetTableCount(tableCount);
+        message = "Mesas actualizadas.";
+    }
+
+    private void Activate(int tableNumber)
+    {
+        var code = Restaurant.ActivateTable(tableNumber);
+        message = $"Mesa {tableNumber} activada con codigo {code}.";
+    }
+}

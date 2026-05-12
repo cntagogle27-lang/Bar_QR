@@ -1,0 +1,19 @@
+@inject StaffSession Session
+
+<header class="app-navbar">
+    <a class="brand" href="/">Bareugenio</a>
+    <nav class="nav-links">
+        <NavLink href="/" Match="NavLinkMatch.All">Inicio</NavLink>
+        <NavLink href="/carta">Carta</NavLink>
+        <NavLink href="/scan">Escanear QR</NavLink>
+        <NavLink href="/staff">Staff</NavLink>
+        @if (Session.CurrentRole == StaffRole.Admin)
+        {
+            <NavLink href="/admin">Admin</NavLink>
+        }
+    </nav>
+    @if (Session.CurrentStaff is not null)
+    {
+        <div class="session-pill">@Session.CurrentStaff.Name · @Session.CurrentStaff.Role</div>
+    }
+</header>

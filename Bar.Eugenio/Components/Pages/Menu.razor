@@ -1,0 +1,25 @@
+@page "/carta"
+@inject RestaurantService Restaurant
+
+<PageTitle>Carta</PageTitle>
+
+<section class="page-heading">
+    <h1>Carta</h1>
+    <p>Productos disponibles para clientes y personal.</p>
+</section>
+
+<div class="product-grid">
+    @foreach (var group in Restaurant.Products.GroupBy(product => product.Category))
+    {
+        <section class="panel">
+            <h2>@group.Key</h2>
+            @foreach (var product in group)
+            {
+                <div class="product-row">
+                    <span>@product.Name</span>
+                    <strong>@product.Price.ToString("0.00") €</strong>
+                </div>
+            }
+        </section>
+    }
+</div>

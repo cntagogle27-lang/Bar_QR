@@ -62,6 +62,7 @@ BenchmarkDotNet.Artifacts/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+.nuget-appdata/
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
@@ -363,8 +364,14 @@ MigrationBackup/
 Bar_QR/barqr.db
 Bar_QR/barqr.db-wal
 Bar_QR/barqr.db-shm
+Bar.Eugenio/bareugenio.dev.db
+Bar.Eugenio/bareugenio.dev.db-wal
+Bar.Eugenio/bareugenio.dev.db-shm
+Bar.Eugenio/DataProtectionKeys/*
+!Bar.Eugenio/DataProtectionKeys/.gitignore
 Bar_QR/*.db
 *.db
+!Bar.Eugenio/Seed/app.db
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd

@@ -1,0 +1,19 @@
+@page "/scan"
+@inject RestaurantService Restaurant
+
+<PageTitle>Escanear QR</PageTitle>
+
+<section class="page-heading">
+    <h1>Escanear QR</h1>
+    <p>El QR de cada mesa abre su acceso directo. Para probarlo aqui, elige una mesa activa.</p>
+</section>
+
+<div class="table-grid">
+    @foreach (var table in Restaurant.GetTables())
+    {
+        <a class="table-tile @(table.Status == TableStatus.Activa ? "active" : "")" href="/mesa/@table.Number">
+            <strong>Mesa @table.Number</strong>
+            <span>@table.Status</span>
+        </a>
+    }
+</div>

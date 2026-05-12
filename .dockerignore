@@ -1,0 +1,13 @@
+.git
+.github
+.vs
+**/bin
+**/obj
+**/*.user
+**/*.suo
+**/*.db
+**/*.db-shm
+**/*.db-wal
+!Bar.Eugenio/Seed/app.db
+**/DataProtectionKeys/*
+!**/DataProtectionKeys/.gitignore

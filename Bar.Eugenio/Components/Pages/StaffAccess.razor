@@ -1,0 +1,109 @@
+@page "/staff"
+@inject RestaurantService Restaurant
+@inject StaffSession Session
+@inject NavigationManager Navigation
+
+<PageTitle>Acceso Staff</PageTitle>
+
+<section class="page-heading">
+    <h1>Acceso Staff</h1>
+    <p>Acceso interno para operar en nombre de empleados, encargados y administracion.</p>
+</section>
+
+@if (!Session.IntranetUnlocked)
+{
+    <div class="panel narrow">
+        <label class="form-label">Contrasena de intranet</label>
+        <input class="form-control form-control-lg" type="password" @bind="intranetPassword" />
+        <button class="btn-main" @onclick="Unlock">Entrar</button>
+        @if (!string.IsNullOrWhiteSpace(error))
+        {
+            <p class="error-text">@error</p>
+        }
+    </div>
+}
+else
+{
+    <div class="staff-grid">
+        @foreach (var staff in Restaurant.Staff)
+        {
+            <button class="staff-button" @onclick="() => SelectStaff(staff.Id)">
+                <strong>@staff.Name</strong>
+                <span>@staff.Role</span>
+            </button>
+        }
+    </div>
+
+    @if (selectedStaffId is not null)
+    {
+        <div class="panel narrow">
+            <label class="form-label">PIN adicional</label>
+            <input class="form-control form-control-lg code-input" maxlength="4" type="password" @bind="pin" />
+            <button class="btn-main" @onclick="SignIn">Continuar</button>
+            <button class="btn-secondary-action" @onclick="CancelPin">Cancelar</button>
+            @if (!string.IsNullOrWhiteSpace(error))
+            {
+                <p class="error-text">@error</p>
+            }
+        </div>
+    }
+}
+
+@code {
+    private string intranetPassword = string.Empty;
+    private string pin = string.Empty;
+    private int? selectedStaffId;
+    private string? error;
+
+    private void Unlock()
+    {
+        if (Restaurant.ValidateIntranetPassword(intranetPassword))
+        {
+            Session.UnlockIntranet();
+            error = null;
+            return;
+        }
+
+        error = "Contrasena de intranet incorrecta.";
+    }
+
+    private void SelectStaff(int staffId)
+    {
+        selectedStaffId = staffId;
+        pin = string.Empty;
+        error = null;
+
+        if (Restaurant.TrySignInStaff(staffId, null, out var staff, out var message))
+        {
+            Session.SignIn(staff!);
+            Navigation.NavigateTo("/panel");
+        }
+        else if (message != "El PIN no es correcto.")
+        {
+            error = message;
+        }
+    }
+
+    private void SignIn()
+    {
+        if (selectedStaffId is null)
+        {
+            return;
+        }
+
+        if (Restaurant.TrySignInStaff(selectedStaffId.Value, pin, out var staff, out var message))
+        {
+            Session.SignIn(staff!);
+            Navigation.NavigateTo(staff!.Role == StaffRole.Admin ? "/admin" : "/panel");
+            return;
+        }
+
+        error = message;
+    }
+
+    private void CancelPin()
+    {
+        selectedStaffId = null;
+        error = null;
+    }
+}
