@@ -17,7 +17,7 @@
                                 <div>
                                     <h5 class="card-title fw-bold">@item.Nombre</h5>
                                     <p class="text-success fs-5">@item.Precio.ToString("F2") €</p>
-                                    <span class="badge bg-light text-muted border">@item.Destino</span>
+                                    <span class="badge bg-light text-muted border">@item.DestinoImpresion</span>
                                 </div>
                                 <button class="btn btn-primary rounded-pill px-3 btn-agregar"
                                         data-nombre="@System.Text.Encodings.Web.HtmlEncoder.Default.Encode(item.Nombre)"

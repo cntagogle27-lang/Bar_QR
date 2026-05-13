@@ -15,9 +15,9 @@
                 @foreach(var mesa in Model)
                 {
                     <div class="col">
-                        <a class="btn btn-light w-100 py-4 shadow-sm" href="@Url.Action("Index", "Carta", new { token = token, mesa = mesa.Numero })">
-                            <div class="h4 mb-0">Mesa @mesa.Numero</div>
-                            <small class="text-muted">@((mesa.Ocupada) ? "Ocupada" : "Libre")</small>
+                        <a class="btn btn-light w-100 py-4 shadow-sm" href="@Url.Action("Index", "Carta", new { token = token, mesa = mesa.NumeroMesa })">
+                            <div class="h4 mb-0">Mesa @mesa.NumeroMesa</div>
+                            <small class="text-muted">@((mesa.Estado == Bar_QR.Models.EstadoMesa.Ocupada) ? "Ocupada" : "Libre")</small>
                         </a>
                     </div>
                 }

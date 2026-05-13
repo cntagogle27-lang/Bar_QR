@@ -26,6 +26,22 @@ public sealed class RestaurantService
     public IReadOnlyList<MenuProduct> Products => _state.Products;
     public IReadOnlyList<StaffMember> Staff => _state.Staff;
 
+    public IReadOnlyList<string> ProductCategories
+    {
+        get
+        {
+            lock (_state.Gate)
+            {
+                return _state.Products
+                    .Select(product => product.Category)
+                    .Where(category => !string.IsNullOrWhiteSpace(category))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(category => category)
+                    .ToList();
+            }
+        }
+    }
+
     public IReadOnlyList<RestaurantTable> GetTables()
     {
         lock (_state.Gate)
@@ -101,8 +117,14 @@ public sealed class RestaurantService
     {
         lock (_state.Gate)
         {
+            var table = RequireTable(tableNumber);
+            if (table.Status != TableStatus.Activa)
+            {
+                throw new InvalidOperationException("La mesa no esta activa.");
+            }
+
             var product = _state.Products.First(product => product.Id == productId);
-            RequireTable(tableNumber).AddItem(new OrderItem(_state.NextOrderItemId++, product, createdBy));
+            table.AddItem(new OrderItem(_state.NextOrderItemId++, product, createdBy));
             _store.Save(_state);
         }
     }
@@ -146,6 +168,62 @@ public sealed class RestaurantService
             _state.Tables = next;
             _store.Save(_state);
         }
+    }
+
+    public void SaveProducts(IEnumerable<MenuProduct> products)
+    {
+        lock (_state.Gate)
+        {
+            var normalized = products
+                .Where(product => !string.IsNullOrWhiteSpace(product.Name))
+                .Select(product => new MenuProduct
+                {
+                    Id = product.Id,
+                    Name = product.Name.Trim(),
+                    Price = product.Price,
+                    Category = string.IsNullOrWhiteSpace(product.Category) ? "General" : product.Category.Trim(),
+                    ImageUrl = string.IsNullOrWhiteSpace(product.ImageUrl) ? null : product.ImageUrl.Trim()
+                })
+                .OrderBy(product => product.Id)
+                .ToList();
+
+            _state.Products.Clear();
+            _state.Products.AddRange(normalized);
+            _store.SaveProducts(_state.Products);
+        }
+    }
+
+    public void SaveStaff(IEnumerable<StaffMember> staff)
+    {
+        lock (_state.Gate)
+        {
+            var normalized = staff
+                .Where(member => !string.IsNullOrWhiteSpace(member.Name))
+                .Select(member => new StaffMember
+                {
+                    Id = member.Id,
+                    Name = member.Name.Trim(),
+                    Role = member.Role,
+                    Pin = string.IsNullOrWhiteSpace(member.Pin) ? null : member.Pin.Trim(),
+                    PhotoUrl = string.IsNullOrWhiteSpace(member.PhotoUrl) ? null : member.PhotoUrl.Trim()
+                })
+                .OrderBy(member => member.Id)
+                .ToList();
+
+            _state.Staff.Clear();
+            _state.Staff.AddRange(normalized);
+            _store.SaveStaff(_state.Staff);
+        }
+    }
+
+    public void SetIntranetPassword(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new ArgumentException("La contrasena no puede estar vacia.", nameof(password));
+        }
+
+        IntranetPassword = password;
     }
 
     public string BuildQrSvgDataUri(int tableNumber, string baseUri)

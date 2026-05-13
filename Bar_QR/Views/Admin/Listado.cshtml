@@ -31,11 +31,11 @@
                     <td class="fw-bold">@item.Nombre</td>
                     <td class="text-success fw-bold">@item.Precio.ToString("F2") €</td>
                     <td class="text-center">
-                        @if (item.Destino.ToString() == "Cocina")
+                        @if (item.DestinoImpresion.ToString() == "Cocina")
                         {
                             <span class="badge bg-danger p-2"><i class="bi bi-egg-fried"></i> 🍳 Cocina</span>
                         }
-                        else if (item.Destino.ToString() == "Barra")
+                        else if (item.DestinoImpresion.ToString() == "Barra")
                         {
                             <span class="badge bg-warning text-dark p-2">🍺 Barra</span>
                         }

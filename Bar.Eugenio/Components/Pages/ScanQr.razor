@@ -1,11 +1,24 @@
 @page "/scan"
 @inject RestaurantService Restaurant
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
 
 <PageTitle>Escanear QR</PageTitle>
 
 <section class="page-heading">
     <h1>Escanear QR</h1>
-    <p>El QR de cada mesa abre su acceso directo. Para probarlo aqui, elige una mesa activa.</p>
+    <p>Abre la camara para leer el QR de una mesa activa.</p>
+</section>
+
+<section class="panel narrow">
+    <button class="btn-main" @onclick="StartScan">Abrir camara QR</button>
+    <button class="btn-secondary-action" @onclick="StopScan">Detener camara</button>
+    @if (!string.IsNullOrWhiteSpace(scanError))
+    {
+        <p class="error-text">@scanError</p>
+    }
+    <video @ref="videoElement" class="qr-video" autoplay playsinline muted></video>
 </section>
 
 <div class="table-grid">
@@ -17,3 +30,54 @@
         </a>
     }
 </div>
+
+@code {
+    private ElementReference videoElement;
+    private DotNetObjectReference<ScanQr>? dotNetRef;
+    private IJSObjectReference? module;
+    private string? scanError;
+
+    private async Task StartScan()
+    {
+        try
+        {
+            module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/qrScanner.js");
+            dotNetRef ??= DotNetObjectReference.Create(this);
+            await module.InvokeVoidAsync("startQrScan", videoElement, dotNetRef);
+            scanError = null;
+        }
+        catch
+        {
+            scanError = "No se pudo abrir la camara en este dispositivo.";
+        }
+    }
+
+    private async Task StopScan()
+    {
+        if (module is not null)
+        {
+            await module.InvokeVoidAsync("stopQrScan");
+        }
+    }
+
+    [JSInvokable]
+    public void OnQrDetected(string content)
+    {
+        if (Uri.TryCreate(content, UriKind.Absolute, out var absolute))
+        {
+            Navigation.NavigateTo(absolute.PathAndQuery);
+            return;
+        }
+
+        if (content.StartsWith("/", StringComparison.Ordinal))
+        {
+            Navigation.NavigateTo(content);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopScan();
+        dotNetRef?.Dispose();
+    }
+}

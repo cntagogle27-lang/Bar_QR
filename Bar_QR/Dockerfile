@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # Copiar proyecto y restaurar
@@ -10,8 +10,8 @@ COPY . .
 WORKDIR "/src/Bar_QR"
 RUN dotnet publish "Bar_QR.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Imagen final de ejecución
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+# Imagen final de ejecucin
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 

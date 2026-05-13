@@ -8,7 +8,7 @@ namespace Bar_QR.Controllers;
 public class StaffController : Controller
 {
     // Simulamos un mapa de mesas
-    private static List<Mesa> Mesas = Enumerable.Range(1, 12).Select(n => new Mesa { Numero = n }).ToList();
+    private static List<Mesa> Mesas = Enumerable.Range(1, 12).Select(n => new Mesa { NumeroMesa = n }).ToList();
     private readonly Bar_QR.Data.AppDbContext _db;
 
     public StaffController(Bar_QR.Data.AppDbContext db)
@@ -17,7 +17,7 @@ public class StaffController : Controller
         // ensure mesas in db
         if (!_db.Mesas.Any())
         {
-            for (int i = 1; i <= 12; i++) _db.Mesas.Add(new Mesa { Numero = i, Ocupada = false });
+            for (int i = 1; i <= 12; i++) _db.Mesas.Add(new Mesa { NumeroMesa = i, Estado = EstadoMesa.Libre });
             _db.SaveChanges();
         }
     }
@@ -27,22 +27,22 @@ public class StaffController : Controller
     {
         // Leer desde el contexto requiere crear un scope; para simplicidad devolvemos la estática si existe
         if (Mesas != null && Mesas.Any()) return Mesas;
-        return Enumerable.Range(1,12).Select(n => new Mesa { Numero = n }).ToList();
+        return Enumerable.Range(1,12).Select(n => new Mesa { NumeroMesa = n }).ToList();
     }
 
     public IActionResult Index()
     {
-        var dbMesas = _db.Mesas.OrderBy(m => m.Numero).ToList();
+        var dbMesas = _db.Mesas.OrderBy(m => m.NumeroMesa).ToList();
         return View(dbMesas);
     }
 
     [HttpPost]
     public IActionResult Toggle(int numero)
     {
-        var m = _db.Mesas.FirstOrDefault(x => x.Numero == numero);
+        var m = _db.Mesas.FirstOrDefault(x => x.NumeroMesa == numero);
         if (m != null)
         {
-            m.Ocupada = !m.Ocupada;
+            m.Estado = m.Estado == EstadoMesa.Libre ? EstadoMesa.Ocupada : EstadoMesa.Libre;
             _db.SaveChanges();
         }
         return RedirectToAction("Index");

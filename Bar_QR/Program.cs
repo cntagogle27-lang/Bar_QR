@@ -18,6 +18,8 @@ builder.Services.AddDbContext<Bar_QR.Data.AppDbContext>(options =>
     options.UseSqlite(sqlitePath);
 });
 
+var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=barqr.db";
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
@@ -120,5 +122,24 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
+
+// Comprobar si la base de datos tiene mesas y crear 10 por defecto si está vacía
+using (var scope = app.Services.CreateScope())
+{
+    var appDbContext = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
+
+    if (!appDbContext.Mesas.Any())
+    {
+        for (int i = 1; i <= 10; i++)
+        {
+            appDbContext.Mesas.Add(new Bar_QR.Models.Mesa 
+            { 
+                NumeroMesa = i, 
+                Estado = Bar_QR.Models.EstadoMesa.Libre 
+            });
+        }
+        appDbContext.SaveChanges();
+    }
+}
 
 app.Run();

@@ -34,7 +34,7 @@ public class CartaController : Controller
     {
         // Mostramos selector de mesa antes de llevar al cliente a la carta
         ViewData["Token"] = token;
-        var mesas = _db.Mesas.OrderBy(m => m.Numero).ToList();
+        var mesas = _db.Mesas.OrderBy(m => m.NumeroMesa).ToList();
         return View(mesas);
     }
 

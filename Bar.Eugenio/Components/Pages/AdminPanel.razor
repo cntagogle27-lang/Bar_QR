@@ -16,59 +16,164 @@ else
 {
     <section class="page-heading">
         <h1>Panel de administracion</h1>
-        <p>Configura mesas, activa codigos temporales y prepara los QR para imprimir.</p>
+        <p>Configura productos y personal.</p>
     </section>
 
-    <section class="panel admin-tools">
-        <label>
-            Numero de mesas
-            <input class="form-control" type="number" min="1" max="200" @bind="tableCount" />
-        </label>
-        <button class="btn-main inline" @onclick="SaveTableCount">Guardar mesas</button>
-        @if (!string.IsNullOrWhiteSpace(message))
-        {
-            <span class="success-text">@message</span>
-        }
-    </section>
-
-    <div class="qr-grid">
-        @foreach (var table in Restaurant.GetTables())
-        {
-            <section class="panel qr-card">
-                <h2>Mesa @table.Number</h2>
-                <img src="@Restaurant.BuildQrSvgDataUri(table.Number, Navigation.BaseUri)" alt="QR Mesa @table.Number" />
-                <p class="status-line">@table.Status</p>
-                @if (table.AccessCode is not null)
-                {
-                    <p class="access-code">Codigo: @table.AccessCode</p>
-                }
-                <div class="button-row">
-                    <button class="btn-main inline" @onclick="() => Activate(table.Number)">Activar</button>
-                    <button class="btn-secondary-action inline" @onclick="() => Restaurant.CloseTable(table.Number)">Forzar cierre</button>
-                </div>
-            </section>
-        }
+    <div class="button-row">
+        <button class="btn-secondary-action inline" @onclick='() => activeSection = "productos"'>Productos</button>
+        <button class="btn-secondary-action inline" @onclick='() => activeSection = "personal"'>Personal</button>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <p class="success-text">@message</p>
+    }
+
+    @if (activeSection == "productos")
+    {
+        <section class="panel">
+            <h2>Productos</h2>
+            @foreach (var product in editableProducts.OrderBy(product => product.Id))
+            {
+                <div class="staff-item">
+                    <input class="form-control" @bind="product.Name" placeholder="Nombre" />
+                    <input class="form-control" type="number" step="0.01" @bind="product.Price" />
+                    <input class="form-control" @bind="product.Category" placeholder="Categoria" />
+                    <input class="form-control" @bind="product.ImageUrl" placeholder="URL imagen" />
+                </div>
+            }
+            <div class="button-row">
+                <button class="btn-secondary-action inline" @onclick="AddProduct">Agregar producto</button>
+                <button class="btn-main inline" @onclick="SaveProducts">Guardar productos</button>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="panel">
+            <h2>Personal</h2>
+            <label>
+                Contrasena de intranet
+                <input class="form-control" type="password" @bind="intranetPassword" />
+            </label>
+            <div class="staff-item">
+                <label>
+                    Numero de empleados
+                    <input class="form-control" type="number" min="1" max="100" @bind="staffCount" />
+                </label>
+                <button class="btn-secondary-action inline" @onclick="ApplyStaffCount">Aplicar</button>
+            </div>
+
+            @foreach (var member in editableStaff.OrderBy(member => member.Id))
+            {
+                <div class="staff-item">
+                    <input class="form-control" @bind="member.Name" placeholder="Nombre" />
+                    <select class="form-control" @bind="member.Role">
+                        @foreach (var role in Enum.GetValues<StaffRole>())
+                        {
+                            if (role != StaffRole.Cliente)
+                            {
+                                <option value="@role">@role</option>
+                            }
+                        }
+                    </select>
+                    <input class="form-control" @bind="member.Pin" placeholder="PIN" />
+                    <input class="form-control" @bind="member.PhotoUrl" placeholder="URL foto" />
+                </div>
+            }
+            <button class="btn-main inline" @onclick="SaveStaff">Guardar personal</button>
+        </section>
+    }
 }
 
 @code {
-    private int tableCount;
+    private string activeSection = "productos";
+    private List<MenuProduct> editableProducts = [];
+    private List<StaffMember> editableStaff = [];
+    private int staffCount;
+    private string intranetPassword = string.Empty;
     private string? message;
 
     protected override void OnInitialized()
     {
-        tableCount = Restaurant.GetTables().Count;
+        editableProducts = Restaurant.Products
+            .Select(product => new MenuProduct
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Price = product.Price,
+                Category = product.Category,
+                ImageUrl = product.ImageUrl
+            })
+            .ToList();
+
+        editableStaff = Restaurant.Staff
+            .Select(member => new StaffMember
+            {
+                Id = member.Id,
+                Name = member.Name,
+                Role = member.Role,
+                Pin = member.Pin,
+                PhotoUrl = member.PhotoUrl
+            })
+            .ToList();
+
+        staffCount = editableStaff.Count;
+        intranetPassword = Restaurant.IntranetPassword;
     }
 
-    private void SaveTableCount()
+    private void AddProduct()
     {
-        Restaurant.SetTableCount(tableCount);
-        message = "Mesas actualizadas.";
+        var nextId = editableProducts.Select(product => product.Id).DefaultIfEmpty(0).Max() + 1;
+        editableProducts.Add(new MenuProduct
+        {
+            Id = nextId,
+            Name = "Nuevo producto",
+            Price = 0,
+            Category = "General"
+        });
     }
 
-    private void Activate(int tableNumber)
+    private void SaveProducts()
     {
-        var code = Restaurant.ActivateTable(tableNumber);
-        message = $"Mesa {tableNumber} activada con codigo {code}.";
+        Restaurant.SaveProducts(editableProducts);
+        message = "Productos guardados de forma permanente.";
+    }
+
+    private void ApplyStaffCount()
+    {
+        staffCount = Math.Clamp(staffCount, 1, 100);
+        var next = new List<StaffMember>();
+        for (var id = 1; id <= staffCount; id++)
+        {
+            var existing = editableStaff.FirstOrDefault(member => member.Id == id);
+            next.Add(existing ?? new StaffMember
+            {
+                Id = id,
+                Name = $"Empleado {id}",
+                Role = id == 1 ? StaffRole.Admin : StaffRole.Empleado,
+                Pin = id == 1 ? "1234" : null
+            });
+        }
+
+        if (next.All(member => member.Role != StaffRole.Admin))
+        {
+            next[0].Role = StaffRole.Admin;
+        }
+
+        editableStaff = next;
+    }
+
+    private void SaveStaff()
+    {
+        if (editableStaff.All(member => member.Role != StaffRole.Admin))
+        {
+            message = "Debe existir al menos un administrador.";
+            return;
+        }
+
+        Restaurant.SetIntranetPassword(intranetPassword);
+        Restaurant.SaveStaff(editableStaff);
+        message = "Personal y credenciales guardados de forma permanente.";
     }
 }

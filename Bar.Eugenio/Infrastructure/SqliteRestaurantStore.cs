@@ -25,8 +25,53 @@ public sealed class SqliteRestaurantStore
         EnsureDatabaseFile();
         using var connection = OpenConnection();
         CreateSchema(connection);
+        EnsureCompatibleSchema(connection);
         SeedIfEmpty(connection);
         Load(connection, state);
+    }
+
+    public void SaveProducts(IReadOnlyList<MenuProduct> products)
+    {
+        using var connection = OpenConnection();
+        using var transaction = connection.BeginTransaction();
+
+        Execute(connection, transaction, "DELETE FROM Products");
+        foreach (var product in products.OrderBy(product => product.Id))
+        {
+            Execute(
+                connection,
+                transaction,
+                "INSERT INTO Products (Id, Name, Price, Category, ImageUrl) VALUES ($id, $name, $price, $category, $imageUrl)",
+                ("$id", product.Id),
+                ("$name", product.Name),
+                ("$price", product.Price.ToString(CultureInfo.InvariantCulture)),
+                ("$category", product.Category),
+                ("$imageUrl", (object?)product.ImageUrl ?? DBNull.Value));
+        }
+
+        transaction.Commit();
+    }
+
+    public void SaveStaff(IReadOnlyList<StaffMember> staff)
+    {
+        using var connection = OpenConnection();
+        using var transaction = connection.BeginTransaction();
+
+        Execute(connection, transaction, "DELETE FROM Staff");
+        foreach (var member in staff.OrderBy(member => member.Id))
+        {
+            Execute(
+                connection,
+                transaction,
+                "INSERT INTO Staff (Id, Name, Role, Pin, PhotoUrl) VALUES ($id, $name, $role, $pin, $photoUrl)",
+                ("$id", member.Id),
+                ("$name", member.Name),
+                ("$role", member.Role.ToString()),
+                ("$pin", (object?)member.Pin ?? DBNull.Value),
+                ("$photoUrl", (object?)member.PhotoUrl ?? DBNull.Value));
+        }
+
+        transaction.Commit();
     }
 
     public void Save(InMemoryRestaurantState state)
@@ -111,14 +156,16 @@ public sealed class SqliteRestaurantStore
                 Id INTEGER PRIMARY KEY,
                 Name TEXT NOT NULL,
                 Price TEXT NOT NULL,
-                Category TEXT NOT NULL
+                Category TEXT NOT NULL,
+                ImageUrl TEXT NULL
             );
 
             CREATE TABLE IF NOT EXISTS Staff (
                 Id INTEGER PRIMARY KEY,
                 Name TEXT NOT NULL,
                 Role TEXT NOT NULL,
-                Pin TEXT NULL
+                Pin TEXT NULL,
+                PhotoUrl TEXT NULL
             );
 
             CREATE TABLE IF NOT EXISTS Tables (
@@ -141,6 +188,12 @@ public sealed class SqliteRestaurantStore
             """);
     }
 
+    private static void EnsureCompatibleSchema(SqliteConnection connection)
+    {
+        EnsureColumn(connection, "Products", "ImageUrl", "TEXT NULL");
+        EnsureColumn(connection, "Staff", "PhotoUrl", "TEXT NULL");
+    }
+
     private static void SeedIfEmpty(SqliteConnection connection)
     {
         if (ScalarLong(connection, "SELECT COUNT(*) FROM Products") == 0)
@@ -159,11 +212,12 @@ public sealed class SqliteRestaurantStore
                 Execute(
                     connection,
                     null,
-                    "INSERT INTO Products (Id, Name, Price, Category) VALUES ($id, $name, $price, $category)",
+                    "INSERT INTO Products (Id, Name, Price, Category, ImageUrl) VALUES ($id, $name, $price, $category, $imageUrl)",
                     ("$id", product.Id),
                     ("$name", product.Name),
                     ("$price", product.Price.ToString(CultureInfo.InvariantCulture)),
-                    ("$category", product.Category));
+                    ("$category", product.Category),
+                    ("$imageUrl", (object?)product.ImageUrl ?? DBNull.Value));
             }
         }
 
@@ -182,11 +236,12 @@ public sealed class SqliteRestaurantStore
                 Execute(
                     connection,
                     null,
-                    "INSERT INTO Staff (Id, Name, Role, Pin) VALUES ($id, $name, $role, $pin)",
+                    "INSERT INTO Staff (Id, Name, Role, Pin, PhotoUrl) VALUES ($id, $name, $role, $pin, $photoUrl)",
                     ("$id", member.Id),
                     ("$name", member.Name),
                     ("$role", member.Role.ToString()),
-                    ("$pin", (object?)member.Pin ?? DBNull.Value));
+                    ("$pin", (object?)member.Pin ?? DBNull.Value),
+                    ("$photoUrl", (object?)member.PhotoUrl ?? DBNull.Value));
             }
         }
 
@@ -209,7 +264,7 @@ public sealed class SqliteRestaurantStore
         state.Products.Clear();
         using (var command = connection.CreateCommand())
         {
-            command.CommandText = "SELECT Id, Name, Price, Category FROM Products ORDER BY Id";
+            command.CommandText = "SELECT Id, Name, Price, Category, ImageUrl FROM Products ORDER BY Id";
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
@@ -218,7 +273,8 @@ public sealed class SqliteRestaurantStore
                     Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
                     Price = decimal.Parse(reader.GetString(2), CultureInfo.InvariantCulture),
-                    Category = reader.GetString(3)
+                    Category = reader.GetString(3),
+                    ImageUrl = reader.IsDBNull(4) ? null : reader.GetString(4)
                 });
             }
         }
@@ -226,7 +282,7 @@ public sealed class SqliteRestaurantStore
         state.Staff.Clear();
         using (var command = connection.CreateCommand())
         {
-            command.CommandText = "SELECT Id, Name, Role, Pin FROM Staff ORDER BY Id";
+            command.CommandText = "SELECT Id, Name, Role, Pin, PhotoUrl FROM Staff ORDER BY Id";
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
@@ -235,7 +291,8 @@ public sealed class SqliteRestaurantStore
                     Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
                     Role = Enum.Parse<StaffRole>(reader.GetString(2)),
-                    Pin = reader.IsDBNull(3) ? null : reader.GetString(3)
+                    Pin = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    PhotoUrl = reader.IsDBNull(4) ? null : reader.GetString(4)
                 });
             }
         }
@@ -260,6 +317,22 @@ public sealed class SqliteRestaurantStore
         }
 
         state.NextOrderItemId = itemsByTable.Values.SelectMany(items => items).Select(item => item.Id).DefaultIfEmpty(0).Max() + 1;
+    }
+
+    private static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info({table})";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+        }
+
+        Execute(connection, null, $"ALTER TABLE {table} ADD COLUMN {column} {definition}");
     }
 
     private static Dictionary<int, List<OrderItem>> LoadItems(SqliteConnection connection)

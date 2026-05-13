@@ -29,11 +29,11 @@
             </div>
 
             <div class="form-group mb-4">
-                <label asp-for="Destino" class="control-label fw-bold">📍 Destino de Comanda</label>
-                <select asp-for="Destino" class="form-control"
-                        asp-items="Html.GetEnumSelectList<Bar_QR.Models.DestinoPedido>()">
+                <label asp-for="DestinoImpresion" class="control-label fw-bold">📍 Destino de Comanda</label>
+                <select asp-for="DestinoImpresion" class="form-control"
+                        asp-items="Html.GetEnumSelectList<Bar_QR.Models.DestinoImpresion>()">
                 </select>
-                <span asp-validation-for="Destino" class="text-danger"></span>
+                <span asp-validation-for="DestinoImpresion" class="text-danger"></span>
             </div>
 
             <div class="form-group">

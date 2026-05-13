@@ -12,6 +12,14 @@
         <a class="btn-main inline" href="/staff">Ir al acceso staff</a>
     </section>
 }
+else if (Session.CurrentRole == StaffRole.Admin)
+{
+    <section class="page-heading">
+        <h1>Perfil administrador</h1>
+        <p>El administrador no usa el mapa de mesas desde este panel.</p>
+        <a class="btn-main inline" href="/admin">Ir a configuracion</a>
+    </section>
+}
 else
 {
     <section class="page-heading">
@@ -39,6 +47,18 @@ else
         <div class="split-layout">
             <section class="panel">
                 <h2>Mesa @SelectedTable.Number</h2>
+                @if (!string.IsNullOrWhiteSpace(statusMessage))
+                {
+                    <p class="success-text">@statusMessage</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    <p class="error-text">@errorMessage</p>
+                }
+                @if (CanManageTable && SelectedTable.Status != TableStatus.Activa)
+                {
+                    <button class="btn-main inline" @onclick="() => ActivateTable(SelectedTable.Number)">Activar mesa</button>
+                }
                 @if (SelectedTable.Items.Count == 0)
                 {
                     <p class="muted">Todavia no hay productos.</p>
@@ -66,10 +86,22 @@ else
 
             <section class="panel">
                 <h2>Tomar nota</h2>
-                @foreach (var product in Restaurant.Products)
+                <div class="category-strip">
+                    @foreach (var category in Restaurant.ProductCategories)
+                    {
+                        <button class="category-chip @(selectedCategory == category ? "selected" : "")" @onclick="() => SelectCategory(category)">@category</button>
+                    }
+                </div>
+                @foreach (var product in FilteredProducts)
                 {
                     <button class="list-button" @onclick="() => AddProduct(product.Id)">
-                        <span>@product.Name</span>
+                        <span>
+                            @if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+                            {
+                                <img class="product-thumb" src="@product.ImageUrl" alt="@product.Name" />
+                            }
+                            @product.Name
+                        </span>
                         <strong>@product.Price.ToString("0.00") €</strong>
                     </button>
                 }
@@ -80,8 +112,14 @@ else
 
 @code {
     private int selectedTable = 1;
+    private string? selectedCategory;
+    private string? statusMessage;
+    private string? errorMessage;
     private RestaurantTable? SelectedTable => Restaurant.FindTable(selectedTable);
     private bool CanManageTable => Session.CurrentRole is StaffRole.Encargado or StaffRole.Admin;
+    private IEnumerable<MenuProduct> FilteredProducts => Restaurant.Products
+        .Where(product => selectedCategory is null || string.Equals(product.Category, selectedCategory, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(product => product.Name);
     private string RoleSummary => Session.CurrentRole switch
     {
         StaffRole.Empleado => "Puede tomar nota para las mesas.",
@@ -90,11 +128,40 @@ else
         _ => string.Empty
     };
 
+    protected override void OnInitialized()
+    {
+        selectedCategory = Restaurant.ProductCategories.FirstOrDefault();
+    }
+
+    private void SelectCategory(string category)
+    {
+        selectedCategory = category;
+    }
+
+    private void ActivateTable(int tableNumber)
+    {
+        var code = Restaurant.ActivateTable(tableNumber);
+        statusMessage = $"Mesa activada con codigo {code}.";
+        errorMessage = null;
+    }
+
     private void AddProduct(int productId)
     {
-        if (SelectedTable is not null && Session.CurrentStaff is not null)
+        if (SelectedTable is null || Session.CurrentStaff is null)
+        {
+            return;
+        }
+
+        try
         {
             Restaurant.AddOrderItem(SelectedTable.Number, productId, Session.CurrentStaff.Name);
+            statusMessage = "Producto anadido.";
+            errorMessage = null;
+        }
+        catch (InvalidOperationException)
+        {
+            errorMessage = "La mesa no esta activa. Pide al encargado activarla primero.";
+            statusMessage = null;
         }
     }
 
@@ -106,10 +173,14 @@ else
         }
 
         Restaurant.ChangeItemPrice(SelectedTable.Number, itemId, price);
+        statusMessage = "Precio actualizado.";
+        errorMessage = null;
     }
 
     private void CloseTable(int tableNumber)
     {
         Restaurant.CloseTable(tableNumber);
+        statusMessage = "Mesa cerrada.";
+        errorMessage = null;
     }
 }

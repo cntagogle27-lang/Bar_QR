@@ -34,11 +34,20 @@ else
         }
     </div>
 
-    @if (selectedStaffId is not null)
+    @if (selectedStaffId is not null && SelectedStaffRequiresPin)
     {
         <div class="panel narrow">
             <label class="form-label">PIN adicional</label>
-            <input class="form-control form-control-lg code-input" maxlength="4" type="password" @bind="pin" />
+            <input class="form-control form-control-lg code-input" maxlength="4" type="password" value="@pin" readonly />
+            <div class="pin-pad">
+                @foreach (var key in PinDigits)
+                {
+                    <button type="button" class="pin-key" @onclick="() => AppendPin(key)">@key</button>
+                }
+                <button type="button" class="pin-key action" @onclick="BackspacePin">←</button>
+                <button type="button" class="pin-key" @onclick="AppendZero">0</button>
+                <button type="button" class="pin-key action" @onclick="ClearPin">C</button>
+            </div>
             <button class="btn-main" @onclick="SignIn">Continuar</button>
             <button class="btn-secondary-action" @onclick="CancelPin">Cancelar</button>
             @if (!string.IsNullOrWhiteSpace(error))
@@ -54,6 +63,11 @@ else
     private string pin = string.Empty;
     private int? selectedStaffId;
     private string? error;
+    private static readonly string[] PinDigits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    private StaffMember? SelectedStaff => selectedStaffId is null
+        ? null
+        : Restaurant.Staff.FirstOrDefault(member => member.Id == selectedStaffId.Value);
+    private bool SelectedStaffRequiresPin => SelectedStaff?.Role is StaffRole.Encargado or StaffRole.Admin;
 
     private void Unlock()
     {
@@ -72,6 +86,11 @@ else
         selectedStaffId = staffId;
         pin = string.Empty;
         error = null;
+
+        if (SelectedStaffRequiresPin)
+        {
+            return;
+        }
 
         if (Restaurant.TrySignInStaff(staffId, null, out var staff, out var message))
         {
@@ -104,6 +123,33 @@ else
     private void CancelPin()
     {
         selectedStaffId = null;
+        pin = string.Empty;
         error = null;
+    }
+
+    private void AppendPin(string digit)
+    {
+        if (pin.Length < 4)
+        {
+            pin += digit;
+        }
+    }
+
+    private void BackspacePin()
+    {
+        if (pin.Length > 0)
+        {
+            pin = pin[..^1];
+        }
+    }
+
+    private void ClearPin()
+    {
+        pin = string.Empty;
+    }
+
+    private void AppendZero()
+    {
+        AppendPin("0");
     }
 }
