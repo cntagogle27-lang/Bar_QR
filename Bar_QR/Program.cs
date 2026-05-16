@@ -36,13 +36,20 @@ builder.Services.AddAuthentication("CookieAuth")
 	.AddGoogle("Google", options =>
 	{
 		options.SignInScheme = "CookieAuth";
-		var clientId = builder.Configuration["GOOGLE_CLIENT_ID"]
-			?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
+		var clientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
+			?? builder.Configuration["GOOGLE_CLIENT_ID"]
 			?? "no-configurado";
-		var clientSecret = builder.Configuration["GOOGLE_CLIENT_SECRET"]
-			?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")
+		var clientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")
+			?? builder.Configuration["GOOGLE_CLIENT_SECRET"]
 			?? "no-configurado";
-		Console.WriteLine($"[OAuth] ClientId cargado: {(clientId == "no-configurado" ? "NO ENCONTRADO" : clientId[..10] + "...")}");
+		Console.WriteLine($"[OAuth] ClientId: {(clientId == "no-configurado" ? "NO ENCONTRADO" : "OK=" + clientId[..12])}");
+		Console.WriteLine($"[OAuth] Secret: {(clientSecret == "no-configurado" ? "NO ENCONTRADO" : "OK")}");
+		Console.WriteLine($"[ENV vars] Total count: {Environment.GetEnvironmentVariables().Count}");
+		foreach (System.Collections.DictionaryEntry e in Environment.GetEnvironmentVariables())
+		{
+			if (e.Key?.ToString()?.StartsWith("GOOGLE") == true)
+				Console.WriteLine($"[ENV] {e.Key} = {e.Value?.ToString()?[..4]}...");
+		}
 		options.ClientId = clientId;
 		options.ClientSecret = clientSecret;
 		options.CallbackPath = "/Login/GoogleCallback";
