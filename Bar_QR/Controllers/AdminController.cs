@@ -248,4 +248,63 @@ public class AdminController : Controller
         }
         return RedirectToAction("Ajustes");
     }
+
+    // ---- MAPA DE MESAS ----
+
+    public IActionResult MapaMesas()
+    {
+        var mesas = _db.Mesas.OrderBy(m => m.NumeroMesa).ToList();
+        return View(mesas);
+    }
+
+    [HttpPost]
+    public IActionResult EditarMesa(int id, string nombre, int numero)
+    {
+        var mesa = _db.Mesas.Find(id);
+        if (mesa == null) { TempData["MesasError"] = "Mesa no encontrada."; return RedirectToAction("MapaMesas"); }
+
+        var nombreLimpio = string.IsNullOrWhiteSpace(nombre) ? $"Mesa {numero}" : nombre.Trim();
+        var slug = GenerarSlug(nombreLimpio, numero);
+
+        // Verificar slug único (excluyendo la propia mesa)
+        if (_db.Mesas.Any(m => m.Slug == slug && m.Id != id))
+            slug = $"{slug}-{id}";
+
+        mesa.NumeroMesa = numero;
+        mesa.Nombre = nombreLimpio;
+        mesa.Slug = slug;
+        _db.SaveChanges();
+        TempData["MesasOk"] = $"Mesa actualizada: {nombreLimpio}";
+        return RedirectToAction("MapaMesas");
+    }
+
+    [HttpPost]
+    public IActionResult AgregarMesa()
+    {
+        var maxNum = _db.Mesas.Any() ? _db.Mesas.Max(m => m.NumeroMesa) + 1 : 1;
+        _db.Mesas.Add(new Mesa { NumeroMesa = maxNum, Nombre = $"Mesa {maxNum}", Slug = $"mesa-{maxNum}", Estado = EstadoMesa.Libre });
+        _db.SaveChanges();
+        TempData["MesasOk"] = $"Mesa {maxNum} añadida.";
+        return RedirectToAction("MapaMesas");
+    }
+
+    [HttpPost]
+    public IActionResult EliminarMesa(int id)
+    {
+        var mesa = _db.Mesas.Find(id);
+        if (mesa != null) { _db.Mesas.Remove(mesa); _db.SaveChanges(); TempData["MesasOk"] = "Mesa eliminada."; }
+        return RedirectToAction("MapaMesas");
+    }
+
+    private static string GenerarSlug(string nombre, int numero)
+    {
+        var s = nombre.ToLowerInvariant()
+            .Replace(" ", "-")
+            .Replace("á","a").Replace("é","e").Replace("í","i").Replace("ó","o").Replace("ú","u")
+            .Replace("ñ","n");
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"[^a-z0-9\-]", "");
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"-+", "-").Trim('-');
+        return string.IsNullOrEmpty(s) ? $"mesa-{numero}" : s;
+    }
+
 } // <-- Esta cierra la Clase

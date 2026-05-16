@@ -62,7 +62,13 @@ public static class DbInitializer
 			if (!context.Mesas.Any())
 			{
 				for (int i = 1; i <= 12; i++)
-					context.Mesas.Add(new Mesa { NumeroMesa = i, Estado = EstadoMesa.Libre });
+					context.Mesas.Add(new Mesa
+					{
+						NumeroMesa = i,
+						Nombre = $"Mesa {i}",
+						Slug = $"mesa-{i}",
+						Estado = EstadoMesa.Libre
+					});
 				context.SaveChanges();
 			}
 		}

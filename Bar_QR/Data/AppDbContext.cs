@@ -23,6 +23,13 @@ public class AppDbContext : DbContext
             b.Property(p => p.Precio).HasConversion<double>();
         });
 
+        modelBuilder.Entity<Mesa>(b =>
+        {
+            b.HasKey(m => m.Id);
+            b.HasIndex(m => m.Slug).IsUnique();
+            b.Property(m => m.Slug).IsRequired();
+        });
+
         base.OnModelCreating(modelBuilder);
     }
 }

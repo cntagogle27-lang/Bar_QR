@@ -1,0 +1,78 @@
+@{
+    ViewData["Title"] = "Escanear QR";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Escanear QR de mesa</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body { background: #1a1a2e; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #e0e0e0; }
+        #scanner-wrap { position: relative; width: 100%; max-width: 380px; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
+        #scanner-video { width: 100%; display: block; }
+        #scanner-overlay { position: absolute; inset: 0; border: 3px solid #e94560; border-radius: 16px; pointer-events: none; }
+        #scanner-line { position: absolute; left: 0; right: 0; height: 3px; background: #e94560; animation: scan 2s linear infinite; }
+        @@keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        #msg { margin-top: 1.2rem; font-size: 1.05rem; min-height: 2rem; color: #aaa; text-align: center; }
+        .btn-back { margin-top: 1.5rem; border-radius: 50px; padding: .7rem 2rem; font-weight: 700; border: 2px solid #e94560; color: #e94560; background: transparent; }
+        .btn-back:hover { background: #e94560; color: #fff; }
+    </style>
+</head>
+<body>
+    <h2 class="mb-4">📷 Apunta al QR de tu mesa</h2>
+
+    <div id="scanner-wrap">
+        <video id="scanner-video" autoplay muted playsinline></video>
+        <canvas id="scanner-canvas" style="display:none"></canvas>
+        <div id="scanner-overlay">
+            <div id="scanner-line"></div>
+        </div>
+    </div>
+
+    <div id="msg">Buscando cámara…</div>
+
+    <a href="@Url.Action("Index","Home")" class="btn btn-back">← Volver</a>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script>
+        const video   = document.getElementById('scanner-video');
+        const canvas  = document.getElementById('scanner-canvas');
+        const ctx     = canvas.getContext('2d');
+        const msg     = document.getElementById('msg');
+        let scanning  = true;
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+                msg.textContent = 'Enfoca el QR de tu mesa…';
+                requestAnimationFrame(tick);
+            })
+            .catch(err => {
+                msg.textContent = '⚠️ No se pudo acceder a la cámara: ' + err.message;
+            });
+
+        function tick() {
+            if (!scanning) return;
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width  = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+                if (code) {
+                    scanning = false;
+                    msg.textContent = '✅ QR detectado, redirigiendo…';
+                    video.srcObject.getTracks().forEach(t => t.stop());
+                    window.location.href = code.data;
+                    return;
+                }
+            }
+            requestAnimationFrame(tick);
+        }
+    </script>
+</body>
+</html>

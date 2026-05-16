@@ -19,11 +19,16 @@ namespace Bar_QR.Controllers
                 return RedirectToAction("Index", "Carta");
             }
 
-            // No autenticado: mostrar carta directamente
-            return RedirectToAction("Index", "Carta");
+            // No autenticado: mostrar landing de cliente
+            return View();
         }
 
         public IActionResult Privacy()
+        {
+            return View();
+        }
+
+        public IActionResult EscanearQR()
         {
             return View();
         }

@@ -46,4 +46,16 @@ public class CartaController : Controller
 		// Por ahora, solo simulamos que se ha enviado
 		return Json(new { success = true, message = "Pedido enviado a cocina" });
 	}
+
+	// Acceso por URL única de mesa (escaneo de QR)
+	[Route("Carta/Mesa/{slug}")]
+	public IActionResult Mesa(string slug)
+	{
+		var mesa = _db.Mesas.FirstOrDefault(m => m.Slug == slug);
+		if (mesa == null) return NotFound("Mesa no encontrada.");
+		var productos = _db.Productos.ToList();
+		ViewData["MesaSeleccionada"] = mesa.NumeroMesa;
+		ViewData["MesaNombre"] = mesa.Nombre;
+		return View("Index", productos);
+	}
 }
