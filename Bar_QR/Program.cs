@@ -38,10 +38,10 @@ builder.Services.AddAuthentication("CookieAuth")
 		options.SignInScheme = "CookieAuth";
 		options.ClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
 			?? builder.Configuration["GOOGLE_CLIENT_ID"]
-			?? throw new InvalidOperationException("GOOGLE_CLIENT_ID no configurado");
+			?? "no-configurado";
 		options.ClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")
 			?? builder.Configuration["GOOGLE_CLIENT_SECRET"]
-			?? throw new InvalidOperationException("GOOGLE_CLIENT_SECRET no configurado");
+			?? "no-configurado";
 		options.CallbackPath = "/Login/GoogleCallback";
 	});
 // ----------------------------------------------------
