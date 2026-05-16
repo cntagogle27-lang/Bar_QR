@@ -12,6 +12,19 @@ if (!string.IsNullOrEmpty(portEnv) && int.TryParse(portEnv, out var p))
 }
 
 var sqlitePath = builder.Configuration.GetConnectionString("Sqlite") ?? "Data Source=barqr.db";
+
+// Asegurar que el directorio del fichero SQLite existe antes de intentar abrirlo
+var sqliteFile = sqlitePath
+    .Split(';')
+    .Select(p => p.Trim())
+    .FirstOrDefault(p => p.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+    ?.Substring("Data Source=".Length)
+    .Trim();
+if (!string.IsNullOrEmpty(sqliteFile) && !string.IsNullOrEmpty(Path.GetDirectoryName(sqliteFile)))
+{
+    Directory.CreateDirectory(Path.GetDirectoryName(sqliteFile)!);
+}
+
 builder.Services.AddSingleton(new Func<string>(() => sqlitePath));
 // Registrar DbContext con SQLite
 builder.Services.AddDbContext<Bar_QR.Data.AppDbContext>(options =>
