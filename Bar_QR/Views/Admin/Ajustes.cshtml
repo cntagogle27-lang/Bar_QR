@@ -10,6 +10,15 @@
             <h4 class="mb-0">?? Ajustes del Sistema</h4>
         </div>
         <div class="card-body">
+            @if (TempData["AjustesError"] is string ajustesError)
+            {
+                <div class="alert alert-danger">@ajustesError</div>
+            }
+            @if (TempData["AjustesOk"] is string ajustesOk)
+            {
+                <div class="alert alert-success">@ajustesOk</div>
+            }
+
             <div class="row">
                 <div class="col-md-6">
                     <h5>Correos permitidos para personal</h5>

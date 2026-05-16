@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Bar_QR.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Mail;
 
 namespace Bar_QR.Controllers;
 
@@ -72,13 +73,34 @@ public class AdminController : Controller
     [HttpPost]
     public IActionResult AgregarEmail(string email)
     {
-        if (!string.IsNullOrWhiteSpace(email))
+        try
         {
-            if (!_db.StaffEmails.Any(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
+            if (string.IsNullOrWhiteSpace(email))
             {
-                _db.StaffEmails.Add(new StaffEmail { Email = email.Trim() });
-                _db.SaveChanges();
+                TempData["AjustesError"] = "Debes indicar un correo.";
+                return RedirectToAction("Ajustes");
             }
+
+            var normalizedEmail = email.Trim();
+            if (!EsEmailValido(normalizedEmail))
+            {
+                TempData["AjustesError"] = "El formato del correo no es válido.";
+                return RedirectToAction("Ajustes");
+            }
+
+            if (_db.StaffEmails.Any(e => e.Email.Equals(normalizedEmail, StringComparison.OrdinalIgnoreCase)))
+            {
+                TempData["AjustesError"] = "Ese correo ya está autorizado.";
+                return RedirectToAction("Ajustes");
+            }
+
+            _db.StaffEmails.Add(new StaffEmail { Email = normalizedEmail });
+            _db.SaveChanges();
+            TempData["AjustesOk"] = "Correo añadido correctamente.";
+        }
+        catch
+        {
+            TempData["AjustesError"] = "No se pudo añadir el correo. Revisa la base de datos y vuelve a intentarlo.";
         }
         return RedirectToAction("Ajustes");
     }
@@ -136,12 +158,44 @@ public class AdminController : Controller
     [HttpPost]
     public IActionResult EliminarEmail(string email)
     {
-        if (!string.IsNullOrWhiteSpace(email))
+        try
         {
-            _db.StaffEmails.RemoveRange(_db.StaffEmails.Where(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase)));
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                TempData["AjustesError"] = "Debes indicar un correo para eliminar.";
+                return RedirectToAction("Ajustes");
+            }
+
+            var normalizedEmail = email.Trim();
+            var emails = _db.StaffEmails.Where(e => e.Email.Equals(normalizedEmail, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (!emails.Any())
+            {
+                TempData["AjustesError"] = "Ese correo no existe en la lista autorizada.";
+                return RedirectToAction("Ajustes");
+            }
+
+            _db.StaffEmails.RemoveRange(emails);
             _db.SaveChanges();
+            TempData["AjustesOk"] = "Correo eliminado correctamente.";
+        }
+        catch
+        {
+            TempData["AjustesError"] = "No se pudo eliminar el correo. Revisa la base de datos y vuelve a intentarlo.";
         }
         return RedirectToAction("Ajustes");
+    }
+
+    private static bool EsEmailValido(string email)
+    {
+        try
+        {
+            _ = new MailAddress(email);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     [HttpPost]
