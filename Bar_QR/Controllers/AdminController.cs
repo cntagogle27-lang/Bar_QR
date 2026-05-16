@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Bar_QR.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Mail;
+using Microsoft.Data.Sqlite;
 
 namespace Bar_QR.Controllers;
 
@@ -106,9 +107,17 @@ public class AdminController : Controller
             _db.SaveChanges();
             TempData["AjustesOk"] = "Correo añadido correctamente.";
         }
+        catch (DbUpdateException ex)
+        {
+            TempData["AjustesError"] = $"No se pudo añadir el correo: {ex.GetBaseException().Message}";
+        }
+        catch (SqliteException ex)
+        {
+            TempData["AjustesError"] = $"No se pudo añadir el correo: {ex.Message}";
+        }
         catch
         {
-            TempData["AjustesError"] = "No se pudo añadir el correo. Revisa la base de datos y vuelve a intentarlo.";
+            TempData["AjustesError"] = "No se pudo añadir el correo.";
         }
         return RedirectToAction("Ajustes");
     }
@@ -186,9 +195,17 @@ public class AdminController : Controller
             _db.SaveChanges();
             TempData["AjustesOk"] = "Correo eliminado correctamente.";
         }
+        catch (DbUpdateException ex)
+        {
+            TempData["AjustesError"] = $"No se pudo eliminar el correo: {ex.GetBaseException().Message}";
+        }
+        catch (SqliteException ex)
+        {
+            TempData["AjustesError"] = $"No se pudo eliminar el correo: {ex.Message}";
+        }
         catch
         {
-            TempData["AjustesError"] = "No se pudo eliminar el correo. Revisa la base de datos y vuelve a intentarlo.";
+            TempData["AjustesError"] = "No se pudo eliminar el correo.";
         }
         return RedirectToAction("Ajustes");
     }

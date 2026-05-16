@@ -11,7 +11,8 @@ RUN dotnet publish "Bar_QR.csproj" -c Release -o /app/publish /p:UseAppHost=fals
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
-RUN mkdir -p /data
+USER root
+RUN mkdir -p /data && chmod 777 /data
 
 COPY --from=build /app/publish .
 
