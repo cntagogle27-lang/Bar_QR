@@ -72,33 +72,20 @@
     <div class="container text-center">
         <h1 class="display-4 fw-bold mb-5">🏨 BAR_QR LOG IN</h1>
 
+        @if (TempData["LoginError"] is string loginError)
+        {
+            <div class="alert alert-danger fw-bold">@loginError</div>
+        }
+
         <div class="row justify-content-center g-4">
-            <div class="col-6 col-md-3">
-                <form asp-action="AccesoCamarero" method="post">
-                    <input type="hidden" name="nombre" value="Paco" />
-                    <button type="submit" class="btn btn-primary btn-perfil shadow-lg">
-                        <span class="display-4">🧔</span> Paco
-                    </button>
-                </form>
-            </div>
-
-            <div class="col-6 col-md-3">
-                <form asp-action="AccesoCamarero" method="post">
-                    <input type="hidden" name="nombre" value="Luis" />
-                    <button type="submit" class="btn btn-info text-white btn-perfil shadow-lg">
-                        <span class="display-4">👦</span> Luis
-                    </button>
-                </form>
-            </div>
-
-            <div class="col-6 col-md-3">
+            <div class="col-10 col-md-4">
                 <button class="btn btn-danger btn-perfil shadow-lg" data-bs-toggle="modal" data-bs-target="#modalPin">
                     <span class="display-4">⚙️</span> Admin
                 </button>
             </div>
         </div>
 
-    <!-- Acceso por correo movido: ahora el sistema detecta al entrar y redirige automáticamente -->
+    <div class="mt-4 fw-bold">Acceso de personal solo mediante enlace único autorizado.</div>
     </div>
 
     <div class="modal fade" id="modalPin" tabindex="-1">

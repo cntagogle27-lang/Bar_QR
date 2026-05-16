@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -98,7 +99,12 @@ app.Use(async (context, next) =>
                         };
                         var identity = new System.Security.Claims.ClaimsIdentity(claims, "CookieAuth");
                         var principal = new System.Security.Claims.ClaimsPrincipal(identity);
-                        await context.SignInAsync("CookieAuth", principal);
+                        var authProperties = new AuthenticationProperties
+                        {
+                            IsPersistent = true,
+                            ExpiresUtc = DateTimeOffset.UtcNow.AddDays(365)
+                        };
+                        await context.SignInAsync("CookieAuth", principal, authProperties);
                     }
                     else
                     {

@@ -10,8 +10,12 @@ namespace Bar_QR.Controllers
         {
             if (User.Identity?.IsAuthenticated == true)
             {
-                if (User.IsInRole("Camarero")) return RedirectToAction("Index", "Staff");
-                if (User.IsInRole("Admin")) return RedirectToAction("Listado", "Admin");
+                var email = User.Identity.Name?.Trim();
+                if (string.Equals(email, "barqrgm@gmail.com", StringComparison.OrdinalIgnoreCase))
+                {
+                    return RedirectToAction("Index", "Staff");
+                }
+
                 return RedirectToAction("Index", "Carta");
             }
 

@@ -8,18 +8,6 @@ public class LoginController : Controller
 {
 	public IActionResult Index() => View();
 
-	// Botón para Paco o Luis
-	[HttpPost]
-	public async Task<IActionResult> AccesoCamarero(string nombre)
-	{
-		var claims = new List<Claim> {
-			new Claim(ClaimTypes.Name, nombre),
-			new Claim(ClaimTypes.Role, "Camarero")
-		};
-		await Loguear(claims);
-		return RedirectToAction("Index", "Staff");
-	}
-
 	[HttpPost]
 	public async Task<IActionResult> AccesoCamareroEmail(string email)
 	{
@@ -38,6 +26,32 @@ public class LoginController : Controller
 			}
 		}
 		// Si no está, vuelve al login con error simple
+		TempData["LoginError"] = "Correo no autorizado";
+		return RedirectToAction("Index");
+	}
+
+	[HttpGet]
+	public async Task<IActionResult> Acceso(string email)
+	{
+		if (string.IsNullOrWhiteSpace(email))
+		{
+			return RedirectToAction("Index", "Carta");
+		}
+
+		using (var scope = HttpContext.RequestServices.CreateScope())
+		{
+			var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
+			if (db.StaffEmails.Any(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
+			{
+				var claims = new List<Claim> {
+					new Claim(ClaimTypes.Name, email.Trim()),
+					new Claim(ClaimTypes.Role, "Camarero")
+				};
+				await Loguear(claims);
+				return RedirectToAction("Index", "Staff");
+			}
+		}
+
 		TempData["LoginError"] = "Correo no autorizado";
 		return RedirectToAction("Index");
 	}
@@ -62,7 +76,12 @@ public class LoginController : Controller
 	{
 		var identity = new ClaimsIdentity(claims, "CookieAuth");
 		var principal = new ClaimsPrincipal(identity);
-		await HttpContext.SignInAsync("CookieAuth", principal);
+     var properties = new AuthenticationProperties
+		{
+			IsPersistent = true,
+			ExpiresUtc = DateTimeOffset.UtcNow.AddDays(365)
+		};
+		await HttpContext.SignInAsync("CookieAuth", principal, properties);
 	}
 
 	public async Task<IActionResult> Logout()
