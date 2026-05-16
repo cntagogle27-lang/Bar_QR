@@ -25,15 +25,24 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// --- PASO 1: CONFIGURACIÓN DE SEGURIDAD (COOKIES) ---
+// --- PASO 1: CONFIGURACIÓN DE SEGURIDAD (COOKIES + GOOGLE) ---
 builder.Services.AddAuthentication("CookieAuth")
 	.AddCookie("CookieAuth", config =>
 	{
 		config.Cookie.Name = "BarQR.Session";
-		config.LoginPath = "/Login/Index"; // Si alguien intenta entrar sin permiso, viene aquí
+		config.LoginPath = "/Login/Index";
 		config.AccessDeniedPath = "/Login/Index";
+	})
+	.AddGoogle("Google", options =>
+	{
+		options.SignInScheme = "CookieAuth";
+		options.ClientId     = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")     ?? builder.Configuration["Authentication:Google:ClientId"]     ?? "";
+		options.ClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") ?? builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
+		options.CallbackPath = "/Login/GoogleCallback";
+		options.Scope.Add("email");
+		options.Scope.Add("profile");
 	});
-// ----------------------------------------------------
+// ---------------------------------------------------------------
 
 var app = builder.Build();
 

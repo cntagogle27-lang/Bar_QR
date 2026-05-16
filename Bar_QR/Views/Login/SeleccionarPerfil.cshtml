@@ -1,0 +1,59 @@
+@model IEnumerable<string>
+@{
+    Layout = null;
+    var googleEmail = ViewData["GoogleEmail"] as string ?? "";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seleccionar perfil</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body { background: radial-gradient(circle, #2c3e50, #000); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: white; }
+        .perfil-card { background: rgba(255,255,255,.07); border-radius: 20px; padding: 2.5rem 2rem; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,.5); backdrop-filter: blur(6px); }
+        .btn-perfil { background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.2); color: #fff; border-radius: 16px; padding: 1.2rem; font-size: 1.1rem; font-weight: 600; transition: .2s; width: 100%; }
+        .btn-perfil:hover { background: rgba(255,255,255,.2); border-color: #4ade80; color: #fff; transform: translateY(-3px); }
+        .avatar { font-size: 2.5rem; display: block; margin-bottom: .3rem; }
+        .email-badge { background: rgba(255,255,255,.15); border-radius: 50px; padding: .3rem 1rem; font-size: .85rem; color: #ccc; display: inline-block; margin-bottom: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="perfil-card">
+        <div style="font-size:3rem">👋</div>
+        <h3 class="fw-bold mt-2 mb-1">¡Hola!</h3>
+        <div class="email-badge">✅ @googleEmail</div>
+        <p class="text-secondary mb-4">Selecciona tu perfil de camarero</p>
+
+        @if (TempData["LoginError"] is string err)
+        {
+            <div class="alert alert-danger py-2">@err</div>
+        }
+
+        <div class="d-flex flex-column gap-3">
+            @foreach (var email in Model)
+            {
+                @* Solo mostramos el perfil del email autenticado *@
+                if (string.Equals(email, googleEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    <form asp-action="ConfirmarPerfil" method="post">
+                        <input type="hidden" name="email" value="@email" />
+                        <input type="hidden" name="googleEmail" value="@googleEmail" />
+                        <button type="submit" class="btn-perfil">
+                            <span class="avatar">🧑‍🍳</span>
+                            @email
+                        </button>
+                    </form>
+                }
+            }
+        </div>
+
+        <a href="@Url.Action("Index","Login")" class="btn btn-link text-secondary mt-4 d-block">
+            Usar otra cuenta
+        </a>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
