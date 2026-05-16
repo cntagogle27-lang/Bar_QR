@@ -13,8 +13,12 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
+RUN mkdir -p /data && chown app:app /data
+
+USER app
+
 ENV DOTNET_RUNNING_IN_CONTAINER=true
-ENV ConnectionStrings__Sqlite="Data Source=/app/barqr.db"
+ENV ConnectionStrings__Sqlite="Data Source=/data/barqr.db"
 
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "ASPNETCORE_URLS=http://+:${PORT:-8080} dotnet Bar_QR.dll"]
