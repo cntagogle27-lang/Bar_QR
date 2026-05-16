@@ -1,12 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Google;
 using System.Security.Claims;
 
 namespace Bar_QR.Controllers;
 
 public class LoginController : Controller
 {
+	// Correo del administrador principal que accede a la intranet/camareros
+	private const string AdminEmail = "barqrgm@gmail.com";
+
 	public IActionResult Index() => View();
 
 	// --- GOOGLE OAUTH ---
@@ -14,46 +16,48 @@ public class LoginController : Controller
 	[HttpGet]
 	public IActionResult GoogleLogin()
 	{
-		var props = new AuthenticationProperties { RedirectUri = Url.Action("GoogleCallback") };
-		return Challenge(props, GoogleDefaults.AuthenticationScheme);
+		var redirectUrl = Url.Action("GoogleCallback", "Login");
+		var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
+		return Challenge(properties, "Google");
 	}
 
 	[HttpGet]
 	public async Task<IActionResult> GoogleCallback()
 	{
 		var result = await HttpContext.AuthenticateAsync("CookieAuth");
-		if (!result.Succeeded) { TempData["LoginError"] = "Error al autenticar con Google."; return RedirectToAction("Index"); }
+		if (!result.Succeeded)
+		{
+			TempData["LoginError"] = "No se pudo autenticar con Google.";
+			return RedirectToAction("Index");
+		}
 
 		var email = result.Principal?.FindFirstValue(ClaimTypes.Email)
-				 ?? result.Principal?.FindFirstValue("email")
-				 ?? "";
+					?? result.Principal?.FindFirstValue("email")
+					?? result.Principal?.Identity?.Name;
 
-		// Admin
-		if (string.Equals(email, "barqrgm@gmail.com", StringComparison.OrdinalIgnoreCase))
+		if (string.IsNullOrEmpty(email))
 		{
-			await HttpContext.SignOutAsync("CookieAuth");
-			var claims = new List<Claim> {
-				new Claim(ClaimTypes.Name, email),
-				new Claim(ClaimTypes.Role, "Admin")
-			};
-			await Loguear(claims);
-			return RedirectToAction("Listado", "Admin");
+			TempData["LoginError"] = "No se pudo obtener el correo de Google.";
+			return RedirectToAction("Index");
 		}
 
-		// Camarero autorizado → selector de perfil
-		using (var scope = HttpContext.RequestServices.CreateScope())
+		// Admin principal → seleccionar perfil de camarero
+		if (string.Equals(email, AdminEmail, StringComparison.OrdinalIgnoreCase))
 		{
-			var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
-			if (db.StaffEmails.Any(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
-			{
-				// Guardamos el email verificado en sesión temporal y mostramos perfiles
-				TempData["GoogleEmail"] = email;
-				await HttpContext.SignOutAsync("CookieAuth"); // limpiamos la cookie provisional de Google
-				return RedirectToAction("SeleccionarPerfil");
-			}
+			// Guardar email en sesión temporal para confirmar identidad
+			TempData["GoogleAdminEmail"] = email;
+			return RedirectToAction("SeleccionarPerfil");
 		}
 
-		await HttpContext.SignOutAsync("CookieAuth");
+		// Otros correos autorizados como camarero
+		using var scope = HttpContext.RequestServices.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
+		if (db.StaffEmails.Any(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
+		{
+			await LoguearCamarero(email);
+			return RedirectToAction("Index", "Staff");
+		}
+
 		TempData["LoginError"] = $"El correo {email} no está autorizado.";
 		return RedirectToAction("Index");
 	}
@@ -61,44 +65,51 @@ public class LoginController : Controller
 	[HttpGet]
 	public IActionResult SeleccionarPerfil()
 	{
-		// Necesita venir de GoogleCallback (email en TempData)
-		if (TempData.Peek("GoogleEmail") is not string email)
+		// Solo accesible si viene del flujo Google
+		if (TempData["GoogleAdminEmail"] is not string email)
 			return RedirectToAction("Index");
+
+		// Mantener el email disponible para el POST
+		TempData.Keep("GoogleAdminEmail");
 
 		using var scope = HttpContext.RequestServices.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
-		var emails = db.StaffEmails.Select(e => e.Email).ToList();
+		var camareros = db.StaffEmails.Select(e => e.Email).ToList();
 		ViewData["GoogleEmail"] = email;
-		return View(emails);
+		return View(camareros);
 	}
 
 	[HttpPost]
-	public async Task<IActionResult> ConfirmarPerfil(string email, string googleEmail)
+	public async Task<IActionResult> SeleccionarPerfil(string emailCamarero)
 	{
-		// Verificar que el perfil elegido coincide con el email de Google autenticado
-		if (!string.Equals(email, googleEmail, StringComparison.OrdinalIgnoreCase))
-		{
-			TempData["LoginError"] = "No puedes seleccionar un perfil que no es el tuyo.";
+		if (TempData["GoogleAdminEmail"] is not string adminEmail)
 			return RedirectToAction("Index");
+
+		if (string.IsNullOrWhiteSpace(emailCamarero))
+		{
+			// Admin entra como administrador
+			var adminClaims = new List<Claim> {
+				new Claim(ClaimTypes.Name, adminEmail),
+				new Claim(ClaimTypes.Role, "Admin")
+			};
+			await Loguear(adminClaims);
+			return RedirectToAction("Listado", "Admin");
 		}
 
 		using var scope = HttpContext.RequestServices.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
-		if (!db.StaffEmails.Any(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
+		if (!db.StaffEmails.Any(e => e.Email.Equals(emailCamarero, StringComparison.OrdinalIgnoreCase)))
 		{
-			TempData["LoginError"] = "Perfil no autorizado.";
-			return RedirectToAction("Index");
+			TempData["LoginError"] = "Perfil no válido.";
+			TempData["GoogleAdminEmail"] = adminEmail;
+			return RedirectToAction("SeleccionarPerfil");
 		}
 
-		var claims = new List<Claim> {
-			new Claim(ClaimTypes.Name, email),
-			new Claim(ClaimTypes.Role, "Camarero")
-		};
-		await Loguear(claims);
+		await LoguearCamarero(emailCamarero);
 		return RedirectToAction("Index", "Staff");
 	}
 
-	// --- ACCESO POR ENLACE ÚNICO (sigue funcionando) ---
+	// --- ACCESO DIRECTO POR ENLACE ÚNICO (sin Google) ---
 
 	[HttpGet]
 	public async Task<IActionResult> Acceso(string email)
@@ -106,25 +117,19 @@ public class LoginController : Controller
 		if (string.IsNullOrWhiteSpace(email))
 			return RedirectToAction("Index", "Carta");
 
-		using (var scope = HttpContext.RequestServices.CreateScope())
+		using var scope = HttpContext.RequestServices.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
+		if (db.StaffEmails.Any(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
 		{
-			var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
-			if (db.StaffEmails.Any(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
-			{
-				var claims = new List<Claim> {
-					new Claim(ClaimTypes.Name, email.Trim()),
-					new Claim(ClaimTypes.Role, "Camarero")
-				};
-				await Loguear(claims);
-				return RedirectToAction("Index", "Staff");
-			}
+			await LoguearCamarero(email.Trim());
+			return RedirectToAction("Index", "Staff");
 		}
 
 		TempData["LoginError"] = "Correo no autorizado";
 		return RedirectToAction("Index");
 	}
 
-	// --- ADMIN CON PIN (acceso secundario) ---
+	// --- ADMIN POR PIN ---
 
 	[HttpPost]
 	public async Task<IActionResult> VerificarAdmin(string pin)
@@ -138,8 +143,18 @@ public class LoginController : Controller
 			await Loguear(claims);
 			return RedirectToAction("Listado", "Admin");
 		}
-		TempData["LoginError"] = "PIN incorrecto.";
 		return RedirectToAction("Index");
+	}
+
+	// --- HELPERS ---
+
+	private async Task LoguearCamarero(string email)
+	{
+		var claims = new List<Claim> {
+			new Claim(ClaimTypes.Name, email),
+			new Claim(ClaimTypes.Role, "Camarero")
+		};
+		await Loguear(claims);
 	}
 
 	private async Task Loguear(List<Claim> claims)

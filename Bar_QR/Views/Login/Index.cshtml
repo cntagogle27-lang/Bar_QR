@@ -1,4 +1,4 @@
-@{
+﻿@{
     Layout = null;
 }
 <!DOCTYPE html>
@@ -9,48 +9,45 @@
     <title>Acceso Bar_QR</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <style>
-        body { background: radial-gradient(circle, #2c3e50, #000); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: white; }
-        .login-card { background: rgba(255,255,255,.07); border-radius: 20px; padding: 3rem 2.5rem; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,.5); backdrop-filter: blur(6px); }
-        .btn-google { background: #fff; color: #444; font-weight: 700; font-size: 1.1rem; border-radius: 50px; padding: .85rem 2rem; border: none; width: 100%; display: flex; align-items: center; justify-content: center; gap: .75rem; box-shadow: 0 4px 14px rgba(0,0,0,.3); transition: .2s; text-decoration: none; }
-        .btn-google:hover { background: #f0f0f0; transform: translateY(-2px); }
-        .divider { color: #aaa; margin: 1.5rem 0; font-size: .85rem; }
-        .btn-pin { background: transparent; border: 1px solid rgba(255,255,255,.3); color: #ccc; font-size: .85rem; border-radius: 50px; padding: .4rem 1.2rem; }
-        .btn-pin:hover { background: rgba(255,255,255,.1); color: #fff; }
-        .pin-btn { width:65px; height:65px; margin:8px; border-radius:50%; font-size:24px; font-weight:bold; border:2px solid #eee; transition:.2s; }
-        .pin-btn:active { background:#eee; color:#000; }
-        #pinInput { background:#f8f9fa; color:#333; border:2px solid #ddd; font-size:35px; letter-spacing:15px; border-radius:10px; }
+        body { background: radial-gradient(circle, #2c3e50, #000000); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: white; }
+        .login-card { background: rgba(255,255,255,0.07); border-radius: 24px; padding: 3rem 2.5rem; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+        .btn-google { background: #fff; color: #444; font-size: 1.1rem; font-weight: 600; border-radius: 50px; padding: .9rem 2rem; width: 100%; border: none; display: flex; align-items: center; justify-content: center; gap: .75rem; box-shadow: 0 4px 14px rgba(0,0,0,.3); transition: .2s; text-decoration: none; }
+        .btn-google:hover { background: #f0f0f0; transform: translateY(-2px); color: #444; }
+        .btn-admin-link { color: rgba(255,255,255,.35); font-size: .8rem; text-decoration: none; }
+        .btn-admin-link:hover { color: rgba(255,255,255,.6); }
+        .pin-btn { width: 65px; height: 65px; margin: 8px; border-radius: 50%; font-size: 24px; font-weight: bold; border: 2px solid #eee; transition: .2s; }
+        .pin-btn:active { background: #eee; color: #000; }
+        #pinInput { background: #f8f9fa; color: #333; border: 2px solid #ddd; font-size: 35px; letter-spacing: 15px; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div class="login-card">
-        <div style="font-size:3.5rem">&#127976;</div>
-        <h2 class="fw-bold mt-2 mb-1">Bar_QR</h2>
-        <p class="text-secondary mb-4">Identifícate con tu cuenta Google</p>
+        <div style="font-size:3.5rem;margin-bottom:.5rem">🏨</div>
+        <h1 class="fw-bold mb-1" style="font-size:1.8rem">Bar_QR</h1>
+        <p class="text-white-50 mb-4">Acceso para personal</p>
 
         @if (TempData["LoginError"] is string loginError)
         {
-            <div class="alert alert-danger fw-bold py-2">@loginError</div>
+            <div class="alert alert-danger fw-bold">@loginError</div>
         }
 
-        <a href="@Url.Action("GoogleLogin","Login")" class="btn-google mb-2">
-            <svg width="22" height="22" viewBox="0 0 48 48">
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
-            Iniciar sesión con Google
+        <a href="@Url.Action("GoogleLogin","Login")" class="btn-google mb-4">
+            <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.8 6C12.3 13 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/><path fill="#FBBC05" d="M10.4 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.9-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6.3 0-11.7-4.3-13.6-10l-7.8 6C6.6 42.6 14.6 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+            Iniciar sesion con Google
         </a>
 
-        <div class="divider">── acceso de administrador ──</div>
-        <button class="btn-pin" data-bs-toggle="modal" data-bs-target="#modalPin">⚙️ Admin PIN</button>
+        <div class="mt-3">
+            <button class="btn btn-admin-link" data-bs-toggle="modal" data-bs-target="#modalPin">
+                Acceso admin con PIN
+            </button>
+        </div>
     </div>
 
     <div class="modal fade" id="modalPin" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content text-dark border-0 shadow-lg" style="border-radius:30px;width:350px;margin:auto">
                 <div class="modal-body p-4">
-                    <h4 class="text-center fw-bold mb-4">CÓDIGO ADMIN</h4>
+                    <h4 class="text-center fw-bold mb-4">CODIGO ADMIN</h4>
                     <form asp-action="VerificarAdmin" method="post">
                         <input type="password" name="pin" id="pinInput" class="form-control text-center mb-4" readonly maxlength="4" />
                         <div class="text-center">
@@ -83,8 +80,8 @@
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function press(n) { var i = document.getElementById('pinInput'); if (i.value.length < 4) i.value += n; }
-        function cls() { document.getElementById('pinInput').value = ''; }
+        function press(n) { const i = document.getElementById("pinInput"); if(i.value.length < 4) i.value += n; }
+        function cls() { document.getElementById("pinInput").value = ""; }
     </script>
 </body>
 </html>

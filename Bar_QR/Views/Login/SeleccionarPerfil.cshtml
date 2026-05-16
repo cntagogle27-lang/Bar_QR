@@ -1,7 +1,7 @@
-@model IEnumerable<string>
+﻿@model IEnumerable<string>
 @{
     Layout = null;
-    var googleEmail = ViewData["GoogleEmail"] as string ?? "";
+    var adminEmail = ViewData["GoogleEmail"] as string;
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -11,47 +11,45 @@
     <title>Seleccionar perfil</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <style>
-        body { background: radial-gradient(circle, #2c3e50, #000); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: white; }
-        .perfil-card { background: rgba(255,255,255,.07); border-radius: 20px; padding: 2.5rem 2rem; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,.5); backdrop-filter: blur(6px); }
-        .btn-perfil { background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.2); color: #fff; border-radius: 16px; padding: 1.2rem; font-size: 1.1rem; font-weight: 600; transition: .2s; width: 100%; }
-        .btn-perfil:hover { background: rgba(255,255,255,.2); border-color: #4ade80; color: #fff; transform: translateY(-3px); }
-        .avatar { font-size: 2.5rem; display: block; margin-bottom: .3rem; }
-        .email-badge { background: rgba(255,255,255,.15); border-radius: 50px; padding: .3rem 1rem; font-size: .85rem; color: #ccc; display: inline-block; margin-bottom: 1.5rem; }
+        body { background: radial-gradient(circle, #2c3e50, #000000); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: white; }
+        .perfil-card { background: rgba(255,255,255,0.07); border-radius: 24px; padding: 2.5rem 2rem; max-width: 520px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+        .btn-perfil { border-radius: 20px; padding: 1.1rem; font-size: 1.1rem; font-weight: 700; width: 100%; transition: .2s; border: 2px solid rgba(255,255,255,.15); background: rgba(255,255,255,.1); color: white; }
+        .btn-perfil:hover { background: rgba(255,255,255,.25); transform: translateY(-3px); color: white; }
+        .btn-admin { background: rgba(220,53,69,.3); border-color: rgba(220,53,69,.6); }
+        .btn-admin:hover { background: rgba(220,53,69,.5); }
     </style>
 </head>
 <body>
     <div class="perfil-card">
-        <div style="font-size:3rem">👋</div>
-        <h3 class="fw-bold mt-2 mb-1">¡Hola!</h3>
-        <div class="email-badge">✅ @googleEmail</div>
-        <p class="text-secondary mb-4">Selecciona tu perfil de camarero</p>
+        <div style="font-size:3rem;margin-bottom:.5rem">👋</div>
+        <h2 class="fw-bold mb-1">Hola, <span style="color:#7dd3fc">@(adminEmail?.Split("@")[0])</span></h2>
+        <p class="text-white-50 mb-4">Selecciona con quien vas a trabajar hoy</p>
 
         @if (TempData["LoginError"] is string err)
         {
-            <div class="alert alert-danger py-2">@err</div>
+            <div class="alert alert-danger">@err</div>
         }
 
-        <div class="d-flex flex-column gap-3">
-            @foreach (var email in Model)
+        <div class="d-grid gap-3">
+            @foreach (var camarero in Model)
             {
-                @* Solo mostramos el perfil del email autenticado *@
-                if (string.Equals(email, googleEmail, StringComparison.OrdinalIgnoreCase))
-                {
-                    <form asp-action="ConfirmarPerfil" method="post">
-                        <input type="hidden" name="email" value="@email" />
-                        <input type="hidden" name="googleEmail" value="@googleEmail" />
-                        <button type="submit" class="btn-perfil">
-                            <span class="avatar">🧑‍🍳</span>
-                            @email
-                        </button>
-                    </form>
-                }
+                <form asp-action="SeleccionarPerfil" method="post">
+                    <input type="hidden" name="emailCamarero" value="@camarero" />
+                    <button type="submit" class="btn-perfil">
+                        🧑‍🍳 @camarero
+                    </button>
+                </form>
             }
-        </div>
 
-        <a href="@Url.Action("Index","Login")" class="btn btn-link text-secondary mt-4 d-block">
-            Usar otra cuenta
-        </a>
+            <hr style="border-color:rgba(255,255,255,.2)" />
+
+            <form asp-action="SeleccionarPerfil" method="post">
+                <input type="hidden" name="emailCamarero" value="" />
+                <button type="submit" class="btn-perfil btn-admin">
+                    ⚙️ Entrar como Administrador
+                </button>
+            </form>
+        </div>
     </div>
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
