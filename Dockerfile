@@ -16,8 +16,8 @@ RUN mkdir -p /data
 COPY --from=build /app/publish .
 
 ENV DOTNET_RUNNING_IN_CONTAINER=true
-ENV ASPNETCORE_URLS=http://+:${PORT}
+ENV ASPNETCORE_URLS=http://+:80
 ENV ConnectionStrings__Sqlite="Data Source=/data/barqr.db"
 
-EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "ASPNETCORE_URLS=http://+:${PORT} dotnet Bar_QR.dll"]
+EXPOSE 80
+ENTRYPOINT ["dotnet", "Bar_QR.dll"]
