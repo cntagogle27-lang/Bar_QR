@@ -58,14 +58,22 @@ public class AdminController : Controller
 
     public IActionResult Ajustes()
     {
-        var vm = new Models.AdminAjustesViewModel
+        try
         {
-            Emails = _db.StaffEmails.Select(e => e.Email).ToList(),
-            Ips = _db.ProxyIps.Select(p => p.IpOrCidr).ToList(),
-            Proxies = _db.ProxyIps.Select(p => p.IpOrCidr).ToList(),
-            Tokens = _db.SiteTokens.Select(t => t.Token).ToList()
-        };
-        return View(vm);
+            var vm = new Models.AdminAjustesViewModel
+            {
+                Emails = _db.StaffEmails.Select(e => e.Email).ToList(),
+                Ips = _db.ProxyIps.Select(p => p.IpOrCidr).ToList(),
+                Proxies = _db.ProxyIps.Select(p => p.IpOrCidr).ToList(),
+                Tokens = _db.SiteTokens.Select(t => t.Token).ToList()
+            };
+            return View(vm);
+        }
+        catch
+        {
+            ViewData["AjustesError"] = "No se pudieron cargar los ajustes desde la base de datos.";
+            return View(new Models.AdminAjustesViewModel());
+        }
     }
 
     // Ajustes: gestionar correos del personal (gestión desde BD en el método Ajustes anterior)
