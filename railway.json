@@ -1,6 +1,6 @@
 {
   "build": {
-    "builder": "DOCKER"
+    "builder": "DOCKERFILE"
   },
   "deploy": {
     "port": 80
