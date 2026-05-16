@@ -19,4 +19,4 @@ ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV ConnectionStrings__Sqlite="Data Source=/data/barqr.db"
 
 EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "ASPNETCORE_URLS=http://+:${PORT} dotnet Bar_QR.dll"]
+ENTRYPOINT ["sh", "-c", "ASPNETCORE_URLS=http://+:${PORT:-8080} dotnet Bar_QR.dll"]
