@@ -37,10 +37,15 @@ builder.Services.AddAuthentication("CookieAuth")
 var app = builder.Build();
 
 // Inicializar DB y seed
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
     Bar_QR.Data.DbInitializer.Initialize(db);
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"[Startup] Error al inicializar la base de datos: {ex.Message}");
 }
 
 // Configure the HTTP request pipeline.
@@ -49,8 +54,10 @@ if (!app.Environment.IsDevelopment())
 	app.UseExceptionHandler("/Home/Error");
 	app.UseHsts();
 }
-
-app.UseHttpsRedirection();
+else
+{
+	app.UseHttpsRedirection();
+}
 
 // --- MAPEO DE ACTIVOS ESTÁTICOS (NUEVO EN .NET 9) ---
 app.MapStaticAssets();
@@ -130,22 +137,26 @@ app.MapControllerRoute(
     .WithStaticAssets();
 
 // Comprobar si la base de datos tiene mesas y crear 10 por defecto si está vacía
-using (var scope = app.Services.CreateScope())
+try
 {
-    var appDbContext = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
-
+    using var scope2 = app.Services.CreateScope();
+    var appDbContext = scope2.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
     if (!appDbContext.Mesas.Any())
     {
         for (int i = 1; i <= 10; i++)
         {
-            appDbContext.Mesas.Add(new Bar_QR.Models.Mesa 
-            { 
-                NumeroMesa = i, 
-                Estado = Bar_QR.Models.EstadoMesa.Libre 
+            appDbContext.Mesas.Add(new Bar_QR.Models.Mesa
+            {
+                NumeroMesa = i,
+                Estado = Bar_QR.Models.EstadoMesa.Libre
             });
         }
         appDbContext.SaveChanges();
     }
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"[Startup] Error al crear mesas por defecto: {ex.Message}");
 }
 
 app.Run();
