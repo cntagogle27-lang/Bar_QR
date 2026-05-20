@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Asegurar que las variables de entorno se cargan (Railway las inyecta como env vars del SO)
+builder.Configuration.AddEnvironmentVariables();
+
 // Configurar cadena SQLite y puerto desde entorno (Railway)
 var portEnv = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrEmpty(portEnv) && int.TryParse(portEnv, out var p))
@@ -36,14 +39,15 @@ builder.Services.AddAuthentication("CookieAuth")
 	.AddGoogle("Google", options =>
 	{
 		options.SignInScheme = "CookieAuth";
-		options.ClientId = builder.Configuration["Authentication:Google:ClientId"]
+		var clientId = builder.Configuration["Authentication:Google:ClientId"]
 			?? builder.Configuration["GOOGLE_CLIENT_ID"]
-			?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
 			?? "no-configurado";
-		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]
+		var clientSecret = builder.Configuration["Authentication:Google:ClientSecret"]
 			?? builder.Configuration["GOOGLE_CLIENT_SECRET"]
-			?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")
 			?? "no-configurado";
+		Console.WriteLine($"[OAuth] ClientId={clientId[..Math.Min(12,clientId.Length)]}... Secret={( clientSecret == "no-configurado" ? "NO" : "OK")}");
+		options.ClientId = clientId;
+		options.ClientSecret = clientSecret;
 		options.CallbackPath = "/Login/GoogleCallback";
 	});
 // ----------------------------------------------------
