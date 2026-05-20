@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -71,10 +72,9 @@ else
 }
 
 // Forzar esquema HTTPS para OAuth (Railway termina SSL en el proxy)
-app.UseForwardedHeaders(new Microsoft.AspNetCore.HttpOverrides.ForwardedHeadersOptions
+app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-	ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
-		| Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+	ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 // --- MAPEO DE ACTIVOS ESTÁTICOS (NUEVO EN .NET 9) ---
 app.MapStaticAssets();
