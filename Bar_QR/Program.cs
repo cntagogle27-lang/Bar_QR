@@ -30,9 +30,11 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Persistir claves de Data Protection en /data para que sobrevivan redeploys en Railway
+// Persistir claves de Data Protection en /data/keys (Railway monta /data como volumen)
+var keysDir = new System.IO.DirectoryInfo("/data/keys");
+if (!keysDir.Exists) keysDir.Create();
 builder.Services.AddDataProtection()
-	.PersistKeysToFileSystem(new System.IO.DirectoryInfo("/data/keys"))
+	.PersistKeysToFileSystem(keysDir)
 	.SetApplicationName("Bar_QR");
 
 // Configurar ForwardedHeaders para Railway (proxy SSL termination)
@@ -51,7 +53,11 @@ builder.Services.AddAuthentication("CookieAuth")
 		config.LoginPath = "/Login/Index";
 		config.AccessDeniedPath = "/Login/Index";
 	})
-	.AddCookie("External")
+	.AddCookie("External", o =>
+	{
+		o.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
+		o.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+	})
 	.AddGoogle("Google", options =>
 	{
 		options.SignInScheme = "External";
@@ -62,6 +68,7 @@ builder.Services.AddAuthentication("CookieAuth")
 		options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
 		options.CorrelationCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
 		options.CorrelationCookie.HttpOnly = true;
+		options.CorrelationCookie.IsEssential = true;
 		options.Events.OnRemoteFailure = ctx =>
 		{
 			var msg = ctx.Failure?.Message ?? "error desconocido";
