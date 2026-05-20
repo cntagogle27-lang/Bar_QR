@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,6 +30,11 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+// Persistir claves de Data Protection en /data para que sobrevivan redeploys en Railway
+builder.Services.AddDataProtection()
+	.PersistKeysToFileSystem(new System.IO.DirectoryInfo("/data/keys"))
+	.SetApplicationName("Bar_QR");
+
 // Configurar ForwardedHeaders para Railway (proxy SSL termination)
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -52,8 +58,10 @@ builder.Services.AddAuthentication("CookieAuth")
 		options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "no-configurado";
 		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "no-configurado";
 		options.CallbackPath = "/Login/GoogleCallback";
+		options.CorrelationCookie.Path = "/";
 		options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
 		options.CorrelationCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+		options.CorrelationCookie.HttpOnly = true;
 		options.Events.OnRemoteFailure = ctx =>
 		{
 			var msg = ctx.Failure?.Message ?? "error desconocido";

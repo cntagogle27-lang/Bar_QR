@@ -14,7 +14,7 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
-RUN mkdir -p /data && chown app:app /data
+RUN mkdir -p /data/keys && chown -R app:app /data
 
 USER app
 
