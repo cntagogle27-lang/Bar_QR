@@ -52,7 +52,7 @@ builder.Services.AddAuthentication("CookieAuth")
 	})
 	.AddCookie("External", o =>
 	{
-		o.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
+		o.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
 		o.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
 	})
 	.AddGoogle("Google", options =>
@@ -62,14 +62,17 @@ builder.Services.AddAuthentication("CookieAuth")
 		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "no-configurado";
 		options.CallbackPath = "/Login/GoogleCallback";
 		options.CorrelationCookie.Path = "/";
-		options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
+		options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
 		options.CorrelationCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
 		options.CorrelationCookie.HttpOnly = true;
 		options.CorrelationCookie.IsEssential = true;
 		options.Events.OnRemoteFailure = ctx =>
 		{
+			var inner = ctx.Failure?.InnerException?.Message ?? "";
 			var msg = ctx.Failure?.Message ?? "error desconocido";
-			ctx.Response.Redirect("/Login/Index?oauthError=" + Uri.EscapeDataString(msg));
+			var full = string.IsNullOrEmpty(inner) ? msg : $"{msg} | {inner}";
+			Console.Error.WriteLine($"[OAuth] RemoteFailure: {ctx.Failure}");
+			ctx.Response.Redirect("/Login/Index?oauthError=" + Uri.EscapeDataString(full));
 			ctx.HandleResponse();
 			return Task.CompletedTask;
 		};
@@ -90,15 +93,15 @@ catch (Exception ex)
     Console.Error.WriteLine($"[Startup] Error al inicializar la base de datos: {ex.Message}");
 }
 
-// Railway termina SSL en el proxy: forzar HTTPS para que las cookies de correlación OAuth funcionen.
+// Railway termina SSL en el proxy ? ForwardedHeaders lee X-Forwarded-Proto del proxy.
+app.UseForwardedHeaders();
+
+// Fallback: forzar HTTPS si ForwardedHeaders no lo estableció (seguridad extra para Railway).
 app.Use((context, next) =>
 {
     context.Request.Scheme = "https";
     return next(context);
 });
-
-// Railway termina SSL en el proxy 
-app.UseForwardedHeaders();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
