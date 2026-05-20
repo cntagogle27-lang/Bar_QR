@@ -29,7 +29,15 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// --- PASO 1: CONFIGURACIÓN DE SEGURIDAD (COOKIES) ---
+// Configurar ForwardedHeaders para Railway (proxy SSL termination)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+	options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+	options.KnownNetworks.Clear();
+	options.KnownProxies.Clear();
+});
+
+// --- PASO 1: CONFIGURACI
 builder.Services.AddAuthentication("CookieAuth")
 	.AddCookie("CookieAuth", config =>
 	{
@@ -43,6 +51,8 @@ builder.Services.AddAuthentication("CookieAuth")
 		options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "no-configurado";
 		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "no-configurado";
 		options.CallbackPath = "/Login/GoogleCallback";
+		options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
+		options.CorrelationCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
 	});
 // ----------------------------------------------------
 
@@ -60,6 +70,9 @@ catch (Exception ex)
     Console.Error.WriteLine($"[Startup] Error al inicializar la base de datos: {ex.Message}");
 }
 
+// Railway termina SSL en el proxy — ForwardedHeaders reescribe Scheme/IP desde cabeceras del proxy
+app.UseForwardedHeaders();
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
@@ -70,13 +83,6 @@ else
 {
 	app.UseHttpsRedirection();
 }
-
-// Railway termina SSL en el proxy — forzar HTTPS para que OAuth genere redirect_uri correcto
-app.Use((context, next) =>
-{
-	context.Request.Scheme = "https";
-	return next();
-});
 
 app.MapStaticAssets();
 
