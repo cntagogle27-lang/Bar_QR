@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Bar_QR.Models;
 
 namespace Bar_QR.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext : DbContext, IDataProtectionKeyContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -12,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<StaffEmail> StaffEmails { get; set; }
     public DbSet<ProxyIp> ProxyIps { get; set; }
     public DbSet<SiteToken> SiteTokens { get; set; }
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

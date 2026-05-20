@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Asegurar que las variables de entorno se cargan (Railway las inyecta como env vars del SO)
@@ -30,11 +29,9 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Persistir claves de Data Protection en /data/keys (Railway monta /data como volumen)
-var keysDir = new System.IO.DirectoryInfo("/data/keys");
-if (!keysDir.Exists) keysDir.Create();
+// Persistir claves de Data Protection en SQLite (persiste entre redeploys en Railway)
 builder.Services.AddDataProtection()
-	.PersistKeysToFileSystem(keysDir)
+	.PersistKeysToDbContext<Bar_QR.Data.AppDbContext>()
 	.SetApplicationName("Bar_QR");
 
 // Configurar ForwardedHeaders para Railway (proxy SSL termination)
