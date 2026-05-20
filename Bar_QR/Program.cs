@@ -90,7 +90,14 @@ catch (Exception ex)
     Console.Error.WriteLine($"[Startup] Error al inicializar la base de datos: {ex.Message}");
 }
 
-// Railway termina SSL en el proxy — ForwardedHeaders reescribe Scheme/IP desde cabeceras del proxy
+// Railway termina SSL en el proxy: forzar HTTPS para que las cookies de correlación OAuth funcionen.
+app.Use((context, next) =>
+{
+    context.Request.Scheme = "https";
+    return next(context);
+});
+
+// Railway termina SSL en el proxy 
 app.UseForwardedHeaders();
 
 // Configure the HTTP request pipeline.
