@@ -39,15 +39,7 @@ builder.Services.AddAuthentication("CookieAuth")
 	.AddGoogle("Google", options =>
 	{
 		options.SignInScheme = "CookieAuth";
-		var clientId = builder.Configuration["Authentication:Google:ClientId"]
-			?? builder.Configuration["GOOGLE_CLIENT_ID"]
-			?? "no-configurado";
-		var clientSecret = builder.Configuration["Authentication:Google:ClientSecret"]
-			?? builder.Configuration["GOOGLE_CLIENT_SECRET"]
-			?? "no-configurado";
-		Console.WriteLine($"[OAuth] ClientId={clientId[..Math.Min(12,clientId.Length)]}... Secret={( clientSecret == "no-configurado" ? "NO" : "OK")}");
-		options.ClientId = clientId;
-		options.ClientSecret = clientSecret;
+		builder.Configuration.Bind("Authentication:Google", options);
 		options.CallbackPath = "/Login/GoogleCallback";
 	});
 // ----------------------------------------------------
