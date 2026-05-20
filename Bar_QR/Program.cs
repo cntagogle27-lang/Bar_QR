@@ -45,14 +45,22 @@ builder.Services.AddAuthentication("CookieAuth")
 		config.LoginPath = "/Login/Index";
 		config.AccessDeniedPath = "/Login/Index";
 	})
+	.AddCookie("External")
 	.AddGoogle("Google", options =>
 	{
-		options.SignInScheme = "CookieAuth";
+		options.SignInScheme = "External";
 		options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "no-configurado";
 		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "no-configurado";
 		options.CallbackPath = "/Login/GoogleCallback";
 		options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
 		options.CorrelationCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+		options.Events.OnRemoteFailure = ctx =>
+		{
+			var msg = ctx.Failure?.Message ?? "error desconocido";
+			ctx.Response.Redirect("/Login/Index?oauthError=" + Uri.EscapeDataString(msg));
+			ctx.HandleResponse();
+			return Task.CompletedTask;
+		};
 	});
 // ----------------------------------------------------
 

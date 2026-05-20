@@ -24,7 +24,8 @@ public class LoginController : Controller
 	[HttpGet]
 	public async Task<IActionResult> GoogleCallback()
 	{
-		var result = await HttpContext.AuthenticateAsync("CookieAuth");
+		// Leer el ticket del esquema externo temporal
+		var result = await HttpContext.AuthenticateAsync("External");
 		if (!result.Succeeded)
 		{
 			TempData["LoginError"] = "No se pudo autenticar con Google.";
@@ -41,10 +42,12 @@ public class LoginController : Controller
 			return RedirectToAction("Index");
 		}
 
+		// Limpiar cookie externa temporal
+		await HttpContext.SignOutAsync("External");
+
 		// Admin principal → seleccionar perfil de camarero
 		if (string.Equals(email, AdminEmail, StringComparison.OrdinalIgnoreCase))
 		{
-			// Guardar email en sesión temporal para confirmar identidad
 			TempData["GoogleAdminEmail"] = email;
 			return RedirectToAction("SeleccionarPerfil");
 		}
