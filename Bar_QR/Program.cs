@@ -7,6 +7,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Asegurar que las variables de entorno se cargan (Railway las inyecta como env vars del SO)
 builder.Configuration.AddEnvironmentVariables();
 
+// Configurar cadena SQLite y puerto desde entorno (Railway)
+var portEnv = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(portEnv) && int.TryParse(portEnv, out var p))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{p}");
+}
+
 var sqlitePath = builder.Configuration.GetConnectionString("Sqlite") ?? "Data Source=barqr.db";
 
 builder.Services.AddSingleton(new Func<string>(() => sqlitePath));
