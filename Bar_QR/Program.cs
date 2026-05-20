@@ -71,12 +71,13 @@ else
 	app.UseHttpsRedirection();
 }
 
-// Forzar esquema HTTPS para OAuth (Railway termina SSL en el proxy)
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+// Railway termina SSL en el proxy — forzar HTTPS para que OAuth genere redirect_uri correcto
+app.Use((context, next) =>
 {
-	ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+	context.Request.Scheme = "https";
+	return next();
 });
-// --- MAPEO DE ACTIVOS ESTÁTICOS (NUEVO EN .NET 9) ---
+
 app.MapStaticAssets();
 
 // Middleware para detección automática de personal vía header (opcional)
