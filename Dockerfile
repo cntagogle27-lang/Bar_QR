@@ -14,9 +14,7 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
-RUN mkdir -p /data/keys && chown -R app:app /data
-
-USER app
+RUN mkdir -p /data/keys && chmod -R 777 /data
 
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV ConnectionStrings__Sqlite="Data Source=/data/barqr.db"
