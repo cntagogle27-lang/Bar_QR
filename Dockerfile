@@ -6,6 +6,7 @@ RUN dotnet restore "Bar_QR/Bar_QR.csproj"
 
 COPY . .
 WORKDIR /src/Bar_QR
+ARG CACHEBUST=1
 RUN dotnet publish "Bar_QR.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
