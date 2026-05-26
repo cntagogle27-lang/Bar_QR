@@ -48,14 +48,10 @@ public class AdminController : Controller
 	{
 		if (foto != null && foto.Length > 0)
 		{
-			var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "productos");
-			Directory.CreateDirectory(uploadsDir);
-			var ext = Path.GetExtension(foto.FileName);
-			var fileName = $"{Guid.NewGuid()}{ext}";
-			var filePath = Path.Combine(uploadsDir, fileName);
-			using var stream = System.IO.File.Create(filePath);
-			await foto.CopyToAsync(stream);
-			nuevo.FotoUrl = $"/uploads/productos/{fileName}";
+			using var ms = new MemoryStream();
+			await foto.CopyToAsync(ms);
+			nuevo.FotoData = ms.ToArray();
+			nuevo.FotoMimeType = foto.ContentType;
 		}
 		_db.Productos.Add(nuevo);
 		_db.SaveChanges();
@@ -88,19 +84,25 @@ public class AdminController : Controller
 
 		if (foto != null && foto.Length > 0)
 		{
-			var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "productos");
-			Directory.CreateDirectory(uploadsDir);
-			var ext = Path.GetExtension(foto.FileName);
-			var fileName = $"{Guid.NewGuid()}{ext}";
-			var filePath = Path.Combine(uploadsDir, fileName);
-			using var stream = System.IO.File.Create(filePath);
-			await foto.CopyToAsync(stream);
-			producto.FotoUrl = $"/uploads/productos/{fileName}";
+			using var ms = new MemoryStream();
+			await foto.CopyToAsync(ms);
+			producto.FotoData = ms.ToArray();
+			producto.FotoMimeType = foto.ContentType;
 		}
 
 		_db.SaveChanges();
 		TempData["ProductoOk"] = "Producto actualizado correctamente.";
 		return RedirectToAction("Listado");
+	}
+
+	/// <summary>Sirve la foto de un producto directamente desde la base de datos.</summary>
+	[AllowAnonymous]
+	public IActionResult FotoProducto(int id)
+	{
+		var producto = _db.Productos.Find(id);
+		if (producto?.FotoData == null || producto.FotoMimeType == null)
+			return NotFound();
+		return File(producto.FotoData, producto.FotoMimeType);
 	}
 
 	[HttpPost]

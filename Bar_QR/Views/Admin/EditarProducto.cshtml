@@ -46,9 +46,9 @@
 
 			<div class="form-group mb-3">
 				<label class="control-label fw-bold">📷 Foto actual</label><br />
-				@if (!string.IsNullOrEmpty(Model.FotoUrl))
+				@if (Model.FotoData != null)
 				{
-					<img src="@Model.FotoUrl" alt="Foto actual" class="rounded mb-2" style="max-height:120px;" />
+					<img src="/Admin/FotoProducto/@Model.Id" alt="Foto actual" class="rounded mb-2" style="max-height:120px;" />
 					<div class="form-text">Sube una nueva para reemplazarla.</div>
 				}
 				else

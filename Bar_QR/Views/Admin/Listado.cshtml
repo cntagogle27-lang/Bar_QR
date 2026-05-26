@@ -58,9 +58,9 @@
                 {
                     <tr>
                         <td>
-                            @if (!string.IsNullOrEmpty(item.FotoUrl))
+                            @if (item.FotoData != null)
                             {
-                                <img src="@item.FotoUrl" alt="@item.Nombre" class="rounded" style="width:48px;height:48px;object-fit:cover;" />
+                                <img src="/Admin/FotoProducto/@item.Id" alt="@item.Nombre" class="rounded" style="width:48px;height:48px;object-fit:cover;" />
                             }
                             else
                             {

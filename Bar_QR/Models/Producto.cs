@@ -35,4 +35,8 @@ public class Producto
 	public DestinoImpresion DestinoImpresion { get; set; }
 	/// <summary>Ruta relativa desde wwwroot, ej: /uploads/productos/foto.jpg</summary>
 	public string? FotoUrl { get; set; }
+	/// <summary>Bytes de la imagen guardada en base de datos (persiste en Railway)</summary>
+	public byte[]? FotoData { get; set; }
+	/// <summary>MIME type de la imagen, ej: image/webp, image/jpeg</summary>
+	public string? FotoMimeType { get; set; }
 }
