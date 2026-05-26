@@ -21,8 +21,9 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
         {
             b.HasKey(p => p.Id);
             b.Property(p => p.Nombre).IsRequired();
-            // SQLite no soporta bien "decimal(10,2)" como tipo SQL. Usamos conversión a double para persistencia.
+            // SQLite no soporta bien "decimal(10,2)" como tipo SQL. Usamos conversiï¿½n a double para persistencia.
             b.Property(p => p.Precio).HasConversion<double>();
+            b.Property(p => p.Grupo).HasConversion<int>();
         });
 
         modelBuilder.Entity<Mesa>(b =>

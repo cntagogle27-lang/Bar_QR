@@ -38,24 +38,83 @@ public class AdminController : Controller
         _db = db;
     }
 
-    public IActionResult NuevoProducto()
+	public IActionResult NuevoProducto()
 	{
-		return View(); // Esto le dice: "busca el archivo NuevoProducto.cshtml"
+		return View();
 	}
 
-    [HttpPost]
-    public IActionResult Guardar(Producto nuevo)
-    {
-        _db.Productos.Add(nuevo);
-        _db.SaveChanges();
-        return RedirectToAction("Listado");
-    }
+	[HttpPost]
+	public async Task<IActionResult> Guardar(Producto nuevo, IFormFile? foto)
+	{
+		if (foto != null && foto.Length > 0)
+		{
+			var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "productos");
+			Directory.CreateDirectory(uploadsDir);
+			var ext = Path.GetExtension(foto.FileName);
+			var fileName = $"{Guid.NewGuid()}{ext}";
+			var filePath = Path.Combine(uploadsDir, fileName);
+			using var stream = System.IO.File.Create(filePath);
+			await foto.CopyToAsync(stream);
+			nuevo.FotoUrl = $"/uploads/productos/{fileName}";
+		}
+		_db.Productos.Add(nuevo);
+		_db.SaveChanges();
+		return RedirectToAction("Listado");
+	}
 
-    public IActionResult Listado()
-    {
-        var productos = _db.Productos.ToList();
-        return View(productos);
-    }
+	public IActionResult Listado()
+	{
+		var productos = _db.Productos.OrderBy(p => p.Grupo).ThenBy(p => p.Nombre).ToList();
+		return View(productos);
+	}
+
+	public IActionResult EditarProducto(int id)
+	{
+		var producto = _db.Productos.Find(id);
+		if (producto == null) return NotFound();
+		return View(producto);
+	}
+
+	[HttpPost]
+	public async Task<IActionResult> EditarProducto(Producto editado, IFormFile? foto)
+	{
+		var producto = _db.Productos.Find(editado.Id);
+		if (producto == null) return NotFound();
+
+		producto.Nombre = editado.Nombre;
+		producto.Precio = editado.Precio;
+		producto.Grupo = editado.Grupo;
+		producto.DestinoImpresion = editado.DestinoImpresion;
+
+		if (foto != null && foto.Length > 0)
+		{
+			var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "productos");
+			Directory.CreateDirectory(uploadsDir);
+			var ext = Path.GetExtension(foto.FileName);
+			var fileName = $"{Guid.NewGuid()}{ext}";
+			var filePath = Path.Combine(uploadsDir, fileName);
+			using var stream = System.IO.File.Create(filePath);
+			await foto.CopyToAsync(stream);
+			producto.FotoUrl = $"/uploads/productos/{fileName}";
+		}
+
+		_db.SaveChanges();
+		TempData["ProductoOk"] = "Producto actualizado correctamente.";
+		return RedirectToAction("Listado");
+	}
+
+	[HttpPost]
+	public IActionResult BorrarProducto(int id)
+	{
+		var producto = _db.Productos.Find(id);
+		if (producto != null)
+		{
+			_db.Productos.Remove(producto);
+			_db.SaveChanges();
+			TempData["ProductoOk"] = "Producto eliminado.";
+		}
+		return RedirectToAction("Listado");
+	}
 
     public IActionResult Ajustes()
     {

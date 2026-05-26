@@ -5,22 +5,21 @@
 }
 
 <h1 class="text-primary">Añadir Nuevo Producto</h1>
-
 <h4>Gestión de Carta</h4>
 <hr />
 <div class="row">
     <div class="col-md-6">
-        <form asp-action="Guardar" method="post" class="shadow p-4 rounded bg-light">
+        <form asp-action="Guardar" method="post" enctype="multipart/form-data" class="shadow p-4 rounded bg-light">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
             <div class="form-group mb-3">
                 <label asp-for="Nombre" class="control-label fw-bold">Nombre del Producto</label>
-                <input asp-for="Nombre" class="form-control" placeholder="Ej: Pizza Barbacoa" />
+                <input asp-for="Nombre" class="form-control" placeholder="Ej: Entrecot a la brasa" />
                 <span asp-validation-for="Nombre" class="text-danger"></span>
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="Precio" class="control-label fw-bold">Precio (en €)</label>
+                <label asp-for="Precio" class="control-label fw-bold">Precio (€)</label>
                 <div class="input-group">
                     <input asp-for="Precio" class="form-control" type="number" step="0.01" placeholder="0.00" />
                     <span class="input-group-text">€</span>
@@ -28,17 +27,32 @@
                 <span asp-validation-for="Precio" class="text-danger"></span>
             </div>
 
-            <div class="form-group mb-4">
+            <div class="form-group mb-3">
+                <label asp-for="Grupo" class="control-label fw-bold">Grupo / Categoría</label>
+                <select asp-for="Grupo" class="form-select"
+                        asp-items="Html.GetEnumSelectList<Bar_QR.Models.GrupoProducto>()">
+                    <option value="">— Selecciona grupo —</option>
+                </select>
+                <span asp-validation-for="Grupo" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
                 <label asp-for="DestinoImpresion" class="control-label fw-bold">📍 Destino de Comanda</label>
-                <select asp-for="DestinoImpresion" class="form-control"
+                <select asp-for="DestinoImpresion" class="form-select"
                         asp-items="Html.GetEnumSelectList<Bar_QR.Models.DestinoImpresion>()">
                 </select>
                 <span asp-validation-for="DestinoImpresion" class="text-danger"></span>
             </div>
 
+            <div class="form-group mb-4">
+                <label for="foto" class="control-label fw-bold">📷 Foto del producto (opcional)</label>
+                <input type="file" name="foto" id="foto" class="form-control" accept="image/*" />
+                <div class="form-text">JPG, PNG o WEBP. Máx. 5 MB.</div>
+            </div>
+
             <div class="form-group">
                 <button type="submit" class="btn btn-success w-100 fw-bold">
-                    ✅ Guardar Producto y Configurar Destino
+                    ✅ Guardar Producto
                 </button>
             </div>
         </form>
@@ -50,7 +64,5 @@
 </div>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }

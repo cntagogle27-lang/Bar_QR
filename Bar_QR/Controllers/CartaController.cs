@@ -26,7 +26,7 @@ public class CartaController : Controller
             ViewData["MesaSeleccionada"] = mesa.Value;
         }
 
-        var productosReales = _db.Productos.ToList();
+        var productosReales = _db.Productos.OrderBy(p => (int)p.Grupo).ThenBy(p => p.Nombre).ToList();
         return View(productosReales);
     }
 
@@ -53,7 +53,7 @@ public class CartaController : Controller
 	{
 		var mesa = _db.Mesas.FirstOrDefault(m => m.Slug == slug);
 		if (mesa == null) return NotFound("Mesa no encontrada.");
-		var productos = _db.Productos.ToList();
+		var productos = _db.Productos.OrderBy(p => (int)p.Grupo).ThenBy(p => p.Nombre).ToList();
 		ViewData["MesaSeleccionada"] = mesa.NumeroMesa;
 		ViewData["MesaNombre"] = mesa.Nombre;
 		return View("Index", productos);

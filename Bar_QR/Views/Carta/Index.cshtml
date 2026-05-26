@@ -1,37 +1,76 @@
 ﻿@model IEnumerable<Bar_QR.Models.Producto>
 
+@{
+    var grupoNombres = new Dictionary<Bar_QR.Models.GrupoProducto, string>
+    {
+        { Bar_QR.Models.GrupoProducto.CafeInfusiones,  "☕ Café e Infusiones" },
+        { Bar_QR.Models.GrupoProducto.Desayunos,       "🥐 Desayunos" },
+        { Bar_QR.Models.GrupoProducto.Vinos,           "🍷 Vinos" },
+        { Bar_QR.Models.GrupoProducto.Bebidas,         "🥤 Bebidas" },
+        { Bar_QR.Models.GrupoProducto.Ensaladas,       "🥗 Ensaladas" },
+        { Bar_QR.Models.GrupoProducto.Entrantes,       "🍢 Entrantes" },
+        { Bar_QR.Models.GrupoProducto.Quesos,          "🧀 Quesos" },
+        { Bar_QR.Models.GrupoProducto.Horno,           "🔥 Horno" },
+        { Bar_QR.Models.GrupoProducto.Carnes,          "🥩 Carnes" },
+        { Bar_QR.Models.GrupoProducto.Postres,         "🍮 Postres" },
+        { Bar_QR.Models.GrupoProducto.LicoresCocteles, "🍸 Licores y Cócteles" },
+    };
+
+    var grupos = Model
+        .GroupBy(p => p.Grupo)
+        .OrderBy(g => (int)g.Key)
+        .ToList();
+}
+
 <div class="container-fluid mt-3">
     <div class="row">
-        <div class="col-md-8">
-            <h2 class="mb-4">🍴 Nuestra Carta</h2>
-            @if(ViewData["MesaSeleccionada"] != null)
+        <div class="col-lg-8">
+            <h2 class="mb-1">🍴 Nuestra Carta</h2>
+            @if (ViewData["MesaNombre"] != null)
             {
-                <div class="mb-2 text-muted small" data-mesa="@ViewData["MesaSeleccionada"]">Mesa: <span class="fw-bold">@ViewData["MesaSeleccionada"]</span></div>
+                <p class="text-muted mb-3">📍 @ViewData["MesaNombre"]</p>
             }
-            <div class="row row-cols-1 row-cols-md-2 g-4">
-                @foreach (var item in Model)
-                {
-                    <div class="col">
-                        <div class="card h-100 shadow-sm border-0">
-                            <div class="card-body d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h5 class="card-title fw-bold">@item.Nombre</h5>
-                                    <p class="text-success fs-5">@item.Precio.ToString("F2") €</p>
-                                    <span class="badge bg-light text-muted border">@item.DestinoImpresion</span>
+            else if (ViewData["MesaSeleccionada"] != null)
+            {
+                <p class="text-muted mb-3" data-mesa="@ViewData["MesaSeleccionada"]">
+                    Mesa <strong>@ViewData["MesaSeleccionada"]</strong>
+                </p>
+            }
+
+            @foreach (var grupo in grupos)
+            {
+                var titulo = grupoNombres.TryGetValue(grupo.Key, out var t) ? t : grupo.Key.ToString();
+                <h4 class="mt-4 mb-3 border-bottom pb-2 text-dark">@titulo</h4>
+                <div class="row row-cols-1 row-cols-md-2 g-3 mb-2">
+                    @foreach (var item in grupo.OrderBy(p => p.Nombre))
+                    {
+                        <div class="col">
+                            <div class="card h-100 shadow-sm border-0">
+                                @if (!string.IsNullOrEmpty(item.FotoUrl))
+                                {
+                                    <img src="@item.FotoUrl" class="card-img-top"
+                                         alt="@item.Nombre"
+                                         style="height:160px;object-fit:cover;" />
+                                }
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="card-title fw-bold mb-1">@item.Nombre</h5>
+                                        <p class="text-success fs-5 mb-0">@item.Precio.ToString("F2") €</p>
+                                    </div>
+                                    <button class="btn btn-primary rounded-pill px-3 btn-agregar"
+                                            data-nombre="@System.Text.Encodings.Web.HtmlEncoder.Default.Encode(item.Nombre)"
+                                            data-precio="@item.Precio.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                                        ➕
+                                    </button>
                                 </div>
-                                <button class="btn btn-primary rounded-pill px-3 btn-agregar"
-                                        data-nombre="@System.Text.Encodings.Web.HtmlEncoder.Default.Encode(item.Nombre)"
-                                        data-precio="@item.Precio.ToString(System.Globalization.CultureInfo.InvariantCulture)">
-                                    ➕ Añadir
-                                </button>
                             </div>
                         </div>
-                    </div>
-                }
-            </div>
+                    }
+                </div>
+            }
         </div>
 
-        <div class="col-md-4">
+        <div class="col-lg-4">
             <div class="card shadow border-primary sticky-top" style="top: 20px;">
                 <div class="card-header bg-primary text-white text-center">
                     <h4 class="mb-0">🛒 Mi Pedido</h4>
@@ -72,11 +111,9 @@
         });
 
         document.getElementById('btn-enviar-pedido').addEventListener('click', () => {
-            if(carrito.length === 0) return alert("¡Añade algo antes de pedir!");
-            // Obtenemos mesa seleccionada
+            if (carrito.length === 0) return alert("¡Añade algo antes de pedir!");
             const mesaElem = document.querySelector('[data-mesa]');
             const mesa = mesaElem ? mesaElem.dataset.mesa : null;
-            // Aquí enviaríamos el pedido al servidor (fetch / post)
             alert("¡Pedido enviado! En breve lo recibirás.");
             carrito = [];
             total = 0;
@@ -86,15 +123,13 @@
         function actualizarInterfaz() {
             const lista = document.getElementById('lista-carrito');
             const totalTxt = document.getElementById('total-precio');
-
-            if(carrito.length === 0) {
+            if (carrito.length === 0) {
                 lista.innerHTML = '<li class="list-group-item text-center text-muted py-4">Tu carrito está vacío</li>';
             } else {
                 lista.innerHTML = carrito.map(i => `
-                    <li class="list-group-item d-flex justify-content-between align-items-center animate__animated animate__fadeIn">
-                        ${i.nombre} <span>${i.precio.toFixed(2)} €</span>
-                    </li>
-                `).join('');
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${i.nombre} <span class="text-success fw-bold">${i.precio.toFixed(2)} €</span>
+                    </li>`).join('');
             }
             totalTxt.innerText = total.toFixed(2) + " €";
         }

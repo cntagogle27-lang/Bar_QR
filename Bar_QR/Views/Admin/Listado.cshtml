@@ -6,58 +6,91 @@
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="text-primary">📋 Gestión de Productos</h1>
+        <h1 class="text-primary">📋 Gestión de Carta</h1>
         <div>
-            <a asp-action="NuevoProducto" class="btn btn-success fw-bold">➕ Añadir Nuevo Producto</a>
+            <a asp-action="NuevoProducto" class="btn btn-success fw-bold">➕ Añadir Producto</a>
             <a asp-action="Ajustes" class="btn btn-outline-secondary fw-bold ms-2">⚙️ Ajustes</a>
         </div>
     </div>
 
-    <table class="table table-hover shadow-sm bg-white rounded">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>Nombre del Plato</th>
-                <th>Precio</th>
-                <th class="text-center">📍 Destino</th>
-                <th class="text-center">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr>
-                    <td class="fw-bold text-muted">#@item.Id</td>
-                    <td class="fw-bold">@item.Nombre</td>
-                    <td class="text-success fw-bold">@item.Precio.ToString("F2") €</td>
-                    <td class="text-center">
-                        @if (item.DestinoImpresion.ToString() == "Cocina")
-                        {
-                            <span class="badge bg-danger p-2"><i class="bi bi-egg-fried"></i> 🍳 Cocina</span>
-                        }
-                        else if (item.DestinoImpresion.ToString() == "Barra")
-                        {
-                            <span class="badge bg-warning text-dark p-2">🍺 Barra</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-info text-dark p-2">🔄 Ambos</span>
-                        }
-                    </td>
-                    <td class="text-center">
-                        <div class="btn-group" role="group">
-                            <a href="#" class="btn btn-outline-primary btn-sm">📝 Editar</a>
-                            <a href="#" class="btn btn-outline-danger btn-sm">🗑️ Borrar</a>
-                        </div>
-                    </td>
-                </tr>
+    @if (TempData["ProductoOk"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">@TempData["ProductoOk"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @{
+        var grupos = Model.GroupBy(p => p.Grupo).OrderBy(g => (int)g.Key);
+    }
+
+    @foreach (var grupo in grupos)
+    {
+        <h5 class="mt-4 mb-2 text-secondary border-bottom pb-1">
+            @grupo.Key.ToString() switch {
+                "CafeInfusiones" => "☕ Café e Infusiones",
+                "Desayunos"      => "🥐 Desayunos",
+                "Vinos"          => "🍷 Vinos",
+                "Bebidas"        => "🥤 Bebidas",
+                "Ensaladas"      => "🥗 Ensaladas",
+                "Entrantes"      => "🍢 Entrantes",
+                "Quesos"         => "🧀 Quesos",
+                "Horno"          => "🔥 Horno",
+                "Carnes"         => "🥩 Carnes",
+                "Postres"        => "🍮 Postres",
+                "LicoresCocteles"=> "🍸 Licores y Cócteles",
+                _                => grupo.Key.ToString()
             }
-        </tbody>
-    </table>
+        </h5>
+        <table class="table table-hover shadow-sm bg-white rounded mb-2">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width:60px">Foto</th>
+                    <th>Nombre</th>
+                    <th>Precio</th>
+                    <th class="text-center">Destino</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in grupo.OrderBy(p => p.Nombre))
+                {
+                    <tr>
+                        <td>
+                            @if (!string.IsNullOrEmpty(item.FotoUrl))
+                            {
+                                <img src="@item.FotoUrl" alt="@item.Nombre" class="rounded" style="width:48px;height:48px;object-fit:cover;" />
+                            }
+                            else
+                            {
+                                <span class="text-muted small">—</span>
+                            }
+                        </td>
+                        <td class="fw-bold align-middle">@item.Nombre</td>
+                        <td class="text-success fw-bold align-middle">@item.Precio.ToString("F2") €</td>
+                        <td class="text-center align-middle">
+                            @if (item.DestinoImpresion == Bar_QR.Models.DestinoImpresion.Cocina)
+                            { <span class="badge bg-danger p-2">🍳 Cocina</span> }
+                            else
+                            { <span class="badge bg-warning text-dark p-2">🍺 Barra</span> }
+                        </td>
+                        <td class="text-center align-middle">
+                            <a asp-action="EditarProducto" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">📝 Editar</a>
+                            <form asp-action="BorrarProducto" method="post" class="d-inline"
+                                  onsubmit="return confirm('¿Seguro que quieres borrar @item.Nombre?')">
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button type="submit" class="btn btn-outline-danger btn-sm">🗑️ Borrar</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
 
     @if (!Model.Any())
     {
-        <div class="alert alert-info text-center">
+        <div class="alert alert-info text-center mt-4">
             Aún no hay productos. ¡Pulsa el botón de arriba para crear el primero!
         </div>
     }
