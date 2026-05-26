@@ -25,6 +25,29 @@
     bool puedesPedir = ViewData["MesaSeleccionada"] != null || ViewData["MesaNombre"] != null;
 }
 
+<style>
+    .reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+    .reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.07s; }
+    .reveal-delay-2 { transition-delay: 0.14s; }
+    .card {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #e0e0e0;
+        border: 1px solid rgba(255,255,255,0.07) !important;
+    }
+    .card .card-title { color: #f0f0f0; }
+    .card .text-success { color: #4ecca3 !important; }
+    .border-bottom { border-color: rgba(255,255,255,0.15) !important; }
+    h2, h4.text-dark { color: #e8e8e8 !important; }
+    .container-fluid { background: #0f0f1a; min-height: 100vh; padding-bottom: 3rem; }
+</style>
 <div class="container-fluid mt-3">
     <div class="row">
         <div class="col-lg-8">
@@ -43,11 +66,11 @@
             @foreach (var grupo in grupos)
             {
                 var titulo = grupoNombres.TryGetValue(grupo.Key, out var t) ? t : grupo.Key.ToString();
-                <h4 class="mt-4 mb-3 border-bottom pb-2 text-dark">@titulo</h4>
+                <h4 class="mt-4 mb-3 border-bottom pb-2 text-dark reveal">@titulo</h4>
                 <div class="row row-cols-1 row-cols-md-2 g-3 mb-2">
                     @foreach (var item in grupo.OrderBy(p => p.Nombre))
                     {
-                        <div class="col">
+                        <div class="col reveal">
                             <div class="card h-100 shadow-sm border-0">
                                     <div class="card-body d-flex align-items-center gap-3">
                                         @if (!string.IsNullOrEmpty(item.FotoUrl))
@@ -114,6 +137,19 @@
 </div>
 
 @section Scripts {
+<script>
+    (function () {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.12 });
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    })();
+</script>
     @if (puedesPedir)
     {
     <script>
