@@ -1,4 +1,47 @@
 ﻿@model IEnumerable<Bar_QR.Models.Producto>
+@{
+    ViewData["HideNav"] = true;
+}
+<style>
+    /* Hero de cabecera */
+    .carta-hero {
+        width: 100%;
+        height: 260px;
+        background: url('/uploads/productos/berenjenas.jpg') center center / cover no-repeat;
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        margin-bottom: 0;
+    }
+    .carta-hero::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to bottom, rgba(15,15,26,0.25) 0%, rgba(15,15,26,0.92) 100%);
+    }
+    .carta-hero-title {
+        position: relative;
+        z-index: 2;
+        padding: 1.5rem 2rem;
+        color: #fff;
+    }
+    .carta-hero-title h2 { font-size: 2.2rem; font-weight: 800; margin: 0; text-shadow: 0 2px 8px rgba(0,0,0,.7); }
+    .carta-hero-title p  { color: #4ecca3; margin: 0; font-size: 1rem; }
+</style>
+
+<div class="carta-hero">
+    <div class="carta-hero-title">
+        <h2>🍴 Nuestra Carta</h2>
+        @if (ViewData["MesaNombre"] != null)
+        {
+            <p>📍 @ViewData["MesaNombre"]</p>
+        }
+        else if (ViewData["MesaSeleccionada"] != null)
+        {
+            <p data-mesa="@ViewData["MesaSeleccionada"]">Mesa <strong>@ViewData["MesaSeleccionada"]</strong></p>
+        }
+    </div>
+</div>
 
 @{
     var grupoNombres = new Dictionary<Bar_QR.Models.GrupoProducto, string>
@@ -51,17 +94,6 @@
 <div class="container-fluid mt-3">
     <div class="row">
         <div class="col-lg-8">
-            <h2 class="mb-1">🍴 Nuestra Carta</h2>
-            @if (ViewData["MesaNombre"] != null)
-            {
-                <p class="text-muted mb-3">📍 @ViewData["MesaNombre"]</p>
-            }
-            else if (ViewData["MesaSeleccionada"] != null)
-            {
-                <p class="text-muted mb-3" data-mesa="@ViewData["MesaSeleccionada"]">
-                    Mesa <strong>@ViewData["MesaSeleccionada"]</strong>
-                </p>
-            }
 
             @foreach (var grupo in grupos)
             {
