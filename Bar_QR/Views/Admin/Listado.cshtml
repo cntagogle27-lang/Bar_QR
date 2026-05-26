@@ -2,6 +2,21 @@
 
 @{
     ViewData["Title"] = "Listado de Productos";
+
+    var grupoNombres = new Dictionary<Bar_QR.Models.GrupoProducto, string>
+    {
+        { Bar_QR.Models.GrupoProducto.CafeInfusiones,  "☕ Café e Infusiones" },
+        { Bar_QR.Models.GrupoProducto.Desayunos,       "🥐 Desayunos" },
+        { Bar_QR.Models.GrupoProducto.Vinos,           "🍷 Vinos" },
+        { Bar_QR.Models.GrupoProducto.Bebidas,         "🥤 Bebidas" },
+        { Bar_QR.Models.GrupoProducto.Ensaladas,       "🥗 Ensaladas" },
+        { Bar_QR.Models.GrupoProducto.Entrantes,       "🍢 Entrantes" },
+        { Bar_QR.Models.GrupoProducto.Quesos,          "🧀 Quesos" },
+        { Bar_QR.Models.GrupoProducto.Horno,           "🔥 Horno" },
+        { Bar_QR.Models.GrupoProducto.Carnes,          "🥩 Carnes" },
+        { Bar_QR.Models.GrupoProducto.Postres,         "🍮 Postres" },
+        { Bar_QR.Models.GrupoProducto.LicoresCocteles, "🍸 Licores y Cócteles" },
+    };
 }
 
 <div class="container mt-4">
@@ -26,22 +41,8 @@
 
     @foreach (var grupo in grupos)
     {
-        <h5 class="mt-4 mb-2 text-secondary border-bottom pb-1">
-            @grupo.Key.ToString() switch {
-                "CafeInfusiones" => "☕ Café e Infusiones",
-                "Desayunos"      => "🥐 Desayunos",
-                "Vinos"          => "🍷 Vinos",
-                "Bebidas"        => "🥤 Bebidas",
-                "Ensaladas"      => "🥗 Ensaladas",
-                "Entrantes"      => "🍢 Entrantes",
-                "Quesos"         => "🧀 Quesos",
-                "Horno"          => "🔥 Horno",
-                "Carnes"         => "🥩 Carnes",
-                "Postres"        => "🍮 Postres",
-                "LicoresCocteles"=> "🍸 Licores y Cócteles",
-                _                => grupo.Key.ToString()
-            }
-        </h5>
+        var titulo = grupoNombres.TryGetValue(grupo.Key, out var t) ? t : grupo.Key.ToString();
+        <h5 class="mt-4 mb-2 text-secondary border-bottom pb-1">@titulo</h5>
         <table class="table table-hover shadow-sm bg-white rounded mb-2">
             <thead class="table-dark">
                 <tr>
@@ -95,3 +96,4 @@
         </div>
     }
 </div>
+

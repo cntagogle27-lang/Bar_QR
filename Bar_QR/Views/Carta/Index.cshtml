@@ -20,6 +20,9 @@
         .GroupBy(p => p.Grupo)
         .OrderBy(g => (int)g.Key)
         .ToList();
+
+    // Solo se puede pedir si hay mesa asignada (acceso por QR)
+    bool puedesPedir = ViewData["MesaSeleccionada"] != null || ViewData["MesaNombre"] != null;
 }
 
 <div class="container-fluid mt-3">
@@ -57,11 +60,14 @@
                                         <h5 class="card-title fw-bold mb-1">@item.Nombre</h5>
                                         <p class="text-success fs-5 mb-0">@item.Precio.ToString("F2") €</p>
                                     </div>
-                                    <button class="btn btn-primary rounded-pill px-3 btn-agregar"
-                                            data-nombre="@System.Text.Encodings.Web.HtmlEncoder.Default.Encode(item.Nombre)"
-                                            data-precio="@item.Precio.ToString(System.Globalization.CultureInfo.InvariantCulture)">
-                                        ➕
-                                    </button>
+                                    @if (puedesPedir)
+                                    {
+                                        <button class="btn btn-primary rounded-pill px-3 btn-agregar"
+                                                data-nombre="@System.Text.Encodings.Web.HtmlEncoder.Default.Encode(item.Nombre)"
+                                                data-precio="@item.Precio.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                                            ➕
+                                        </button>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -70,6 +76,8 @@
             }
         </div>
 
+        @if (puedesPedir)
+        {
         <div class="col-lg-4">
             <div class="card shadow border-primary sticky-top" style="top: 20px;">
                 <div class="card-header bg-primary text-white text-center">
@@ -91,10 +99,23 @@
                 </div>
             </div>
         </div>
+        }
+        else
+        {
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 sticky-top bg-light text-center p-4" style="top:20px;">
+                <div style="font-size:3rem;">📋</div>
+                <h5 class="mt-2 fw-bold">Solo lectura</h5>
+                <p class="text-muted small">Escanea el QR de tu mesa para poder realizar pedidos.</p>
+            </div>
+        </div>
+        }
     </div>
 </div>
 
 @section Scripts {
+    @if (puedesPedir)
+    {
     <script>
         let carrito = [];
         let total = 0;
@@ -134,4 +155,5 @@
             totalTxt.innerText = total.toFixed(2) + " €";
         }
     </script>
+    }
 }

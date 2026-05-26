@@ -1,4 +1,4 @@
-@model Bar_QR.Models.AdminAjustesViewModel
+ï»¿@model Bar_QR.Models.AdminAjustesViewModel
 
 @{
     ViewData["Title"] = "Ajustes";
@@ -26,12 +26,12 @@
             <ul class="nav nav-tabs mb-4" id="ajustesTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="empleados-tab" data-bs-toggle="tab" data-bs-target="#empleados" type="button" role="tab">
-                        ?? Empleados y credenciales
+                        ðŸ‘¤ Empleados y credenciales
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="mesas-tab" data-bs-toggle="tab" data-bs-target="#mesas-tab-pane" type="button" role="tab">
-                        ??? Mapa de mesas
+                        ðŸ—º Mapa de mesas
                     </button>
                 </li>
             </ul>
@@ -45,7 +45,7 @@
                             <h5>Correos permitidos para personal</h5>
                             <form asp-action="AgregarEmail" method="post" class="d-flex mb-3">
                                 <input type="email" name="email" class="form-control me-2" placeholder="nuevo@correo.com" required />
-                                <button class="btn btn-primary">Añadir</button>
+                                <button class="btn btn-primary">Aï¿½adir</button>
                             </form>
                             <ul class="list-group">
                                 @foreach(var email in Model.Emails)
@@ -69,7 +69,7 @@
                             <h5>Tokens para QR</h5>
                             <form asp-action="AgregarToken" method="post" class="d-flex mb-3">
                                 <input type="text" name="token" class="form-control me-2" placeholder="token-por-mesa-o-global" required />
-                                <button class="btn btn-primary">Añadir Token</button>
+                                <button class="btn btn-primary">Aï¿½adir Token</button>
                             </form>
                             <ul class="list-group">
                                 @foreach(var t in Model.Tokens)
@@ -88,7 +88,7 @@
                             <h5>IP permitidas (lista blanca)</h5>
                             <form asp-action="AgregarIP" method="post" class="d-flex mb-3">
                                 <input type="text" name="ip" class="form-control me-2" placeholder="127.0.0.1" required />
-                                <button class="btn btn-primary">Añadir IP</button>
+                                <button class="btn btn-primary">Aï¿½adir IP</button>
                             </form>
                             <ul class="list-group">
                                 @foreach(var ip in Model.Ips)
@@ -106,7 +106,7 @@
                             <h5>Proxies confiables</h5>
                             <form asp-action="AgregarProxy" method="post" class="d-flex mb-3">
                                 <input type="text" name="proxy" class="form-control me-2" placeholder="ip.del.proxy" required />
-                                <button class="btn btn-primary">Añadir Proxy</button>
+                                <button class="btn btn-primary">Aï¿½adir Proxy</button>
                             </form>
                             <ul class="list-group">
                                 @foreach(var p in Model.Proxies)
@@ -129,10 +129,10 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0">Mesas del local</h5>
                         <form asp-action="AgregarMesa" method="post">
-                            <button class="btn btn-success btn-sm">? Nueva mesa</button>
+                            <button class="btn btn-success btn-sm">âž• Nueva mesa</button>
                         </form>
                     </div>
-                    <a asp-action="MapaMesas" class="btn btn-outline-secondary btn-sm mb-3">?? Ver mapa completo</a>
+                    <a asp-action="MapaMesas" class="btn btn-outline-secondary btn-sm mb-3">ðŸ—º Ver mapa completo</a>
                 </div>
 
             </div>

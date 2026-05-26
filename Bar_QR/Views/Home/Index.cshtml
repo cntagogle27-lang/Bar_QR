@@ -7,13 +7,46 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bar · Bienvenido</title>
+    <title>Café Joplin</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <style>
-        body { background: #1a1a2e; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .landing-card { background: #16213e; border-radius: 20px; padding: 3rem 2.5rem; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: url('/images/fachada.jpg') center center / cover no-repeat;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 20, 0.60);
+            z-index: 0;
+        }
+        .logo-joplin {
+            position: fixed;
+            top: 18px;
+            right: 24px;
+            z-index: 10;
+            height: 70px;
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.7));
+        }
+        .landing-card {
+            position: relative;
+            z-index: 1;
+            background: rgba(22, 33, 62, 0.88);
+            border-radius: 20px;
+            padding: 3rem 2.5rem;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,.5);
+            backdrop-filter: blur(6px);
+        }
         .landing-card h1 { color: #e0e0e0; font-size: 2.5rem; font-weight: 800; margin-bottom: .5rem; }
-        .landing-card p { color: #aaa; margin-bottom: 2.5rem; }
+        .landing-card p  { color: #aaa; margin-bottom: 2.5rem; }
         .btn-landing { font-size: 1.2rem; padding: 1rem 2rem; border-radius: 50px; width: 100%; margin-bottom: 1rem; font-weight: 700; }
         .btn-carta { background: #e94560; border: none; color: #fff; }
         .btn-carta:hover { background: #c73652; color: #fff; }
@@ -22,6 +55,7 @@
     </style>
 </head>
 <body>
+    <img src="/images/logo-joplin.png" alt="Café Joplin" class="logo-joplin" />
     <div class="landing-card">
         <div style="font-size:4rem; margin-bottom:.5rem;">🍽️</div>
         <h1>Bienvenido</h1>
