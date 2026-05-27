@@ -122,8 +122,31 @@ function subirImagen(input, zona) {
 }
 
 // ── Vista previa ───────────────────────────────────────────────────
+// Datos de ejemplo para la previsualización
+const PREVIEW_ITEMS = [
+    { uds: 2, nombre: 'Coca Cola',   precio: 3.50 },
+    { uds: 1, nombre: 'Whisky',      precio: 2.50 },
+    { uds: 1, nombre: 'Red Bull',    precio: 6.30 },
+    { uds: 1, nombre: 'Solomillo',   precio: 18.32 },
+];
+const PREVIEW_IVA = [{ pct: 10 }]; // se calculará sobre el total
+
+function fmtMon(v) { return v.toFixed(2).replace('.', ',') + ' €'; }
+function fmtR(str, width) {
+    str = String(str);
+    return str.length >= width ? str : str + ' '.repeat(width - str.length);
+}
+function fmtL(str, width) {
+    str = String(str);
+    return str.length >= width ? str : ' '.repeat(width - str.length) + str;
+}
+const SEP  = '━'.repeat(38);
+const SEPm = '─'.repeat(38);
+
 function actualizarPreview() {
-    // Cabecera
+    const W = 38; // ancho del ticket en caracteres
+
+    // ── Cabecera (elementos del editor) ─────────────────────────────
     const cab = document.getElementById('prev-cabecera');
     cab.innerHTML = '';
     estado.cabecera.forEach(el => {
@@ -133,11 +156,67 @@ function actualizarPreview() {
         else if (el.tipo === 'imagen') { d.innerHTML = `<img src="/Admin/ImagenTicket/${el.imgId}" style="max-width:100%;max-height:50px;object-fit:contain;">`; }
         cab.appendChild(d);
     });
-    cab.style.minHeight = '60px';
+    cab.style.minHeight = estado.cabecera.length ? '80px' : '10px';
 
-    // Pie
+    // ── Cuerpo del ticket ─────────────────────────────────────────
+    const cuerpo = document.getElementById('prev-cuerpo');
+    let html = '';
+
+    // Título
+    html += `<div>${SEP}</div>`;
+    html += `<div style="text-align:center;font-weight:bold;">FACTURA SIMPLIFICADA</div>`;
+    html += `<div>${SEPm}</div>`;
+
+    // Nº Op / Mesa
+    html += `<div>${fmtR('Nº Op.:  T-1', 22)}${fmtL('Salón/Mesa 1', W-22)}</div>`;
+    html += `<div>${SEPm}</div>`;
+
+    // Hora y camarero
+    const ahora = new Date();
+    const fechaStr = ahora.toLocaleDateString('es-ES') + ' ' + ahora.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
+    if (document.getElementById('chkHora')?.checked)
+        html += `<div>${fechaStr}</div>`;
+    if (document.getElementById('chkUsuario')?.checked)
+        html += `<div>Camarero: [nombre del camarero]</div>`;
+
+    // Cabecera de líneas
+    html += `<div>${SEPm}</div>`;
+    html += `<div>${fmtR('Uds.', 6)}${fmtR('Producto', 22)}${fmtL('Importe', W-28)}</div>`;
+    html += `<div>${SEPm}</div>`;
+
+    // Líneas de productos
+    let total = 0;
+    if (document.getElementById('chkDesglose')?.checked) {
+        PREVIEW_ITEMS.forEach(it => {
+            const imp = fmtL(fmtMon(it.precio), 9);
+            html += `<div>${fmtR(it.uds, 4)}  ${fmtR(it.nombre, 22)}${imp}</div>`;
+            total += it.uds * it.precio;
+        });
+    } else {
+        PREVIEW_ITEMS.forEach(it => { total += it.uds * it.precio; });
+    }
+
+    html += `<div>${SEPm}</div>`;
+
+    // Impuestos (solo porcentaje del total, NO suman)
+    if (document.getElementById('chkImpuestos')?.checked) {
+        PREVIEW_IVA.forEach(iv => {
+            const base  = total / (1 + iv.pct / 100);
+            const cuota = total - base;
+            html += `<div>${iv.pct}%  Base: ${fmtMon(base)}  Cuota: ${fmtMon(cuota)}</div>`;
+        });
+        html += `<div>${fmtR('Total:', 20)}${fmtL(fmtMon(total), W-20)}</div>`;
+        html += `<div>${SEPm}</div>`;
+        html += `<div>Total (Impuestos Incl.)${fmtL(fmtMon(total), W-23)}</div>`;
+    } else {
+        html += `<div style="font-weight:bold;text-align:right;">TOTAL: ${fmtMon(total)}</div>`;
+    }
+
+    cuerpo.innerHTML = html;
+
+    // ── Pie (elementos del editor) ──────────────────────────────────
     const pie = document.getElementById('prev-pie');
-    pie.innerHTML = '';
+    pie.innerHTML = `<div>${SEP}</div>`;
     estado.pie.forEach(el => {
         const d = document.createElement('div');
         d.style.cssText = `position:absolute;left:${el.x||0}px;top:${el.y||0}px;width:${el.w||100}px;`;
@@ -145,20 +224,7 @@ function actualizarPreview() {
         else if (el.tipo === 'imagen') { d.innerHTML = `<img src="/Admin/ImagenTicket/${el.imgId}" style="max-width:100%;max-height:50px;object-fit:contain;">`; }
         pie.appendChild(d);
     });
-    pie.style.minHeight = '60px';
-
-    // Cuerpo
-    const cuerpo = document.getElementById('prev-cuerpo');
-    cuerpo.innerHTML = `<div class="text-center border-bottom pb-1 mb-1"><strong>:barqr</strong></div>`;
-    if (document.getElementById('chkHora')?.checked)
-        cuerpo.innerHTML += `<div>🕐 ${new Date().toLocaleTimeString()}</div>`;
-    if (document.getElementById('chkUsuario')?.checked)
-        cuerpo.innerHTML += `<div>👤 Camarero</div>`;
-    if (document.getElementById('chkDesglose')?.checked)
-        cuerpo.innerHTML += `<div>─────────────<br>1x Café Espresso .... 1.50 €<br>1x Croissant ......... 2.80 €<br>─────────────</div>`;
-    if (document.getElementById('chkImpuestos')?.checked)
-        cuerpo.innerHTML += `<div>IVA 10%: 0.43 €</div>`;
-    cuerpo.innerHTML += `<div class="text-end fw-bold mt-1">TOTAL: 4.30 €</div>`;
+    pie.style.minHeight = '30px';
 }
 
 // Activar pestaña tickets si viene en el hash
