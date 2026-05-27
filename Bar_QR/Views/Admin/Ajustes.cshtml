@@ -15,8 +15,16 @@ function cargarZona(zona, json) {
     try { estado[zona] = JSON.parse(json) || []; } catch { estado[zona] = []; }
     renderZona(zona);
 }
-cargarZona('cabecera', document.getElementById('cabeceraJson').value);
-cargarZona('pie',      document.getElementById('pieJson').value);
+
+// Ejecutar carga de zonas cuando el DOM esté listo
+function inicializarEditor() {
+    const cabeceraInput = document.getElementById('cabeceraJson');
+    const pieInput = document.getElementById('pieJson');
+    if (cabeceraInput && pieInput) {
+        cargarZona('cabecera', cabeceraInput.value);
+        cargarZona('pie', pieInput.value);
+    }
+}
 
 // ── Render de una zona ─────────────────────────────────────────────
 function renderZona(zona) {
@@ -257,14 +265,23 @@ if (location.hash === '#tickets') {
 
 // Renderizar preview inicial al cargar la página
 window.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM cargado, ejecutando actualizarPreview()');
+    console.log('DOM cargado, inicializando...');
+    inicializarEditor();
     actualizarPreview();
 });
 
 // También actualizar cuando se active la pestaña de tickets
-document.getElementById('tickets-tab')?.addEventListener('shown.bs.tab', function() {
-    console.log('Pestaña Tickets activada, ejecutando actualizarPreview()');
-    actualizarPreview();
+document.addEventListener('DOMContentLoaded', function() {
+    const ticketsTab = document.getElementById('tickets-tab');
+    if (ticketsTab) {
+        ticketsTab.addEventListener('click', function() {
+            console.log('Pestaña Tickets activada');
+            setTimeout(function() {
+                inicializarEditor();
+                actualizarPreview();
+            }, 100);
+        });
+    }
 });
 </script>
 }
