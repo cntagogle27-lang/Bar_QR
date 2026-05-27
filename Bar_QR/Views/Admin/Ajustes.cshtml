@@ -122,22 +122,20 @@ function subirImagen(input, zona) {
 }
 
 // ── Vista previa ───────────────────────────────────────────────────
-// Datos de ejemplo para la previsualización (del ticket de ejemplo)
+// Datos de ejemplo basados en el ticket real proporcionado
 const PREVIEW_ITEMS = [
-    { uds: 2, nombre: 'Coca cola',    precio: 3.50 },
-    { uds: 1, nombre: 'Whisky',       precio: 2.50 },
-    { uds: 1, nombre: 'Red Bull',     precio: 6.30 },
-    { uds: 1, nombre: 'Solomillo al oporto', precio: 18.32 },
-    { uds: 1, nombre: 'Menú del día', precio: 10.00 },
-    { uds: 1, nombre: 'Coca cola',    precio: 0.00 }  // gratis
+    { uds: 2, nombre: 'Coca cola',              precio: 3.50, total: 7.00 },
+    { uds: 1, nombre: 'Whisky',                 precio: 2.50, total: 2.50 },
+    { uds: 1, nombre: 'Red Bull',               precio: 6.30, total: 6.30 },
+    { uds: 1, nombre: 'Solomillo al oporto',    precio: 18.32, total: 18.32 },
+    { uds: 1, nombre: 'Menú del día',           precio: 10.00, total: 10.00 },
+    { uds: 1, nombre: 'Coca cola',              precio: 0.00, total: 0.00 }
 ];
 
-function fmtMon(v) { return v.toFixed(2).replace('.', ',') + ' €'; }
-function pad(str, len) { return (str + ' '.repeat(len)).substring(0, len); }
-function padL(str, len) { return (' '.repeat(len) + str).slice(-len); }
+function fmtEur(v) { return v.toFixed(2).replace('.', ',') + ' €'; }
 const ANCHO = 38;
 const SEP_GRUESO = '*'.repeat(ANCHO);
-const SEP_FINO    = '-'.repeat(ANCHO);
+const SEP_FINO = '-'.repeat(ANCHO);
 
 function actualizarPreview() {
     // ── Cabecera (elementos del editor) ─────────────────────────────
@@ -158,85 +156,86 @@ function actualizarPreview() {
 
     lineas.push(SEP_GRUESO);
     lineas.push('        FACTURA SIMPLIFICADA        ');
-    lineas.push(SEP_FINO);
-
-    // Nº Op / Mesa
+    lineas.push(SEP_GRUESO);
+    lineas.push('');
     lineas.push('Nº Op.:  T-1             Salón/Mesa 1');
-    lineas.push(SEP_FINO);
+    lineas.push(SEP_GRUESO);
 
-    // Fecha/hora
+    // Fecha y hora
     const ahora = new Date();
-    const fecha = ahora.toLocaleDateString('es-ES').padEnd(11);
-    const hora  = ahora.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}).padEnd(15);
-    if (document.getElementById('chkHora')?.checked)
-        lineas.push(fecha + hora + 'Mateo');
-    else
-        lineas.push(fecha + hora.trim());
+    const dd = String(ahora.getDate()).padStart(2, '0');
+    const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+    const yyyy = ahora.getFullYear();
+    const hh = String(ahora.getHours()).padStart(2, '0');
+    const min = String(ahora.getMinutes()).padStart(2, '0');
 
-    if (document.getElementById('chkUsuario')?.checked)
-        lineas.push('Camarero: [nombre camarero]');
+    const mostrarHora = document.getElementById('chkHora')?.checked;
+    const mostrarUsuario = document.getElementById('chkUsuario')?.checked;
+
+    if (mostrarHora) {
+        lineas.push(`${dd}/${mm}/${yyyy} ${hh}:${min}              Mateo`);
+    } else {
+        lineas.push(`${dd}/${mm}/${yyyy}`);
+    }
+
+    if (mostrarUsuario) {
+        lineas.push('Camarero: [nombre]');
+    }
 
     lineas.push(SEP_FINO);
 
-    // Cabecera productos
+    // Cabecera de productos
     lineas.push('Uds.  Producto                Importe');
     lineas.push(SEP_FINO);
 
-    // Líneas de productos
-    let subtotal = 0;
-    if (document.getElementById('chkDesglose')?.checked) {
-        PREVIEW_ITEMS.forEach(it => {
-            const importe = it.uds * it.precio;
-            subtotal += importe;
-            const uds = String(it.uds).padStart(3);
-            const prod = it.nombre.substring(0, 22).padEnd(22);
-            const imp = fmtMon(it.precio).padStart(9);
-            lineas.push(`  ${uds}  ${prod}  ${imp}`);
+    // Productos
+    let total = 0;
+    const mostrarDesglose = document.getElementById('chkDesglose')?.checked;
+
+    if (mostrarDesglose) {
+        PREVIEW_ITEMS.forEach(item => {
+            total += item.total;
+            const udsStr = String(item.uds).padStart(3, ' ');
+            const nombreStr = item.nombre.padEnd(22, ' ').substring(0, 22);
+            const precioStr = fmtEur(item.precio).padStart(9, ' ');
+            lineas.push(`  ${udsStr}  ${nombreStr}  ${precioStr}`);
         });
     } else {
-        // Solo sumar total sin mostrar líneas
-        PREVIEW_ITEMS.forEach(it => { subtotal += it.uds * it.precio; });
+        PREVIEW_ITEMS.forEach(item => { total += item.total; });
     }
 
-    // Pie y descuentos (en este bar no hay descuentos, así que omitir)
-    lineas.push(SEP_FINO);
+    lineas.push(SEP_GRUESO);
 
-    // Impuestos
-    if (document.getElementById('chkImpuestos')?.checked) {
-        const tasaIVA = 0.10; // 10%
-        const base  = subtotal / (1 + tasaIVA);
-        const cuota = subtotal - base;
+    // Impuestos (NO SUMAN, son PORCENTAJE del total)
+    const mostrarImpuestos = document.getElementById('chkImpuestos')?.checked;
 
-        lineas.push(`10 %  Base:  ${fmtMon(base)}  Cuota:  ${fmtMon(cuota)}`);
-        lineas.push(`            Total:  ${fmtMon(subtotal)}  Total:  ${fmtMon(cuota)}`);
-        lineas.push(SEP_FINO);
-        lineas.push(`Total (Impuestos Incl.)      ${fmtMon(subtotal)}`);
+    if (mostrarImpuestos) {
+        // Calcular impuestos como PORCENTAJE del total, no sumándolos
+        const porcentaje10 = total * 0.10;
+        const porcentaje21 = total * 0.21;
+
+        lineas.push('');
+        lineas.push(`7 %  Base:   ${fmtEur(total).padStart(8)}  Cuota:   ${fmtEur(porcentaje10).padStart(8)}`);
+        lineas.push(`           Total:   ${fmtEur(total).padStart(8)}  Total:   ${fmtEur(porcentaje10).padStart(8)}`);
+        lineas.push('');
+        lineas.push(`Total (Impuestos Incl.)      ${fmtEur(total).padStart(8)}`);
         lineas.push(SEP_GRUESO);
         lineas.push('');
-        lineas.push(`Emitido:       ${fmtMon(subtotal)}  Cambio:       0,00 €`);
-        lineas.push('Efectivo                     ' + fmtMon(subtotal));
+        lineas.push(`Entregado:     ${fmtEur(total).padStart(8)}  Cambio:       0,00 €`);
+        lineas.push(`Efectivo                     ${fmtEur(total).padStart(8)}`);
     } else {
-        lineas.push(`                    TOTAL:  ${fmtMon(subtotal)}`);
+        lineas.push('');
+        lineas.push(`                     TOTAL:  ${fmtEur(total)}`);
     }
 
+    lineas.push('');
+    lineas.push('           Cheque Restaurante');
     lineas.push(SEP_GRUESO);
+    lineas.push('');
+    lineas.push('              barqr           ');
+    lineas.push('');
 
-    // Datos factura completa (solo si fuera factura normal, no simplificada/proforma)
-    // Por ahora comentado ya que esto se mostrará solo en facturas completas
-    /*
-    lineas.push('Cheque Restaurante           27,49 €');
-    lineas.push('Donde Restaurante             3,00 €');
-    lineas.push(SEP_GRUESO);
-    lineas.push('Cliente: EL CAPRICHO, S.A.');
-    lineas.push('NIF/CIF: A99999999');
-    lineas.push('TIF:');
-    lineas.push('CP:      Avd. Real de Pinto s/n');
-    lineas.push('         28821');
-    lineas.push('Prov.:   Madrid');
-    lineas.push(SEP_GRUESO);
-    */
-
-    cuerpo.innerHTML = lineas.map(l => `<div style="font-family:monospace;font-size:11px;white-space:pre;">${l}</div>`).join('');
+    cuerpo.innerHTML = lineas.map(l => `<div style="font-family:'Courier New',monospace;font-size:10px;line-height:1.3;white-space:pre;">${l}</div>`).join('');
 
     // ── Pie (elementos del editor) ──────────────────────────────────
     const pie = document.getElementById('prev-pie');
