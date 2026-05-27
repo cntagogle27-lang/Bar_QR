@@ -4,6 +4,170 @@
     ViewData["Title"] = "Ajustes";
 }
 
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+<script>
+// ── Estado del editor ──────────────────────────────────────────────
+const estado = { cabecera: [], pie: [] };
+
+// ── Cargar JSON inicial desde servidor ──────────────────────────────
+function cargarZona(zona, json) {
+    try { estado[zona] = JSON.parse(json) || []; } catch { estado[zona] = []; }
+    renderZona(zona);
+}
+cargarZona('cabecera', document.getElementById('cabeceraJson').value);
+cargarZona('pie',      document.getElementById('pieJson').value);
+
+// ── Render de una zona ─────────────────────────────────────────────
+function renderZona(zona) {
+    const cont = document.getElementById('zona-' + zona);
+    cont.innerHTML = '';
+    estado[zona].forEach((el, i) => crearElementoDOM(zona, el, i));
+    actualizarPreview();
+}
+
+function crearElementoDOM(zona, el, i) {
+    const cont = document.getElementById('zona-' + zona);
+    const div  = document.createElement('div');
+    div.className = 'ticket-elemento';
+    div.style.left   = (el.x || 10) + 'px';
+    div.style.top    = (el.y || 10) + 'px';
+    div.style.width  = (el.w || 120) + 'px';
+    div.style.height = (el.h || 36) + 'px';
+    div.dataset.zona  = zona;
+    div.dataset.index = i;
+
+    if (el.tipo === 'texto') {
+        const span = document.createElement('span');
+        span.contentEditable = 'true';
+        span.innerText = el.contenido || 'Texto';
+        span.style.fontSize = (el.fs || 13) + 'px';
+        span.style.display  = 'block';
+        span.style.width    = '100%';
+        span.addEventListener('input', () => { estado[zona][i].contenido = span.innerText; serializarZona(zona); actualizarPreview(); });
+        div.appendChild(span);
+    } else if (el.tipo === 'imagen') {
+        const img = document.createElement('img');
+        img.src   = '/Admin/ImagenTicket/' + el.imgId;
+        img.style.width  = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        div.appendChild(img);
+    }
+
+    const btnDel = document.createElement('button');
+    btnDel.className = 'btn btn-danger btn-del';
+    btnDel.innerHTML = '✕';
+    btnDel.onclick = () => { estado[zona].splice(i, 1); renderZona(zona); };
+    div.appendChild(btnDel);
+
+    cont.appendChild(div);
+    activarInteract(div, zona, i);
+}
+
+// ── interact.js: drag + resize ─────────────────────────────────────
+function activarInteract(div, zona, i) {
+    interact(div)
+        .draggable({
+            listeners: {
+                move(e) {
+                    const x = (parseFloat(div.dataset.x) || 0) + e.dx;
+                    const y = (parseFloat(div.dataset.y) || 0) + e.dy;
+                    div.style.transform = `translate(${x}px,${y}px)`;
+                    div.dataset.x = x; div.dataset.y = y;
+                    const rect = div.parentElement.getBoundingClientRect();
+                    const base = div.getBoundingClientRect();
+                    estado[zona][i].x = base.left - rect.left;
+                    estado[zona][i].y = base.top  - rect.top;
+                    serializarZona(zona); actualizarPreview();
+                }
+            }
+        })
+        .resizable({ edges: { right: true, bottom: true, bottomRight: true }, listeners: {
+            move(e) {
+                div.style.width  = e.rect.width  + 'px';
+                div.style.height = e.rect.height + 'px';
+                estado[zona][i].w = e.rect.width;
+                estado[zona][i].h = e.rect.height;
+                serializarZona(zona); actualizarPreview();
+            }
+        }});
+}
+
+// ── Serializar al input hidden ─────────────────────────────────────
+function serializarZona(zona) {
+    document.getElementById(zona + 'Json').value = JSON.stringify(estado[zona]);
+}
+
+// ── Añadir texto ──────────────────────────────────────────────────
+function agregarTexto(zona) {
+    estado[zona].push({ tipo: 'texto', contenido: 'Texto', x: 10, y: 10 + estado[zona].length * 40, w: 180, h: 36 });
+    renderZona(zona);
+}
+
+// ── Subir imagen al servidor y añadir elemento ────────────────────
+function subirImagen(input, zona) {
+    const file = input.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('imagen', file);
+    fd.append('zona', zona);
+    fetch('/Admin/SubirImagenTicket', { method: 'POST', body: fd,
+        headers: { 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' }
+    }).then(r => r.json()).then(data => {
+        estado[zona].push({ tipo: 'imagen', imgId: data.id, nombre: data.nombre, x: 10, y: 10, w: 100, h: 80 });
+        renderZona(zona);
+    });
+    input.value = '';
+}
+
+// ── Vista previa ───────────────────────────────────────────────────
+function actualizarPreview() {
+    // Cabecera
+    const cab = document.getElementById('prev-cabecera');
+    cab.innerHTML = '';
+    estado.cabecera.forEach(el => {
+        const d = document.createElement('div');
+        d.style.cssText = `position:absolute;left:${el.x||0}px;top:${el.y||0}px;width:${el.w||100}px;`;
+        if (el.tipo === 'texto') { d.innerText = el.contenido || ''; d.style.fontSize = '11px'; }
+        else if (el.tipo === 'imagen') { d.innerHTML = `<img src="/Admin/ImagenTicket/${el.imgId}" style="max-width:100%;max-height:50px;object-fit:contain;">`; }
+        cab.appendChild(d);
+    });
+    cab.style.minHeight = '60px';
+
+    // Pie
+    const pie = document.getElementById('prev-pie');
+    pie.innerHTML = '';
+    estado.pie.forEach(el => {
+        const d = document.createElement('div');
+        d.style.cssText = `position:absolute;left:${el.x||0}px;top:${el.y||0}px;width:${el.w||100}px;`;
+        if (el.tipo === 'texto') { d.innerText = el.contenido || ''; d.style.fontSize = '11px'; }
+        else if (el.tipo === 'imagen') { d.innerHTML = `<img src="/Admin/ImagenTicket/${el.imgId}" style="max-width:100%;max-height:50px;object-fit:contain;">`; }
+        pie.appendChild(d);
+    });
+    pie.style.minHeight = '60px';
+
+    // Cuerpo
+    const cuerpo = document.getElementById('prev-cuerpo');
+    cuerpo.innerHTML = `<div class="text-center border-bottom pb-1 mb-1"><strong>:barqr</strong></div>`;
+    if (document.getElementById('chkHora')?.checked)
+        cuerpo.innerHTML += `<div>🕐 ${new Date().toLocaleTimeString()}</div>`;
+    if (document.getElementById('chkUsuario')?.checked)
+        cuerpo.innerHTML += `<div>👤 Camarero</div>`;
+    if (document.getElementById('chkDesglose')?.checked)
+        cuerpo.innerHTML += `<div>─────────────<br>1x Café Espresso .... 1.50 €<br>1x Croissant ......... 2.80 €<br>─────────────</div>`;
+    if (document.getElementById('chkImpuestos')?.checked)
+        cuerpo.innerHTML += `<div>IVA 10%: 0.43 €</div>`;
+    cuerpo.innerHTML += `<div class="text-end fw-bold mt-1">TOTAL: 4.30 €</div>`;
+}
+
+// Activar pestaña tickets si viene en el hash
+if (location.hash === '#tickets') {
+    document.getElementById('tickets-tab')?.click();
+}
+</script>
+}
+
 <div class="container mt-4">
     <div class="card shadow">
         <div class="card-header bg-secondary text-white">
@@ -32,6 +196,11 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="mesas-tab" data-bs-toggle="tab" data-bs-target="#mesas-tab-pane" type="button" role="tab">
                         🗺 Mapa de mesas
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tickets-tab" data-bs-toggle="tab" data-bs-target="#tickets-tab-pane" type="button" role="tab">
+                        🧾 Tickets
                     </button>
                 </li>
             </ul>
@@ -134,6 +303,135 @@
                     </div>
                     <a asp-action="MapaMesas" class="btn btn-outline-secondary btn-sm mb-3">🗺 Ver mapa completo</a>
                 </div>
+
+                @* TAB: TICKETS *@
+                <div class="tab-pane fade" id="tickets-tab-pane" role="tabpanel">
+                <style>
+                    .ticket-zona {
+                        position: relative;
+                        min-height: 120px;
+                        border: 2px dashed #aaa;
+                        border-radius: 8px;
+                        background: #f9f9f9;
+                        overflow: hidden;
+                    }
+                    .ticket-elemento {
+                        position: absolute;
+                        border: 1px solid #999;
+                        background: rgba(255,255,255,0.85);
+                        cursor: move;
+                        user-select: none;
+                        box-shadow: 0 1px 4px rgba(0,0,0,.2);
+                        border-radius: 4px;
+                        padding: 4px 6px;
+                        min-width: 60px;
+                        min-height: 28px;
+                        resize: both;
+                        overflow: hidden;
+                    }
+                    .ticket-elemento .btn-del {
+                        position: absolute;
+                        top: 2px; right: 2px;
+                        font-size: 10px;
+                        line-height: 1;
+                        padding: 1px 4px;
+                    }
+                    /* Vista previa */
+                    #ticket-preview {
+                        width: 300px;
+                        min-height: 400px;
+                        border: 1px solid #ccc;
+                        border-radius: 6px;
+                        font-family: monospace;
+                        font-size: 12px;
+                        background: #fff;
+                        padding: 0;
+                        box-shadow: 0 2px 8px rgba(0,0,0,.15);
+                    }
+                    #ticket-preview .zona-prev {
+                        min-height: 60px;
+                        border-bottom: 1px dashed #ccc;
+                        padding: 6px;
+                        position: relative;
+                    }
+                    #ticket-preview .zona-prev.pie { border-top: 1px dashed #ccc; border-bottom: none; }
+                    #ticket-preview .cuerpo-prev { padding: 8px; }
+                </style>
+
+                <form id="form-ticket" asp-action="GuardarTicketPlantilla" method="post">
+                    <input type="hidden" id="cabeceraJson" name="cabeceraJson" value='@Model.Ticket.CabeceraJson' />
+                    <input type="hidden" id="pieJson" name="pieJson" value='@Model.Ticket.PieJson' />
+
+                    <div class="row g-4">
+                        <!-- Columna editor -->
+                        <div class="col-lg-7">
+                            <h5>🧾 Configuración de plantilla de ticket</h5>
+                            <p class="text-muted small">Arrastra y redimensiona los elementos. Guarda al terminar.</p>
+
+                            <div class="mb-3">
+                                <label class="fw-bold">📄 Cabecera del ticket</label>
+                                <div class="d-flex gap-2 mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="agregarTexto('cabecera')">+ Texto</button>
+                                    <label class="btn btn-sm btn-outline-secondary mb-0">
+                                        + Imagen
+                                        <input type="file" class="d-none" accept="image/*" onchange="subirImagen(this,'cabecera')" />
+                                    </label>
+                                </div>
+                                <div class="ticket-zona" id="zona-cabecera" style="height:130px;"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="fw-bold">📝 Cuerpo del ticket</label>
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="chkHora" name="imprimirHora" value="true" @(Model.Ticket.ImprimirHora ? "checked" : "") onchange="actualizarPreview()" />
+                                        <label class="form-check-label" for="chkHora">🕐 Imprimir hora</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="chkUsuario" name="imprimirUsuario" value="true" @(Model.Ticket.ImprimirUsuario ? "checked" : "") onchange="actualizarPreview()" />
+                                        <label class="form-check-label" for="chkUsuario">👤 Imprimir nombre de usuario</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="chkImpuestos" name="imprimirImpuestos" value="true" @(Model.Ticket.ImprimirImpuestos ? "checked" : "") onchange="actualizarPreview()" />
+                                        <label class="form-check-label" for="chkImpuestos">💶 Imprimir desglose de impuestos</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="chkDesglose" name="imprimirDesglose" value="true" @(Model.Ticket.ImprimirDesglose ? "checked" : "") onchange="actualizarPreview()" />
+                                        <label class="form-check-label" for="chkDesglose">📋 Imprimir desglose de líneas de productos</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="fw-bold">📄 Pie del ticket</label>
+                                <div class="d-flex gap-2 mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="agregarTexto('pie')">+ Texto</button>
+                                    <label class="btn btn-sm btn-outline-secondary mb-0">
+                                        + Imagen
+                                        <input type="file" class="d-none" accept="image/*" onchange="subirImagen(this,'pie')" />
+                                    </label>
+                                </div>
+                                <div class="ticket-zona" id="zona-pie" style="height:130px;"></div>
+                            </div>
+
+                            <button type="submit" class="btn btn-success w-100 fw-bold">💾 Guardar plantilla</button>
+                        </div>
+
+                        <!-- Vista previa -->
+                        <div class="col-lg-5">
+                            <h5>👁 Vista previa</h5>
+                            <div id="ticket-preview">
+                                <div class="zona-prev" id="prev-cabecera"></div>
+                                <div class="cuerpo-prev" id="prev-cuerpo">
+                                    <div class="text-center border-bottom pb-1 mb-1"><strong>:barqr</strong></div>
+                                </div>
+                                <div class="zona-prev pie" id="prev-pie"></div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                </div><!-- /tickets-tab-pane -->
 
             </div>
         </div>

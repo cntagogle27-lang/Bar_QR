@@ -118,16 +118,77 @@ public class AdminController : Controller
 		return RedirectToAction("Listado");
 	}
 
+	// ── TICKET PLANTILLA ────────────────────────────────────────────
+    [HttpPost]
+    public IActionResult GuardarTicketPlantilla(
+        bool imprimirHora, bool imprimirUsuario, bool imprimirImpuestos, bool imprimirDesglose,
+        string cabeceraJson, string pieJson)
+    {
+        var plantilla = _db.TicketPlantillas.FirstOrDefault();
+        if (plantilla == null)
+        {
+            plantilla = new Models.TicketPlantilla();
+            _db.TicketPlantillas.Add(plantilla);
+        }
+        plantilla.ImprimirHora      = imprimirHora;
+        plantilla.ImprimirUsuario   = imprimirUsuario;
+        plantilla.ImprimirImpuestos = imprimirImpuestos;
+        plantilla.ImprimirDesglose  = imprimirDesglose;
+        plantilla.CabeceraJson      = string.IsNullOrWhiteSpace(cabeceraJson) ? "[]" : cabeceraJson;
+        plantilla.PieJson           = string.IsNullOrWhiteSpace(pieJson)      ? "[]" : pieJson;
+        _db.SaveChanges();
+        TempData["AjustesOk"] = "Plantilla de ticket guardada correctamente.";
+        return RedirectToAction("Ajustes", null, "tickets");
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SubirImagenTicket(IFormFile imagen, string zona)
+    {
+        if (imagen == null || imagen.Length == 0)
+            return BadRequest();
+        using var ms = new MemoryStream();
+        await imagen.CopyToAsync(ms);
+        var ti = new Models.TicketImagen
+        {
+            Nombre   = Path.GetFileNameWithoutExtension(imagen.FileName),
+            Data     = ms.ToArray(),
+            MimeType = imagen.ContentType,
+            Zona     = zona ?? "cabecera"
+        };
+        _db.TicketImagenes.Add(ti);
+        _db.SaveChanges();
+        return Json(new { id = ti.Id, nombre = ti.Nombre });
+    }
+
+    [AllowAnonymous]
+    public IActionResult ImagenTicket(int id)
+    {
+        var img = _db.TicketImagenes.Find(id);
+        if (img == null) return NotFound();
+        return File(img.Data, img.MimeType);
+    }
+
+    [HttpPost]
+    public IActionResult EliminarImagenTicket(int id)
+    {
+        var img = _db.TicketImagenes.Find(id);
+        if (img != null) { _db.TicketImagenes.Remove(img); _db.SaveChanges(); }
+        return RedirectToAction("Ajustes", null, "tickets");
+    }
+
+
     public IActionResult Ajustes()
     {
         try
         {
             var vm = new Models.AdminAjustesViewModel
             {
-                Emails = _db.StaffEmails.Select(e => e.Email).ToList(),
-                Ips = _db.ProxyIps.Select(p => p.IpOrCidr).ToList(),
-                Proxies = _db.ProxyIps.Select(p => p.IpOrCidr).ToList(),
-                Tokens = _db.SiteTokens.Select(t => t.Token).ToList()
+                Emails   = _db.StaffEmails.Select(e => e.Email).ToList(),
+                Ips      = _db.ProxyIps.Select(p => p.IpOrCidr).ToList(),
+                Proxies  = _db.ProxyIps.Select(p => p.IpOrCidr).ToList(),
+                Tokens   = _db.SiteTokens.Select(t => t.Token).ToList(),
+                Ticket   = _db.TicketPlantillas.FirstOrDefault() ?? new Models.TicketPlantilla(),
+                TicketImagenes = _db.TicketImagenes.Select(i => new Models.TicketImagen { Id = i.Id, Nombre = i.Nombre, MimeType = i.MimeType, Zona = i.Zona, Data = new byte[0] }).ToList()
             };
             return View(vm);
         }

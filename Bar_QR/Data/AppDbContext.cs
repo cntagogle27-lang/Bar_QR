@@ -14,6 +14,8 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<ProxyIp> ProxyIps { get; set; }
     public DbSet<SiteToken> SiteTokens { get; set; }
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
+    public DbSet<TicketPlantilla> TicketPlantillas { get; set; }
+    public DbSet<TicketImagen> TicketImagenes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
