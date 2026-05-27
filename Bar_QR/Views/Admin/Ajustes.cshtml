@@ -255,6 +255,11 @@ function actualizarPreview() {
 if (location.hash === '#tickets') {
     document.getElementById('tickets-tab')?.click();
 }
+
+// Renderizar preview inicial al cargar la página
+window.addEventListener('DOMContentLoaded', function() {
+    actualizarPreview();
+});
 </script>
 }
 
@@ -512,9 +517,7 @@ if (location.hash === '#tickets') {
                             <h5>👁 Vista previa</h5>
                             <div id="ticket-preview">
                                 <div class="zona-prev" id="prev-cabecera"></div>
-                                <div class="cuerpo-prev" id="prev-cuerpo">
-                                    <div class="text-center border-bottom pb-1 mb-1"><strong>:barqr</strong></div>
-                                </div>
+                                <div class="cuerpo-prev" id="prev-cuerpo"></div>
                                 <div class="zona-prev pie" id="prev-pie"></div>
                             </div>
                         </div>
