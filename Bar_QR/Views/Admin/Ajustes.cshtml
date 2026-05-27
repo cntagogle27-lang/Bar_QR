@@ -122,109 +122,133 @@ function subirImagen(input, zona) {
 }
 
 // ── Vista previa ───────────────────────────────────────────────────
-// Datos de ejemplo para la previsualización
+// Datos de ejemplo para la previsualización (del ticket de ejemplo)
 const PREVIEW_ITEMS = [
-    { uds: 2, nombre: 'Coca Cola',   precio: 3.50 },
-    { uds: 1, nombre: 'Whisky',      precio: 2.50 },
-    { uds: 1, nombre: 'Red Bull',    precio: 6.30 },
-    { uds: 1, nombre: 'Solomillo',   precio: 18.32 },
+    { uds: 2, nombre: 'Coca cola',    precio: 3.50 },
+    { uds: 1, nombre: 'Whisky',       precio: 2.50 },
+    { uds: 1, nombre: 'Red Bull',     precio: 6.30 },
+    { uds: 1, nombre: 'Solomillo al oporto', precio: 18.32 },
+    { uds: 1, nombre: 'Menú del día', precio: 10.00 },
+    { uds: 1, nombre: 'Coca cola',    precio: 0.00 }  // gratis
 ];
-const PREVIEW_IVA = [{ pct: 10 }]; // se calculará sobre el total
 
 function fmtMon(v) { return v.toFixed(2).replace('.', ',') + ' €'; }
-function fmtR(str, width) {
-    str = String(str);
-    return str.length >= width ? str : str + ' '.repeat(width - str.length);
-}
-function fmtL(str, width) {
-    str = String(str);
-    return str.length >= width ? str : ' '.repeat(width - str.length) + str;
-}
-const SEP  = '━'.repeat(38);
-const SEPm = '─'.repeat(38);
+function pad(str, len) { return (str + ' '.repeat(len)).substring(0, len); }
+function padL(str, len) { return (' '.repeat(len) + str).slice(-len); }
+const ANCHO = 38;
+const SEP_GRUESO = '*'.repeat(ANCHO);
+const SEP_FINO    = '-'.repeat(ANCHO);
 
 function actualizarPreview() {
-    const W = 38; // ancho del ticket en caracteres
-
     // ── Cabecera (elementos del editor) ─────────────────────────────
     const cab = document.getElementById('prev-cabecera');
     cab.innerHTML = '';
     estado.cabecera.forEach(el => {
         const d = document.createElement('div');
         d.style.cssText = `position:absolute;left:${el.x||0}px;top:${el.y||0}px;width:${el.w||100}px;`;
-        if (el.tipo === 'texto') { d.innerText = el.contenido || ''; d.style.fontSize = '11px'; }
-        else if (el.tipo === 'imagen') { d.innerHTML = `<img src="/Admin/ImagenTicket/${el.imgId}" style="max-width:100%;max-height:50px;object-fit:contain;">`; }
+        if (el.tipo === 'texto') { d.innerText = el.contenido || ''; d.style.fontSize = '10px'; d.style.whiteSpace = 'pre'; }
+        else if (el.tipo === 'imagen') { d.innerHTML = `<img src="/Admin/ImagenTicket/${el.imgId}" style="max-width:100%;max-height:60px;object-fit:contain;">`; }
         cab.appendChild(d);
     });
     cab.style.minHeight = estado.cabecera.length ? '80px' : '10px';
 
     // ── Cuerpo del ticket ─────────────────────────────────────────
     const cuerpo = document.getElementById('prev-cuerpo');
-    let html = '';
+    let lineas = [];
 
-    // Título
-    html += `<div>${SEP}</div>`;
-    html += `<div style="text-align:center;font-weight:bold;">FACTURA SIMPLIFICADA</div>`;
-    html += `<div>${SEPm}</div>`;
+    lineas.push(SEP_GRUESO);
+    lineas.push('        FACTURA SIMPLIFICADA        ');
+    lineas.push(SEP_FINO);
 
     // Nº Op / Mesa
-    html += `<div>${fmtR('Nº Op.:  T-1', 22)}${fmtL('Salón/Mesa 1', W-22)}</div>`;
-    html += `<div>${SEPm}</div>`;
+    lineas.push('Nº Op.:  T-1             Salón/Mesa 1');
+    lineas.push(SEP_FINO);
 
-    // Hora y camarero
+    // Fecha/hora
     const ahora = new Date();
-    const fechaStr = ahora.toLocaleDateString('es-ES') + ' ' + ahora.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
+    const fecha = ahora.toLocaleDateString('es-ES').padEnd(11);
+    const hora  = ahora.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}).padEnd(15);
     if (document.getElementById('chkHora')?.checked)
-        html += `<div>${fechaStr}</div>`;
-    if (document.getElementById('chkUsuario')?.checked)
-        html += `<div>Camarero: [nombre del camarero]</div>`;
+        lineas.push(fecha + hora + 'Mateo');
+    else
+        lineas.push(fecha + hora.trim());
 
-    // Cabecera de líneas
-    html += `<div>${SEPm}</div>`;
-    html += `<div>${fmtR('Uds.', 6)}${fmtR('Producto', 22)}${fmtL('Importe', W-28)}</div>`;
-    html += `<div>${SEPm}</div>`;
+    if (document.getElementById('chkUsuario')?.checked)
+        lineas.push('Camarero: [nombre camarero]');
+
+    lineas.push(SEP_FINO);
+
+    // Cabecera productos
+    lineas.push('Uds.  Producto                Importe');
+    lineas.push(SEP_FINO);
 
     // Líneas de productos
-    let total = 0;
+    let subtotal = 0;
     if (document.getElementById('chkDesglose')?.checked) {
         PREVIEW_ITEMS.forEach(it => {
-            const imp = fmtL(fmtMon(it.precio), 9);
-            html += `<div>${fmtR(it.uds, 4)}  ${fmtR(it.nombre, 22)}${imp}</div>`;
-            total += it.uds * it.precio;
+            const importe = it.uds * it.precio;
+            subtotal += importe;
+            const uds = String(it.uds).padStart(3);
+            const prod = it.nombre.substring(0, 22).padEnd(22);
+            const imp = fmtMon(it.precio).padStart(9);
+            lineas.push(`  ${uds}  ${prod}  ${imp}`);
         });
     } else {
-        PREVIEW_ITEMS.forEach(it => { total += it.uds * it.precio; });
+        // Solo sumar total sin mostrar líneas
+        PREVIEW_ITEMS.forEach(it => { subtotal += it.uds * it.precio; });
     }
 
-    html += `<div>${SEPm}</div>`;
+    // Pie y descuentos (en este bar no hay descuentos, así que omitir)
+    lineas.push(SEP_FINO);
 
-    // Impuestos (solo porcentaje del total, NO suman)
+    // Impuestos
     if (document.getElementById('chkImpuestos')?.checked) {
-        PREVIEW_IVA.forEach(iv => {
-            const base  = total / (1 + iv.pct / 100);
-            const cuota = total - base;
-            html += `<div>${iv.pct}%  Base: ${fmtMon(base)}  Cuota: ${fmtMon(cuota)}</div>`;
-        });
-        html += `<div>${fmtR('Total:', 20)}${fmtL(fmtMon(total), W-20)}</div>`;
-        html += `<div>${SEPm}</div>`;
-        html += `<div>Total (Impuestos Incl.)${fmtL(fmtMon(total), W-23)}</div>`;
+        const tasaIVA = 0.10; // 10%
+        const base  = subtotal / (1 + tasaIVA);
+        const cuota = subtotal - base;
+
+        lineas.push(`10 %  Base:  ${fmtMon(base)}  Cuota:  ${fmtMon(cuota)}`);
+        lineas.push(`            Total:  ${fmtMon(subtotal)}  Total:  ${fmtMon(cuota)}`);
+        lineas.push(SEP_FINO);
+        lineas.push(`Total (Impuestos Incl.)      ${fmtMon(subtotal)}`);
+        lineas.push(SEP_GRUESO);
+        lineas.push('');
+        lineas.push(`Emitido:       ${fmtMon(subtotal)}  Cambio:       0,00 €`);
+        lineas.push('Efectivo                     ' + fmtMon(subtotal));
     } else {
-        html += `<div style="font-weight:bold;text-align:right;">TOTAL: ${fmtMon(total)}</div>`;
+        lineas.push(`                    TOTAL:  ${fmtMon(subtotal)}`);
     }
 
-    cuerpo.innerHTML = html;
+    lineas.push(SEP_GRUESO);
+
+    // Datos factura completa (solo si fuera factura normal, no simplificada/proforma)
+    // Por ahora comentado ya que esto se mostrará solo en facturas completas
+    /*
+    lineas.push('Cheque Restaurante           27,49 €');
+    lineas.push('Donde Restaurante             3,00 €');
+    lineas.push(SEP_GRUESO);
+    lineas.push('Cliente: EL CAPRICHO, S.A.');
+    lineas.push('NIF/CIF: A99999999');
+    lineas.push('TIF:');
+    lineas.push('CP:      Avd. Real de Pinto s/n');
+    lineas.push('         28821');
+    lineas.push('Prov.:   Madrid');
+    lineas.push(SEP_GRUESO);
+    */
+
+    cuerpo.innerHTML = lineas.map(l => `<div style="font-family:monospace;font-size:11px;white-space:pre;">${l}</div>`).join('');
 
     // ── Pie (elementos del editor) ──────────────────────────────────
     const pie = document.getElementById('prev-pie');
-    pie.innerHTML = `<div>${SEP}</div>`;
+    pie.innerHTML = '';
     estado.pie.forEach(el => {
         const d = document.createElement('div');
-        d.style.cssText = `position:absolute;left:${el.x||0}px;top:${el.y||0}px;width:${el.w||100}px;`;
-        if (el.tipo === 'texto') { d.innerText = el.contenido || ''; d.style.fontSize = '11px'; }
-        else if (el.tipo === 'imagen') { d.innerHTML = `<img src="/Admin/ImagenTicket/${el.imgId}" style="max-width:100%;max-height:50px;object-fit:contain;">`; }
+        d.style.cssText = `position:absolute;left:${el.x||0}px;top:${el.y||0}px;width:${el.w||100}px;text-align:center;`;
+        if (el.tipo === 'texto') { d.innerText = el.contenido || ''; d.style.fontSize = '10px'; d.style.whiteSpace = 'pre'; d.style.fontWeight = 'bold'; }
+        else if (el.tipo === 'imagen') { d.innerHTML = `<img src="/Admin/ImagenTicket/${el.imgId}" style="max-width:100%;max-height:40px;object-fit:contain;">`; }
         pie.appendChild(d);
     });
-    pie.style.minHeight = '30px';
+    pie.style.minHeight = '50px';
 }
 
 // Activar pestaña tickets si viene en el hash
