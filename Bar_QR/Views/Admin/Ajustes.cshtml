@@ -257,6 +257,13 @@ if (location.hash === '#tickets') {
 
 // Renderizar preview inicial al cargar la página
 window.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM cargado, ejecutando actualizarPreview()');
+    actualizarPreview();
+});
+
+// También actualizar cuando se active la pestaña de tickets
+document.getElementById('tickets-tab')?.addEventListener('shown.bs.tab', function() {
+    console.log('Pestaña Tickets activada, ejecutando actualizarPreview()');
     actualizarPreview();
 });
 </script>
