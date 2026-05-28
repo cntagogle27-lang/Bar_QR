@@ -92,15 +92,23 @@ public class LoginController : Controller
 		return View(camareros);
 	}
 
+	private const string AdminPin = "1234";
+
 	[HttpPost]
-	public async Task<IActionResult> SeleccionarPerfil(string emailCamarero)
+	public async Task<IActionResult> SeleccionarPerfil(string emailCamarero, string? adminPin)
 	{
 		if (TempData["GoogleAdminEmail"] is not string adminEmail)
 			return RedirectToAction("Index");
 
 		if (string.IsNullOrWhiteSpace(emailCamarero))
 		{
-			// Admin entra como administrador
+			// Verificar PIN de admin
+			if (adminPin != AdminPin)
+			{
+				TempData["LoginError"] = "PIN incorrecto.";
+				TempData["GoogleAdminEmail"] = adminEmail;
+				return RedirectToAction("SeleccionarPerfil");
+			}
 			var adminClaims = new List<Claim> {
 				new Claim(ClaimTypes.Name, adminEmail),
 				new Claim(ClaimTypes.Role, "Admin")

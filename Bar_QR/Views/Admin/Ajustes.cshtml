@@ -324,30 +324,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="tab-pane fade show active" id="empleados" role="tabpanel">
                     <div class="row">
                         <div class="col-md-6">
-                            <h5>Correos permitidos para personal</h5>
-                            <form asp-action="AgregarEmail" method="post" class="d-flex mb-3">
-                                <input type="email" name="email" class="form-control me-2" placeholder="nuevo@correo.com" required />
-                                <button class="btn btn-primary">A�adir</button>
-                            </form>
-                            <ul class="list-group">
-                                @foreach(var email in Model.Emails)
-                                {
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        <div class="me-3">
-                                            <div class="fw-bold">@email</div>
-                                            <div class="small text-muted">Enlace de acceso:</div>
-                                            <a class="small" href="@Url.Action("Acceso", "Login", new { email }, Context.Request.Scheme)">
-                                                @Url.Action("Acceso", "Login", new { email }, Context.Request.Scheme)
-                                            </a>
-                                        </div>
-                                        <form asp-action="EliminarEmail" method="post" class="m-0">
-                                            <input type="hidden" name="email" value="@email" />
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
-                                        </form>
-                                    </li>
-                                }
-                            </ul>
-                            <hr />
                             <h5>Tokens para QR</h5>
                             <form asp-action="AgregarToken" method="post" class="d-flex mb-3">
                                 <input type="text" name="token" class="form-control me-2" placeholder="token-por-mesa-o-global" required />
