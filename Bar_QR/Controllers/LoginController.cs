@@ -16,7 +16,8 @@ public class LoginController : Controller
 	[HttpGet]
 	public IActionResult GoogleLogin()
 	{
-		var redirectUrl = Url.Action("GoogleCallback", "Login", values: null, protocol: "https");
+		// RedirectUri apunta a AfterGoogle, que es DISTINTO del CallbackPath del middleware (/Login/GoogleCallback)
+		var redirectUrl = Url.Action("AfterGoogle", "Login", values: null, protocol: "https");
 		Console.WriteLine($"[GoogleLogin] RedirectUri = {redirectUrl}");
 		var properties = new AuthenticationProperties
 		{
@@ -27,7 +28,10 @@ public class LoginController : Controller
 	}
 
 	[HttpGet]
-	public async Task<IActionResult> GoogleCallback()
+	public IActionResult GoogleCallback() => Redirect("/"); // solo por si acaso; el middleware intercepta esta ruta
+
+	[HttpGet]
+	public async Task<IActionResult> AfterGoogle()
 	{
 		// Leer el ticket del esquema externo temporal
 		var result = await HttpContext.AuthenticateAsync("External");
