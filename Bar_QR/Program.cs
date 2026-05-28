@@ -34,18 +34,9 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// DataProtection: usar /data si existe (volumen Railway), si no /tmp
-// Con ProtectKeysWithDpapi=false y clave fija por env var las keys son reproducibles entre reinicios
-var dataDir = Directory.Exists("/data") ? "/data" : Path.GetTempPath();
-var keysDir = Path.Combine(dataDir, "barqr-dp-keys");
-Directory.CreateDirectory(keysDir);
-var dpBuilder = builder.Services.AddDataProtection()
-	.PersistKeysToFileSystem(new DirectoryInfo(keysDir))
+// DataProtection en memoria (Railway single-instance: el flujo OAuth dura segundos en el mismo proceso)
+builder.Services.AddDataProtection()
 	.SetApplicationName("Bar_QR");
-// Si hay una clave maestra en variable de entorno, usarla para cifrar las keys (opcional pero recomendado)
-var dpMasterKey = Environment.GetEnvironmentVariable("DP_MASTER_KEY");
-if (!string.IsNullOrEmpty(dpMasterKey))
-	dpBuilder.ProtectKeysWithDpapi();
 
 // Configurar ForwardedHeaders para Railway (proxy SSL termination)
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
