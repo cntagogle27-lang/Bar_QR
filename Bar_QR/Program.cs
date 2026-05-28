@@ -60,12 +60,22 @@ builder.Services.AddAuthentication("CookieAuth")
 		options.SignInScheme = "External";
 		options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "no-configurado";
 		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "no-configurado";
-		options.CallbackPath = "/signin-google";
+		options.CallbackPath = "/Login/GoogleCallback";
 		options.CorrelationCookie.Path = "/";
 		options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
 		options.CorrelationCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
 		options.CorrelationCookie.HttpOnly = true;
 		options.CorrelationCookie.IsEssential = true;
+		options.CorrelationCookie.Name = ".Correlation.Google";
+		options.Events.OnRedirectToAuthorizationEndpoint = ctx =>
+		{
+			// Forzar que la redirect_uri que va a Google sea siempre HTTPS
+			var uri = new UriBuilder(ctx.RedirectUri);
+			if (ctx.Request.Headers.ContainsKey("X-Forwarded-Proto"))
+				uri.Scheme = "https";
+			ctx.Response.Redirect(uri.ToString());
+			return Task.CompletedTask;
+		};
 		options.Events.OnRemoteFailure = ctx =>
 		{
 			var inner = ctx.Failure?.InnerException?.Message ?? "";
