@@ -28,7 +28,8 @@ public class LoginController : Controller
 		var result = await HttpContext.AuthenticateAsync("External");
 		if (!result.Succeeded)
 		{
-			TempData["LoginError"] = "No se pudo autenticar con Google.";
+			var errorMsg = result.Failure?.Message ?? "No se pudo autenticar con Google.";
+			TempData["LoginError"] = $"Error Google: {errorMsg}";
 			return RedirectToAction("Index");
 		}
 
