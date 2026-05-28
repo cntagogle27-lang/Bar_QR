@@ -60,7 +60,7 @@ builder.Services.AddAuthentication("CookieAuth")
 		options.SignInScheme = "External";
 		options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "no-configurado";
 		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "no-configurado";
-		options.CallbackPath = "/Login/GoogleCallback";
+		options.CallbackPath = "/signin-google";
 		options.CorrelationCookie.Path = "/";
 		options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
 		options.CorrelationCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;

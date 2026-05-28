@@ -17,6 +17,7 @@ public class LoginController : Controller
 	public IActionResult GoogleLogin()
 	{
 		var redirectUrl = Url.Action("GoogleCallback", "Login", values: null, protocol: "https");
+		Console.WriteLine($"[GoogleLogin] RedirectUri = {redirectUrl}");
 		var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
 		return Challenge(properties, "Google");
 	}
