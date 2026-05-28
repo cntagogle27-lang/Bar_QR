@@ -5,8 +5,9 @@ using Microsoft.AspNetCore.DataProtection;
 namespace Bar_QR.Utils;
 
 /// <summary>
-/// IDataProtectionProvider con clave fija derivada de variable de entorno.
-/// Permite que el estado OAuth sobreviva reinicios de contenedor en Railway.
+/// IDataProtectionProvider con clave fija derivada de OAUTH_SECRET.
+/// Garantiza que la cookie de correlación OAuth se pueda descifrar
+/// tras reinicios de contenedor en Railway.
 /// </summary>
 public class EnvKeyDataProtectionProvider : IDataProtectionProvider
 {
@@ -14,6 +15,7 @@ public class EnvKeyDataProtectionProvider : IDataProtectionProvider
 
 	public EnvKeyDataProtectionProvider(string secret)
 	{
+		// Derivar una clave de 32 bytes reproducible desde el secret
 		_masterKey = SHA256.HashData(Encoding.UTF8.GetBytes(secret));
 	}
 
@@ -23,10 +25,11 @@ public class EnvKeyDataProtectionProvider : IDataProtectionProvider
 
 public class EnvKeyDataProtector : IDataProtector
 {
-	private readonly byte[] _key;
+	private readonly byte[] _key; // 32 bytes
 
 	public EnvKeyDataProtector(byte[] masterKey, string purpose)
 	{
+		// Derivar una subkey específica para este purpose
 		_key = HMACSHA256.HashData(masterKey, Encoding.UTF8.GetBytes(purpose));
 	}
 
@@ -35,30 +38,50 @@ public class EnvKeyDataProtector : IDataProtector
 
 	public byte[] Protect(byte[] plaintext)
 	{
-		var nonce = new byte[12];
-		RandomNumberGenerator.Fill(nonce);
-		var ciphertext = new byte[plaintext.Length];
-		var tag = new byte[16];
-		using var aes = new AesGcm(_key, 16);
-		aes.Encrypt(nonce, plaintext, ciphertext, tag);
-		// Formato: [12 nonce][16 tag][ciphertext]
-		var result = new byte[28 + ciphertext.Length];
-		nonce.CopyTo(result, 0);
-		tag.CopyTo(result, 12);
-		ciphertext.CopyTo(result, 28);
+		using var aes = Aes.Create();
+		aes.Key = _key;
+		aes.GenerateIV(); // IV aleatorio de 16 bytes
+		aes.Mode = CipherMode.CBC;
+		aes.Padding = PaddingMode.PKCS7;
+
+		using var ms = new MemoryStream();
+		ms.Write(aes.IV, 0, 16); // Escribir IV al inicio
+		using (var cs = new CryptoStream(ms, aes.CreateEncryptor(), CryptoStreamMode.Write))
+			cs.Write(plaintext, 0, plaintext.Length);
+
+		// Añadir HMAC para integridad
+		var ciphertext = ms.ToArray();
+		var mac = HMACSHA256.HashData(_key, ciphertext);
+		var result = new byte[ciphertext.Length + 32];
+		ciphertext.CopyTo(result, 0);
+		mac.CopyTo(result, ciphertext.Length);
 		return result;
 	}
 
 	public byte[] Unprotect(byte[] protectedData)
 	{
-		if (protectedData.Length < 28)
+		if (protectedData.Length < 48) // 16 IV + al menos 1 bloque + 32 HMAC
 			throw new CryptographicException("Datos protegidos inválidos.");
-		var nonce = protectedData[..12];
-		var tag = protectedData[12..28];
-		var ciphertext = protectedData[28..];
-		var plaintext = new byte[ciphertext.Length];
-		using var aes = new AesGcm(_key, 16);
-		aes.Decrypt(nonce, ciphertext, tag, plaintext);
-		return plaintext;
+
+		// Verificar HMAC
+		var ciphertext = protectedData[..^32];
+		var mac = protectedData[^32..];
+		var expectedMac = HMACSHA256.HashData(_key, ciphertext);
+		if (!CryptographicOperations.FixedTimeEquals(mac, expectedMac))
+			throw new CryptographicException("Firma inválida.");
+
+		// Descifrar
+		var iv = ciphertext[..16];
+		var encrypted = ciphertext[16..];
+		using var aes = Aes.Create();
+		aes.Key = _key;
+		aes.IV = iv;
+		aes.Mode = CipherMode.CBC;
+		aes.Padding = PaddingMode.PKCS7;
+
+		using var ms = new MemoryStream();
+		using (var cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Write))
+			cs.Write(encrypted, 0, encrypted.Length);
+		return ms.ToArray();
 	}
 }

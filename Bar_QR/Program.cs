@@ -77,10 +77,12 @@ builder.Services.AddAuthentication("CookieAuth")
 		options.DataProtectionProvider = new Bar_QR.Utils.EnvKeyDataProtectionProvider(secret);
 		options.Events.OnRemoteFailure = ctx =>
 		{
-			var inner = ctx.Failure?.InnerException?.Message ?? "";
-			var msg = ctx.Failure?.Message ?? "error desconocido";
+			var ex = ctx.Failure;
+			Console.Error.WriteLine($"[OAuth] RemoteFailure: {ex}");
+			Console.Error.WriteLine($"[OAuth] Stack: {ex?.StackTrace}");
+			var inner = ex?.InnerException?.Message ?? "";
+			var msg = ex?.Message ?? "error desconocido";
 			var full = string.IsNullOrEmpty(inner) ? msg : $"{msg} | {inner}";
-			Console.Error.WriteLine($"[OAuth] RemoteFailure: {ctx.Failure}");
 			ctx.Response.Redirect("/Login/Index?oauthError=" + Uri.EscapeDataString(full));
 			ctx.HandleResponse();
 			return Task.CompletedTask;
