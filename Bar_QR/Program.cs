@@ -15,7 +15,12 @@ if (!string.IsNullOrEmpty(portEnv) && int.TryParse(portEnv, out var p))
     builder.WebHost.UseUrls($"http://0.0.0.0:{p}");
 }
 
-var sqlitePath = builder.Configuration.GetConnectionString("Sqlite") ?? "Data Source=barqr.db";
+var sqlitePath = builder.Configuration.GetConnectionString("Sqlite") ?? "Data Source=/data/barqr.db";
+// Si el directorio /data no existe (local dev), usar directorio actual
+if (sqlitePath.Contains("/data/") && !Directory.Exists("/data"))
+{
+    sqlitePath = "Data Source=barqr.db";
+}
 
 builder.Services.AddSingleton(new Func<string>(() => sqlitePath));
 // Registrar DbContext con SQLite
@@ -29,9 +34,11 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Persistir claves de Data Protection en SQLite (persiste entre redeploys en Railway)
+// Persistir claves de Data Protection en fichero (/data en Railway, tmp en local)
+var keysDir = Directory.Exists("/data") ? "/data/dataprotection-keys" : Path.Combine(Path.GetTempPath(), "barqr-keys");
+Directory.CreateDirectory(keysDir);
 builder.Services.AddDataProtection()
-	.PersistKeysToDbContext<Bar_QR.Data.AppDbContext>()
+	.PersistKeysToFileSystem(new DirectoryInfo(keysDir))
 	.SetApplicationName("Bar_QR");
 
 // Configurar ForwardedHeaders para Railway (proxy SSL termination)
