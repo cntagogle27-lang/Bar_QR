@@ -34,12 +34,18 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Persistir claves de Data Protection en fichero (/data en Railway, tmp en local)
-var keysDir = Directory.Exists("/data") ? "/data/dataprotection-keys" : Path.Combine(Path.GetTempPath(), "barqr-keys");
+// DataProtection: usar /data si existe (volumen Railway), si no /tmp
+// Con ProtectKeysWithDpapi=false y clave fija por env var las keys son reproducibles entre reinicios
+var dataDir = Directory.Exists("/data") ? "/data" : Path.GetTempPath();
+var keysDir = Path.Combine(dataDir, "barqr-dp-keys");
 Directory.CreateDirectory(keysDir);
-builder.Services.AddDataProtection()
+var dpBuilder = builder.Services.AddDataProtection()
 	.PersistKeysToFileSystem(new DirectoryInfo(keysDir))
 	.SetApplicationName("Bar_QR");
+// Si hay una clave maestra en variable de entorno, usarla para cifrar las keys (opcional pero recomendado)
+var dpMasterKey = Environment.GetEnvironmentVariable("DP_MASTER_KEY");
+if (!string.IsNullOrEmpty(dpMasterKey))
+	dpBuilder.ProtectKeysWithDpapi();
 
 // Configurar ForwardedHeaders para Railway (proxy SSL termination)
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -59,7 +65,7 @@ builder.Services.AddAuthentication("CookieAuth")
 	})
 	.AddCookie("External", o =>
 	{
-		o.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+		o.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
 		o.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
 	})
 	.AddGoogle("Google", options =>
@@ -74,15 +80,6 @@ builder.Services.AddAuthentication("CookieAuth")
 		options.CorrelationCookie.HttpOnly = true;
 		options.CorrelationCookie.IsEssential = true;
 		options.CorrelationCookie.Name = ".Correlation.Google";
-		options.Events.OnRedirectToAuthorizationEndpoint = ctx =>
-		{
-			// Forzar que la redirect_uri que va a Google sea siempre HTTPS
-			var uri = new UriBuilder(ctx.RedirectUri);
-			if (ctx.Request.Headers.ContainsKey("X-Forwarded-Proto"))
-				uri.Scheme = "https";
-			ctx.Response.Redirect(uri.ToString());
-			return Task.CompletedTask;
-		};
 		options.Events.OnRemoteFailure = ctx =>
 		{
 			var inner = ctx.Failure?.InnerException?.Message ?? "";
