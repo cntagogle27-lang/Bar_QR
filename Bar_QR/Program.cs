@@ -34,7 +34,14 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// DataProtection en memoria (Railway single-instance: el flujo OAuth dura segundos en el mismo proceso)
+// DataProtection con clave fija desde variable de entorno OAUTH_SECRET
+// Esto permite que el estado OAuth sobreviva reinicios de contenedor en Railway
+var oauthSecret = Environment.GetEnvironmentVariable("OAUTH_SECRET");
+if (!string.IsNullOrEmpty(oauthSecret))
+{
+	builder.Services.AddSingleton<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(
+		new Bar_QR.Utils.EnvKeyDataProtectionProvider(oauthSecret));
+}
 builder.Services.AddDataProtection()
 	.SetApplicationName("Bar_QR");
 
