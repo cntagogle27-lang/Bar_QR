@@ -114,6 +114,19 @@ app.Use((context, next) =>
     return next(context);
 });
 
+// LOG diagnóstico OAuth
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/Login/GoogleCallback"))
+    {
+        var cookies = string.Join(", ", context.Request.Cookies.Keys);
+        Console.Error.WriteLine($"[Callback] Scheme={context.Request.Scheme}");
+        Console.Error.WriteLine($"[Callback] Cookies: {(string.IsNullOrEmpty(cookies) ? "NINGUNA" : cookies)}");
+        Console.Error.WriteLine($"[Callback] Query: {context.Request.QueryString}");
+    }
+    await next();
+});
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
