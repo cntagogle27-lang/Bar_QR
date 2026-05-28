@@ -34,14 +34,7 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// DataProtection con clave fija desde variable de entorno OAUTH_SECRET
-// Esto permite que el estado OAuth sobreviva reinicios de contenedor en Railway
-var oauthSecret = Environment.GetEnvironmentVariable("OAUTH_SECRET");
-if (!string.IsNullOrEmpty(oauthSecret))
-{
-	builder.Services.AddSingleton<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(
-		new Bar_QR.Utils.EnvKeyDataProtectionProvider(oauthSecret));
-}
+// DataProtection base (necesario para cookies de sesión)
 builder.Services.AddDataProtection()
 	.SetApplicationName("Bar_QR");
 
@@ -78,6 +71,10 @@ builder.Services.AddAuthentication("CookieAuth")
 		options.CorrelationCookie.HttpOnly = true;
 		options.CorrelationCookie.IsEssential = true;
 		options.CorrelationCookie.Name = ".Correlation.Google";
+		// Usar proveedor de DataProtection con clave fija para que la correlación
+		// sobreviva reinicios de contenedor en Railway
+		var secret = Environment.GetEnvironmentVariable("OAUTH_SECRET") ?? "fallback-dev-secret-no-usar-en-prod";
+		options.DataProtectionProvider = new Bar_QR.Utils.EnvKeyDataProtectionProvider(secret);
 		options.Events.OnRemoteFailure = ctx =>
 		{
 			var inner = ctx.Failure?.InnerException?.Message ?? "";
