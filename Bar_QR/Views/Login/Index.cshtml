@@ -13,11 +13,6 @@
         .login-card { background: rgba(255,255,255,0.07); border-radius: 24px; padding: 3rem 2.5rem; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
         .btn-google { background: #fff; color: #444; font-size: 1.1rem; font-weight: 600; border-radius: 50px; padding: .9rem 2rem; width: 100%; border: none; display: flex; align-items: center; justify-content: center; gap: .75rem; box-shadow: 0 4px 14px rgba(0,0,0,.3); transition: .2s; text-decoration: none; }
         .btn-google:hover { background: #f0f0f0; transform: translateY(-2px); color: #444; }
-        .btn-admin-link { color: rgba(255,255,255,.35); font-size: .8rem; text-decoration: none; }
-        .btn-admin-link:hover { color: rgba(255,255,255,.6); }
-        .pin-btn { width: 65px; height: 65px; margin: 8px; border-radius: 50%; font-size: 24px; font-weight: bold; border: 2px solid #eee; transition: .2s; }
-        .pin-btn:active { background: #eee; color: #000; }
-        #pinInput { background: #f8f9fa; color: #333; border: 2px solid #ddd; font-size: 35px; letter-spacing: 15px; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -39,53 +34,8 @@
             <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.8 6C12.3 13 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/><path fill="#FBBC05" d="M10.4 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.9-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6.3 0-11.7-4.3-13.6-10l-7.8 6C6.6 42.6 14.6 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
             Iniciar sesion con Google
         </a>
-
-        <div class="mt-3">
-            <button class="btn btn-admin-link" data-bs-toggle="modal" data-bs-target="#modalPin">
-                Acceso admin con PIN
-            </button>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalPin" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content text-dark border-0 shadow-lg" style="border-radius:30px;width:350px;margin:auto">
-                <div class="modal-body p-4">
-                    <h4 class="text-center fw-bold mb-4">CODIGO ADMIN</h4>
-                    <form asp-action="VerificarAdmin" method="post">
-                        <input type="password" name="pin" id="pinInput" class="form-control text-center mb-4" readonly maxlength="4" />
-                        <div class="text-center">
-                            <div class="d-flex justify-content-center">
-                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="press(1)">1</button>
-                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="press(2)">2</button>
-                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="press(3)">3</button>
-                            </div>
-                            <div class="d-flex justify-content-center">
-                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="press(4)">4</button>
-                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="press(5)">5</button>
-                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="press(6)">6</button>
-                            </div>
-                            <div class="d-flex justify-content-center">
-                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="press(7)">7</button>
-                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="press(8)">8</button>
-                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="press(9)">9</button>
-                            </div>
-                            <div class="d-flex justify-content-center align-items-center">
-                                <button type="button" class="btn btn-link text-danger fw-bold" style="text-decoration:none;width:65px" onclick="cls()">BORRAR</button>
-                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="press(0)">0</button>
-                                <button type="submit" class="btn btn-success pin-btn shadow">OK</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function press(n) { const i = document.getElementById("pinInput"); if(i.value.length < 4) i.value += n; }
-        function cls() { document.getElementById("pinInput").value = ""; }
-    </script>
 </body>
 </html>
