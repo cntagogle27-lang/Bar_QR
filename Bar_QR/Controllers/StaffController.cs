@@ -27,44 +27,54 @@ public class StaffController : Controller
 	{
 		var zona = _db.Zonas.Include(z => z.Mesas).FirstOrDefault(z => z.Id == zonaId);
 		if (zona == null) return RedirectToAction("Zonas");
-		ViewData["ZonaId"] = zonaId;
+		ViewData["ZonaId"]     = zonaId;
 		ViewData["ZonaNombre"] = zona.Nombre;
 		return View(zona.Mesas.OrderBy(m => m.NumeroMesa).ToList());
 	}
 
 	// ─── PANEL DE PEDIDO ────────────────────────────────────────────────────────
 
-	public IActionResult Panel(int mesaId, int zonaId, int? pedidoId = null)
+	public IActionResult Panel(int mesaId, int zonaId)
 	{
 		var mesa = _db.Mesas.Find(mesaId);
 		if (mesa == null) return RedirectToAction("MapaMesas", new { zonaId });
 
-		PedidoMesa? pedido = null;
-
-		// Si viene pedidoId explícito, cargarlo directamente
-		if (pedidoId.HasValue)
-			pedido = _db.PedidosMesa
-				.Include(p => p.Lineas).ThenInclude(l => l.Producto)
-				.FirstOrDefault(p => p.Id == pedidoId.Value && p.MesaId == mesaId);
-
-		// Si no, buscar el más reciente con estado Abierto
-		pedido ??= _db.PedidosMesa
-			.Include(p => p.Lineas).ThenInclude(l => l.Producto)
-			.Where(p => p.MesaId == mesaId && p.Estado == EstadoPedidoMesa.Abierto)
-			.OrderByDescending(p => p.CreadoEn)
+		// Buscar id del pedido abierto (Estado=0) con SQL directo para evitar problemas de conversión de enum
+		var idPedido = _db.Database
+			.SqlQueryRaw<int>("SELECT Id FROM PedidosMesa WHERE MesaId = {0} AND Estado = 0 ORDER BY CreadoEn DESC LIMIT 1", mesaId)
+			.AsEnumerable()
 			.FirstOrDefault();
+
+		PedidoMesa? pedido = null;
+		if (idPedido > 0)
+		{
+			pedido = _db.PedidosMesa
+				.Include(p => p.Lineas)
+				.ThenInclude(l => l.Producto)
+				.FirstOrDefault(p => p.Id == idPedido);
+		}
 
 		if (pedido == null)
 		{
-			var nuevo = new PedidoMesa { MesaId = mesaId, CreadoEn = DateTime.UtcNow, Estado = EstadoPedidoMesa.Abierto };
-			_db.PedidosMesa.Add(nuevo);
+			pedido = new PedidoMesa
+			{
+				MesaId   = mesaId,
+				CreadoEn = DateTime.UtcNow,
+				Estado   = EstadoPedidoMesa.Abierto
+			};
+			_db.PedidosMesa.Add(pedido);
 			_db.SaveChanges();
+
 			pedido = _db.PedidosMesa
-				.Include(p => p.Lineas).ThenInclude(l => l.Producto)
-				.First(p => p.Id == nuevo.Id);
+				.Include(p => p.Lineas)
+				.ThenInclude(l => l.Producto)
+				.First(p => p.Id == pedido.Id);
 		}
 
-		var productos = _db.Productos.OrderBy(p => (int)p.Grupo).ThenBy(p => p.Nombre).ToList();
+		var productos = _db.Productos
+			.OrderBy(p => (int)p.Grupo)
+			.ThenBy(p => p.Nombre)
+			.ToList();
 
 		ViewData["ZonaId"]      = zonaId;
 		ViewData["MesaNombre"]  = mesa.Nombre;
@@ -77,21 +87,43 @@ public class StaffController : Controller
 	[HttpPost]
 	public IActionResult AgregarLinea(int pedidoId, int productoId, int zonaId, int mesaId)
 	{
-		var pedido = _db.PedidosMesa.Include(p => p.Lineas).FirstOrDefault(p => p.Id == pedidoId);
+		// Buscar por id explícito; si no existe, buscar el abierto de la mesa
+		var pedido = _db.PedidosMesa
+			.Include(p => p.Lineas)
+			.FirstOrDefault(p => p.Id == pedidoId && p.MesaId == mesaId);
+
+		if (pedido == null)
+		{
+			var idFallback = _db.Database
+				.SqlQueryRaw<int>("SELECT Id FROM PedidosMesa WHERE MesaId = {0} AND Estado = 0 ORDER BY CreadoEn DESC LIMIT 1", mesaId)
+				.AsEnumerable()
+				.FirstOrDefault();
+
+			if (idFallback > 0)
+				pedido = _db.PedidosMesa
+					.Include(p => p.Lineas)
+					.FirstOrDefault(p => p.Id == idFallback);
+		}
+
 		if (pedido == null) return RedirectToAction("MapaMesas", new { zonaId });
 
 		var esEncargado = User.IsInRole("Encargado") || User.IsInRole("Admin");
 		if (pedido.Estado == EstadoPedidoMesa.Enviado && !esEncargado)
-			return RedirectToAction("Panel", new { mesaId, zonaId, pedidoId });
+			return RedirectToAction("Panel", new { mesaId, zonaId });
 
 		var linea = pedido.Lineas.FirstOrDefault(l => l.ProductoId == productoId);
 		if (linea != null)
 			linea.Cantidad++;
 		else
-			pedido.Lineas.Add(new LineaPedido { PedidoMesaId = pedidoId, ProductoId = productoId, Cantidad = 1 });
+			pedido.Lineas.Add(new LineaPedido
+			{
+				PedidoMesaId = pedidoId,
+				ProductoId   = productoId,
+				Cantidad     = 1
+			});
 
 		_db.SaveChanges();
-		return RedirectToAction("Panel", new { mesaId, zonaId, pedidoId });
+		return RedirectToAction("Panel", new { mesaId, zonaId });
 	}
 
 	[HttpPost]
@@ -101,11 +133,11 @@ public class StaffController : Controller
 		var linea  = _db.LineasPedido.FirstOrDefault(l => l.Id == lineaId && l.PedidoMesaId == pedidoId);
 
 		if (pedido == null || linea == null)
-			return RedirectToAction("Panel", new { mesaId, zonaId, pedidoId });
+			return RedirectToAction("Panel", new { mesaId, zonaId });
 
 		var esEncargado = User.IsInRole("Encargado") || User.IsInRole("Admin");
 		if (pedido.Estado == EstadoPedidoMesa.Enviado && !esEncargado)
-			return RedirectToAction("Panel", new { mesaId, zonaId, pedidoId });
+			return RedirectToAction("Panel", new { mesaId, zonaId });
 
 		if (linea.Cantidad > 1)
 			linea.Cantidad--;
@@ -113,7 +145,7 @@ public class StaffController : Controller
 			_db.LineasPedido.Remove(linea);
 
 		_db.SaveChanges();
-		return RedirectToAction("Panel", new { mesaId, zonaId, pedidoId });
+		return RedirectToAction("Panel", new { mesaId, zonaId });
 	}
 
 	[HttpPost]
