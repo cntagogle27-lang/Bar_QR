@@ -49,6 +49,50 @@ public static class DbInitializer
 			catch (Exception ex) { Console.Error.WriteLine($"[DbInit] EnsureCreated falló: {ex.Message}"); }
 		}
 
+		// Aplicar cambios de esquema manualmente para SQLite (ALTER TABLE no falla si ya existen)
+		try
+		{
+			// Columnas nuevas en Mesas
+			var mesasCols = new[] { "PosX", "PosY", "Ancho", "Alto", "ZonaId" };
+			foreach (var col in mesasCols)
+			{
+				try
+				{
+					string tipo = col == "ZonaId" ? "INTEGER NULL" : "INTEGER NOT NULL DEFAULT 0";
+					context.Database.ExecuteSqlRaw($"ALTER TABLE Mesas ADD COLUMN {col} {tipo}");
+					Console.WriteLine($"[DbInit] Columna Mesas.{col} añadida.");
+				}
+				catch { /* Ya existe, ignorar */ }
+			}
+
+			// Tabla Empleados
+			context.Database.ExecuteSqlRaw(@"
+				CREATE TABLE IF NOT EXISTS Empleados (
+					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+					Nombre TEXT NOT NULL,
+					AvatarTipo TEXT NOT NULL DEFAULT 'avatar_h1',
+					FotoData BLOB NULL,
+					FotoMime TEXT NULL
+				)");
+
+			// Tabla Zonas
+			context.Database.ExecuteSqlRaw(@"
+				CREATE TABLE IF NOT EXISTS Zonas (
+					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+					Nombre TEXT NOT NULL
+				)");
+
+			// Registrar la migración EmpleadosYZonas como aplicada
+			context.Database.ExecuteSqlRaw(
+				"INSERT OR IGNORE INTO __EFMigrationsHistory VALUES ('20260528234008_EmpleadosYZonas','9.0.0')");
+
+			Console.WriteLine("[DbInit] Esquema manual OK.");
+		}
+		catch (Exception exSchema)
+		{
+			Console.Error.WriteLine($"[DbInit] Error esquema manual: {exSchema.Message}");
+		}
+
 		// Seed de datos iniciales
 		try
 		{
