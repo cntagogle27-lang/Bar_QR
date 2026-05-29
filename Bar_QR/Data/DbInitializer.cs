@@ -32,9 +32,14 @@ public static class DbInitializer
 					Precio REAL NOT NULL DEFAULT 0,
 					Grupo INTEGER NOT NULL DEFAULT 0,
 					DestinoImpresion INTEGER NOT NULL DEFAULT 0,
+					FotoUrl TEXT NULL,
 					FotoData BLOB NULL,
 					FotoMimeType TEXT NULL
 				)");
+
+			// Añadir FotoUrl si la tabla ya existía sin ella
+			try { context.Database.ExecuteSqlRaw("ALTER TABLE Productos ADD COLUMN FotoUrl TEXT NULL"); }
+			catch { /* Ya existe */ }
 
 			context.Database.ExecuteSqlRaw(@"
 				CREATE TABLE IF NOT EXISTS Mesas (
