@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
+using Bar_QR.Models;
 
 namespace Bar_QR.Controllers;
 
@@ -96,27 +97,27 @@ public class LoginController : Controller
 		{
 			using var scope = HttpContext.RequestServices.CreateScope();
 			var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
-			var camareros = db.StaffEmails.Select(e => e.Email).ToList();
+			var empleados = db.Empleados.OrderBy(e => e.Nombre).ToList();
 			ViewData["GoogleEmail"] = email;
-			return View(camareros);
+			return View(empleados);
 		}
 		catch (Exception ex)
 		{
 			Console.Error.WriteLine($"[SeleccionarPerfil] Error BD: {ex.Message}");
 			ViewData["GoogleEmail"] = email;
-			return View(new List<string>());
+			return View(new List<Empleado>());
 		}
 	}
 
 	private const string AdminPin = "1234";
 
 	[HttpPost]
-	public async Task<IActionResult> SeleccionarPerfil(string emailCamarero, string? adminPin)
+	public async Task<IActionResult> SeleccionarPerfil(int? empleadoId, string? adminPin)
 	{
 		if (TempData["GoogleAdminEmail"] is not string adminEmail)
 			return RedirectToAction("Index");
 
-		if (string.IsNullOrWhiteSpace(emailCamarero))
+		if (empleadoId == null)
 		{
 			// Verificar PIN de admin
 			if (adminPin != AdminPin)
@@ -135,14 +136,15 @@ public class LoginController : Controller
 
 		using var scope = HttpContext.RequestServices.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
-		if (!db.StaffEmails.Any(e => e.Email.Equals(emailCamarero, StringComparison.OrdinalIgnoreCase)))
+		var empleado = db.Empleados.Find(empleadoId.Value);
+		if (empleado == null)
 		{
 			TempData["LoginError"] = "Perfil no válido.";
 			TempData["GoogleAdminEmail"] = adminEmail;
 			return RedirectToAction("SeleccionarPerfil");
 		}
 
-		await LoguearCamarero(emailCamarero);
+		await LoguearCamarero(empleado.Nombre);
 		return RedirectToAction("Index", "Staff");
 	}
 
@@ -204,6 +206,16 @@ public class LoginController : Controller
 			ExpiresUtc = DateTimeOffset.UtcNow.AddDays(365)
 		};
 		await HttpContext.SignInAsync("CookieAuth", principal, properties);
+	}
+
+	[Microsoft.AspNetCore.Authorization.AllowAnonymous]
+	public IActionResult AvatarEmpleado(int id)
+	{
+		using var scope = HttpContext.RequestServices.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
+		var emp = db.Empleados.Find(id);
+		if (emp?.FotoData == null || emp.FotoMime == null) return NotFound();
+		return File(emp.FotoData, emp.FotoMime);
 	}
 
 	public async Task<IActionResult> Logout()

@@ -1,4 +1,4 @@
-﻿@model IEnumerable<string>
+﻿@model List<Bar_QR.Models.Empleado>
 @{
     Layout = null;
     var adminEmail = ViewData["GoogleEmail"] as string;
@@ -33,13 +33,26 @@
             <div class="alert alert-danger">@err</div>
         }
 
+        @if (!Model.Any())
+        {
+            <div class="alert alert-warning">No hay empleados aún. Añade empleados desde el panel de administración.</div>
+        }
+
         <div class="d-grid gap-3">
-            @foreach (var camarero in Model)
+            @foreach (var emp in Model)
             {
                 <form asp-action="SeleccionarPerfil" method="post">
-                    <input type="hidden" name="emailCamarero" value="@camarero" />
+                    <input type="hidden" name="empleadoId" value="@emp.Id" />
                     <button type="submit" class="btn-perfil">
-                        🧑‍🍳 @camarero.Split('@')[0]
+                        @if (emp.AvatarTipo == "custom" && emp.FotoData != null)
+                        {
+                            <img src="/Login/AvatarEmpleado/@emp.Id" style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px" />
+                        }
+                        else
+                        {
+                            <span style="margin-right:8px">🧑‍🍳</span>
+                        }
+                        @emp.Nombre
                     </button>
                 </form>
             }
