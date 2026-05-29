@@ -13,7 +13,7 @@ namespace Bar_QR.Controllers
                 var email = User.Identity.Name?.Trim();
                 if (string.Equals(email, "barqrgm@gmail.com", StringComparison.OrdinalIgnoreCase))
                 {
-                    return RedirectToAction("Index", "Staff");
+                    return RedirectToAction("Listado", "Admin");
                 }
 
                 return RedirectToAction("Index", "Carta");

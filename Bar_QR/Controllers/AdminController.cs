@@ -46,6 +46,9 @@ public class AdminController : Controller
 	[HttpPost]
 	public async Task<IActionResult> Guardar(Producto nuevo, IFormFile? foto)
 	{
+		if (!ModelState.IsValid)
+			return View("NuevoProducto", nuevo);
+
 		if (foto != null && foto.Length > 0)
 		{
 			using var ms = new MemoryStream();
@@ -54,7 +57,7 @@ public class AdminController : Controller
 			nuevo.FotoMimeType = foto.ContentType;
 		}
 		_db.Productos.Add(nuevo);
-		_db.SaveChanges();
+		await _db.SaveChangesAsync();
 		return RedirectToAction("Listado");
 	}
 
