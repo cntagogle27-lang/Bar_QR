@@ -1,0 +1,274 @@
+@using Bar_QR.Models
+@model (PedidoMesa Pedido, List<Producto> Productos)
+
+@{
+	Layout = null;
+	var zonaId      = (int)ViewData["ZonaId"]!;
+	var mesaId      = (int)ViewData["MesaId"]!;
+	var pedidoId    = (int)ViewData["PedidoId"]!;
+	var mesaNombre  = ViewData["MesaNombre"]?.ToString() ?? "Mesa";
+	var esEncargado = (bool)(ViewData["EsEncargado"] ?? false);
+	var pedidoEnviado = Model.Pedido.Estado == EstadoPedidoMesa.Enviado;
+
+	var grupos = Model.Productos
+		.GroupBy(p => p.Grupo)
+		.OrderBy(g => (int)g.Key)
+		.ToList();
+
+	// Nombre amigable de grupos
+	static string NombreGrupo(GrupoProducto g) => g switch {
+		GrupoProducto.CafeInfusiones  => "☕ Café",
+		GrupoProducto.Desayunos       => "🥐 Desayunos",
+		GrupoProducto.Vinos           => "🍷 Vinos",
+		GrupoProducto.Bebidas         => "🥤 Bebidas",
+		GrupoProducto.Ensaladas       => "🥗 Ensaladas",
+		GrupoProducto.Entrantes       => "🍤 Entrantes",
+		GrupoProducto.Quesos          => "🧀 Quesos",
+		GrupoProducto.Horno           => "🍕 Horno",
+		GrupoProducto.Carnes          => "🥩 Carnes",
+		GrupoProducto.Postres         => "🍮 Postres",
+		GrupoProducto.LicoresCocteles => "🍸 Licores",
+		_                             => g.ToString()
+	};
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width,initial-scale=1"/>
+	<title>@mesaNombre · Pedido</title>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
+	<style>
+		*, *::before, *::after { box-sizing: border-box; }
+		html, body { height: 100%; margin: 0; background: #0f0f1a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+
+		/* ── LAYOUT ── */
+		#app { display: flex; flex-direction: column; height: 100vh; }
+
+		/* Cabecera */
+		#cabecera {
+			background: #1a1a2e;
+			border-bottom: 2px solid #2a2a4a;
+			padding: .7rem 1.2rem;
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+			flex-shrink: 0;
+		}
+		#cabecera h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+		.badge-estado-pedido {
+			font-size: .72rem; padding: 3px 10px; border-radius: 20px;
+		}
+		.estado-abierto { background: #1db95433; color: #1db954; border: 1px solid #1db95466; }
+		.estado-enviado { background: #ffc10733; color: #ffc107; border: 1px solid #ffc10766; }
+
+		/* Zona central */
+		#centro { display: flex; flex: 1; overflow: hidden; }
+
+		/* Panel izquierdo: categorías + productos */
+		#panel-izq { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+		/* Tabs de categorías */
+		#cats {
+			display: flex; flex-wrap: wrap; gap: 6px;
+			padding: .8rem 1rem .4rem;
+			background: #13132a;
+			border-bottom: 1px solid #2a2a4a;
+			flex-shrink: 0;
+		}
+		.btn-cat {
+			background: #1a1a2e; border: 1.5px solid #2a2a4a; color: #a0a0c0;
+			border-radius: 8px; padding: 6px 14px; font-size: .82rem; cursor: pointer;
+			transition: all .15s;
+		}
+		.btn-cat.activa, .btn-cat:hover {
+			background: #0d6efd22; border-color: #0d6efd; color: #6ea8fe;
+		}
+
+		/* Grid de productos */
+		#productos-grid {
+			flex: 1; overflow-y: auto;
+			padding: 1rem;
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+			gap: 10px;
+			align-content: start;
+		}
+		.prod-btn {
+			background: #1a1a2e; border: 1.5px solid #2a2a4a; border-radius: 10px;
+			color: #e0e0e0; padding: 12px 8px; text-align: center;
+			cursor: pointer; transition: all .15s; display: flex; flex-direction: column;
+			align-items: center; gap: 4px; font-size: .82rem;
+		}
+		.prod-btn:hover { background: #0d6efd22; border-color: #0d6efd; }
+		.prod-btn img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; }
+		.prod-btn .p-precio { color: #6ea8fe; font-size: .78rem; }
+
+		/* Carrito derecho */
+		#carrito {
+			width: 280px; flex-shrink: 0;
+			background: #13132a; border-left: 1.5px solid #2a2a4a;
+			display: flex; flex-direction: column; overflow: hidden;
+		}
+		#carrito h3 { font-size: .95rem; padding: .8rem 1rem .4rem; border-bottom: 1px solid #2a2a4a; margin: 0; }
+		#lineas-list { flex: 1; overflow-y: auto; padding: .5rem; }
+		.linea-item {
+			display: flex; align-items: center; gap: 8px;
+			background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px;
+			padding: 6px 10px; margin-bottom: 6px; font-size: .82rem;
+		}
+		.linea-item .l-nombre { flex: 1; }
+		.linea-item .l-cant { color: #6ea8fe; font-weight: 700; min-width: 20px; text-align: center; }
+		.linea-item .l-precio { color: #aaa; font-size: .75rem; }
+		.btn-quitar {
+			background: #ff6b6b22; border: 1px solid #ff6b6b55; color: #ff6b6b;
+			border-radius: 6px; padding: 2px 8px; font-size: .78rem; cursor: pointer;
+		}
+		.btn-quitar:disabled { opacity: .35; cursor: not-allowed; }
+		#total-row { padding: .7rem 1rem; border-top: 1px solid #2a2a4a; font-weight: 700; font-size: .95rem; }
+
+		/* Barra inferior */
+		#barra-inferior {
+			background: #1a1a2e; border-top: 2px solid #2a2a4a;
+			padding: .7rem 1.2rem; display: flex; gap: 10px; flex-shrink: 0;
+		}
+		.btn-accion {
+			border-radius: 10px; padding: 10px 22px; font-size: .9rem;
+			font-weight: 600; border: none; cursor: pointer; transition: all .15s;
+		}
+		.btn-volver { background: #2a2a4a; color: #aaa; }
+		.btn-volver:hover { background: #3a3a5a; color: #e0e0e0; }
+
+		/* Mensaje vacío */
+		.vacio { color: #555577; text-align: center; padding: 2rem; font-size: .85rem; }
+	</style>
+</head>
+<body>
+<div id="app">
+
+	<!-- CABECERA -->
+	<div id="cabecera">
+		<span style="font-size:1.4rem;">🍽️</span>
+		<h2>@mesaNombre</h2>
+		<span class="badge-estado-pedido @(pedidoEnviado ? "estado-enviado" : "estado-abierto")">
+			@(pedidoEnviado ? "Enviado" : "Abierto")
+		</span>
+		@if (pedidoEnviado && !esEncargado)
+		{
+			<span style="font-size:.78rem;color:#ffc107;margin-left:auto;">Solo el encargado puede modificar</span>
+		}
+	</div>
+
+	<!-- CENTRO -->
+	<div id="centro">
+
+		<!-- Izquierda: categorías + productos -->
+		<div id="panel-izq">
+			<!-- Tabs categorías -->
+			<div id="cats">
+				@foreach (var g in grupos)
+				{
+					<button class="btn-cat" data-grupo="@((int)g.Key)" onclick="filtrarGrupo(@((int)g.Key), this)">
+						@NombreGrupo(g.Key)
+					</button>
+				}
+			</div>
+
+			<!-- Grid productos -->
+			<div id="productos-grid">
+				@foreach (var p in Model.Productos)
+				{
+					var disabled = pedidoEnviado && !esEncargado ? "disabled" : "";
+					<form asp-controller="Staff" asp-action="AgregarLinea" method="post"
+						  class="prod-card" data-grupo="@((int)p.Grupo)" style="display:contents">
+						<input type="hidden" name="pedidoId"  value="@pedidoId"/>
+						<input type="hidden" name="productoId" value="@p.Id"/>
+						<input type="hidden" name="zonaId"    value="@zonaId"/>
+						<input type="hidden" name="mesaId"    value="@mesaId"/>
+						<button type="submit" class="prod-btn" @disabled>
+							@if (p.FotoData != null)
+							{
+								<img src="/Admin/FotoProducto/@p.Id" alt="@p.Nombre"/>
+							}
+							else
+							{
+								<span style="font-size:2rem;">🍽️</span>
+							}
+							<span>@p.Nombre</span>
+							<span class="p-precio">@p.Precio.ToString("0.00") €</span>
+						</button>
+					</form>
+				}
+			</div>
+		</div>
+
+		<!-- Carrito -->
+		<div id="carrito">
+			<h3>🧾 Pedido</h3>
+			<div id="lineas-list">
+				@if (!Model.Pedido.Lineas.Any())
+				{
+					<p class="vacio">Sin productos aún</p>
+				}
+				@foreach (var linea in Model.Pedido.Lineas)
+				{
+					var puedeBorrar = !pedidoEnviado || esEncargado;
+					<div class="linea-item">
+						<span class="l-cant">@linea.Cantidad×</span>
+						<span class="l-nombre">@linea.Producto?.Nombre</span>
+						<span class="l-precio">@((linea.Producto?.Precio * linea.Cantidad)?.ToString("0.00")) €</span>
+						@if (puedeBorrar)
+						{
+							<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0">
+								<input type="hidden" name="lineaId"  value="@linea.Id"/>
+								<input type="hidden" name="pedidoId" value="@pedidoId"/>
+								<input type="hidden" name="zonaId"   value="@zonaId"/>
+								<input type="hidden" name="mesaId"   value="@mesaId"/>
+								<button type="submit" class="btn-quitar">−</button>
+							</form>
+						}
+					</div>
+				}
+			</div>
+			<div id="total-row">
+				Total: @Model.Pedido.Lineas.Sum(l => (l.Producto?.Precio ?? 0) * l.Cantidad).ToString("0.00") €
+			</div>
+		</div>
+	</div>
+
+	<!-- BARRA INFERIOR -->
+	<div id="barra-inferior">
+		@if (!pedidoEnviado)
+		{
+			<form asp-controller="Staff" asp-action="EnviarPedido" method="post" style="margin:0">
+				<input type="hidden" name="pedidoId" value="@pedidoId"/>
+				<input type="hidden" name="zonaId"   value="@zonaId"/>
+				<input type="hidden" name="mesaId"   value="@mesaId"/>
+				<button type="submit" class="btn-accion"
+						style="background:#1db954;color:#fff;"
+						onclick="return confirm('¿Enviar pedido y volver al mapa?')">
+					✅ Enviar y volver
+				</button>
+			</form>
+		}
+		<a href="@Url.Action("MapaMesas","Staff",new{zonaId})" class="btn-accion btn-volver">
+			← Volver al mapa
+		</a>
+	</div>
+</div>
+
+<script>
+	// Filtro de categoría
+	function filtrarGrupo(grupo, btn) {
+		document.querySelectorAll('.btn-cat').forEach(b => b.classList.remove('activa'));
+		btn.classList.add('activa');
+		document.querySelectorAll('.prod-card').forEach(f => {
+			f.style.display = f.dataset.grupo == grupo ? 'contents' : 'none';
+		});
+	}
+	// Activar primera categoría al cargar
+	const primera = document.querySelector('.btn-cat');
+	if (primera) primera.click();
+</script>
+</body>
+</html>

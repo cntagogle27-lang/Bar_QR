@@ -19,6 +19,8 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
     public DbSet<TicketPlantilla> TicketPlantillas { get; set; }
     public DbSet<TicketImagen> TicketImagenes { get; set; }
+    public DbSet<PedidoMesa> PedidosMesa { get; set; }
+    public DbSet<LineaPedido> LineasPedido { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,6 +54,28 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
             b.HasOne(s => s.Mesa)
              .WithMany()
              .HasForeignKey(s => s.MesaId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PedidoMesa>(b =>
+        {
+            b.HasKey(p => p.Id);
+            b.HasOne(p => p.Mesa)
+             .WithMany()
+             .HasForeignKey(p => p.MesaId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LineaPedido>(b =>
+        {
+            b.HasKey(l => l.Id);
+            b.HasOne(l => l.Pedido)
+             .WithMany(p => p.Lineas)
+             .HasForeignKey(l => l.PedidoMesaId)
+             .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(l => l.Producto)
+             .WithMany()
+             .HasForeignKey(l => l.ProductoId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 

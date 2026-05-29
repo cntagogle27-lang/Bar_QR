@@ -123,6 +123,25 @@ public static class DbInitializer
 				)");
 
 			context.Database.ExecuteSqlRaw(@"
+				CREATE TABLE IF NOT EXISTS PedidosMesa (
+					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+					MesaId INTEGER NOT NULL,
+					CreadoEn TEXT NOT NULL DEFAULT '',
+					Estado INTEGER NOT NULL DEFAULT 0,
+					FOREIGN KEY (MesaId) REFERENCES Mesas(Id) ON DELETE CASCADE
+				)");
+
+			context.Database.ExecuteSqlRaw(@"
+				CREATE TABLE IF NOT EXISTS LineasPedido (
+					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+					PedidoMesaId INTEGER NOT NULL,
+					ProductoId INTEGER NOT NULL,
+					Cantidad INTEGER NOT NULL DEFAULT 1,
+					FOREIGN KEY (PedidoMesaId) REFERENCES PedidosMesa(Id) ON DELETE CASCADE,
+					FOREIGN KEY (ProductoId) REFERENCES Productos(Id) ON DELETE CASCADE
+				)");
+
+			context.Database.ExecuteSqlRaw(@"
 				CREATE TABLE IF NOT EXISTS TicketPlantillas (
 					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 					CabeceraJson TEXT NULL,

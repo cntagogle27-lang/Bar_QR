@@ -79,15 +79,13 @@
 				var clase = mesa.Estado == Bar_QR.Models.EstadoMesa.Libre ? "libre" : "ocupada";
 				var texto = mesa.Estado == Bar_QR.Models.EstadoMesa.Libre ? "Libre" : "Ocupada";
 				var nombre = string.IsNullOrWhiteSpace(mesa.Nombre) ? $"Mesa {mesa.NumeroMesa}" : mesa.Nombre;
-				<form asp-action="Toggle" method="post" style="position:absolute;left:@(mesa.PosX)px;top:@(mesa.PosY)px;width:@(mesa.Ancho)px;height:@(mesa.Alto)px;margin:0;">
-					<input type="hidden" name="mesaId" value="@mesa.Id" />
-					<input type="hidden" name="zonaId" value="@zonaId" />
-					<button type="submit" class="mesa-staff @clase" style="width:100%;height:100%;">
-						<span class="m-num">#@mesa.NumeroMesa</span>
-						<span>@nombre</span>
-						<span class="m-estado">@texto</span>
-					</button>
-				</form>
+				<a href="@Url.Action("Panel","Staff",new{mesaId=mesa.Id,zonaId})"
+				   class="mesa-staff @clase"
+				   style="position:absolute;left:@(mesa.PosX)px;top:@(mesa.PosY)px;width:@(mesa.Ancho)px;height:@(mesa.Alto)px;text-decoration:none;">
+					<span class="m-num">#@mesa.NumeroMesa</span>
+					<span>@nombre</span>
+					<span class="m-estado">@texto</span>
+				</a>
 			}
 		</div>
 	}

@@ -144,7 +144,12 @@ public class LoginController : Controller
 			return RedirectToAction("SeleccionarPerfil");
 		}
 
-		await LoguearCamarero(empleado.Nombre);
+		var rol = string.IsNullOrWhiteSpace(empleado.Rol) ? "Camarero" : empleado.Rol.Trim();
+		var empClaims = new List<Claim> {
+			new Claim(ClaimTypes.Name, empleado.Nombre),
+			new Claim(ClaimTypes.Role, rol)
+		};
+		await Loguear(empClaims);
 		return RedirectToAction("Index", "Staff");
 	}
 
