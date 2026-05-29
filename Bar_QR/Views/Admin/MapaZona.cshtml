@@ -71,18 +71,25 @@ document.addEventListener('DOMContentLoaded', function() {
 			}
 		});
 
-	// Editar nombre al doble clic
+	// Editar nombre al doble clic → abre modal
+	let _renombreCard = null;
 	document.querySelectorAll('.mesa-nombre').forEach(span => {
 		span.addEventListener('dblclick', function() {
-			const nuevoNombre = prompt('Nuevo nombre de la mesa:', span.textContent.trim());
-			if (nuevoNombre && nuevoNombre.trim()) {
-				span.textContent = nuevoNombre.trim();
-				const card = span.closest('.mesa-card');
-				const posX = parseInt(card.dataset.baseX) || 0;
-				const posY = parseInt(card.dataset.baseY) || 0;
-				guardarMesa(card.dataset.id, posX, posY, card.offsetWidth, card.offsetHeight, nuevoNombre.trim());
-			}
+			_renombreCard = span.closest('.mesa-card');
+			document.getElementById('inputNuevoNombre').value = span.textContent.trim();
+			new bootstrap.Modal(document.getElementById('modalRenombrar')).show();
 		});
+	});
+
+	document.getElementById('btnConfirmarRenombre').addEventListener('click', function() {
+		const nuevoNombre = document.getElementById('inputNuevoNombre').value.trim();
+		if (nuevoNombre && _renombreCard) {
+			_renombreCard.querySelector('.mesa-nombre').textContent = nuevoNombre;
+			const posX = parseInt(_renombreCard.dataset.baseX) || 0;
+			const posY = parseInt(_renombreCard.dataset.baseY) || 0;
+			guardarMesa(_renombreCard.dataset.id, posX, posY, _renombreCard.offsetWidth, _renombreCard.offsetHeight, nuevoNombre);
+			bootstrap.Modal.getInstance(document.getElementById('modalRenombrar')).hide();
+		}
 	});
 });
 </script>
@@ -143,6 +150,28 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 </style>
 }
+
+@* Modal para renombrar mesa *@
+<div class="modal fade" id="modalRenombrar" tabindex="-1" aria-labelledby="modalRenombrarLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered" style="max-width:380px">
+		<div class="modal-content border-0 shadow-lg" style="background:#1a1a2e;color:#e0e0e0;border-radius:14px;">
+			<div class="modal-header border-0 pb-0">
+				<h5 class="modal-title fw-bold" id="modalRenombrarLabel">✏️ Renombrar mesa</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+			</div>
+			<div class="modal-body pt-2">
+				<label class="form-label small text-secondary mb-1">Nuevo nombre</label>
+				<input type="text" id="inputNuevoNombre" class="form-control"
+					   style="background:#0f0f1a;border:1px solid #2a2a4a;color:#e0e0e0;border-radius:8px;"
+					   placeholder="Ej: Mesa VIP 1" />
+			</div>
+			<div class="modal-footer border-0 pt-0 gap-2">
+				<button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Cancelar</button>
+				<button type="button" id="btnConfirmarRenombre" class="btn btn-primary btn-sm px-4">Guardar</button>
+			</div>
+		</div>
+	</div>
+</div>
 
 <div class="container mt-4">
 	<div class="d-flex align-items-center gap-3 mb-3">

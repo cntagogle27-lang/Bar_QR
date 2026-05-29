@@ -1,0 +1,98 @@
+@model IEnumerable<Bar_QR.Models.Zona>
+
+@{
+	ViewData["Title"] = "Control de Mesas";
+}
+
+<style>
+	.zona-card {
+		background: #1a1a2e;
+		border: 1px solid #2a2a4a;
+		border-radius: 14px;
+		color: #e0e0e0;
+		transition: box-shadow .2s;
+	}
+	.zona-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+	.zona-card.deshabilitada { opacity: .55; border-color: #ff6b6b44; }
+	.badge-hab  { background: #1db954; color: #fff; }
+	.badge-desh { background: #ff6b6b; color: #fff; }
+	.btn-toggle-on  { background: transparent; border: 1px solid #ff6b6b; color: #ff6b6b; }
+	.btn-toggle-on:hover  { background: #ff6b6b22; color: #ff6b6b; }
+	.btn-toggle-off { background: transparent; border: 1px solid #1db954; color: #1db954; }
+	.btn-toggle-off:hover { background: #1db95422; color: #1db954; }
+	.btn-ver-mapa { background: #0d6efd22; border: 1px solid #0d6efd; color: #6ea8fe; }
+	.btn-ver-mapa:hover { background: #0d6efd44; color: #6ea8fe; }
+	.stat-pill { font-size: .75rem; padding: 2px 10px; border-radius: 20px; }
+	.stat-libre   { background: #1db95422; color: #1db954; border: 1px solid #1db95455; }
+	.stat-ocupada { background: #ffc10722; color: #ffc107; border: 1px solid #ffc10755; }
+</style>
+
+<div class="container mt-4">
+	<div class="d-flex justify-content-between align-items-center mb-4">
+		<div>
+			<h3 class="mb-0 fw-bold" style="color:#e0e0e0;">🗂️ Control de Mesas</h3>
+			<p class="text-secondary small mb-0">Habilita o deshabilita zonas enteras. Entra en una zona para gestionar mesas individuales.</p>
+		</div>
+		<a asp-action="Ajustes" class="btn btn-sm btn-outline-secondary">← Ajustes</a>
+	</div>
+
+	@if (TempData["ControlOk"] is string ok)
+	{
+		<div class="alert alert-success alert-dismissible fade show" role="alert">@ok
+			<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+		</div>
+	}
+
+	@if (!Model.Any())
+	{
+		<div class="text-center py-5" style="color:#555577;">
+			<div style="font-size:2.5rem;">🏠</div>
+			<p class="mt-2">No hay zonas creadas aún. Créalas desde <a asp-action="Ajustes" asp-fragment="mesas">Ajustes → Mesas</a>.</p>
+		</div>
+	}
+
+	<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+		@foreach (var zona in Model)
+		{
+			var libres   = zona.Mesas.Count(m => m.Estado == Bar_QR.Models.EstadoMesa.Libre && m.Habilitada);
+			var ocupadas = zona.Mesas.Count(m => m.Estado != Bar_QR.Models.EstadoMesa.Libre && m.Habilitada);
+			var deshabMesas = zona.Mesas.Count(m => !m.Habilitada);
+
+			<div class="col">
+				<div class="zona-card p-4 @(!zona.Habilitada ? "deshabilitada" : "")">
+					<div class="d-flex justify-content-between align-items-start mb-3">
+						<div>
+							<h5 class="fw-bold mb-1">🏠 @zona.Nombre</h5>
+							<div class="d-flex gap-2 flex-wrap">
+								<span class="badge @(zona.Habilitada ? "badge-hab" : "badge-desh") stat-pill">
+									@(zona.Habilitada ? "Habilitada" : "Deshabilitada")
+								</span>
+								<span class="stat-pill stat-libre">@libres libres</span>
+								<span class="stat-pill stat-ocupada">@ocupadas ocupadas</span>
+								@if (deshabMesas > 0)
+								{
+									<span class="stat-pill" style="background:#ff6b6b22;color:#ff6b6b;border:1px solid #ff6b6b55;">@deshabMesas deshabilitadas</span>
+								}
+							</div>
+						</div>
+						<span class="text-secondary small">@zona.Mesas.Count mesas</span>
+					</div>
+
+					<div class="d-flex gap-2 mt-3">
+						<a asp-action="ControlMapaZona" asp-route-zonaId="@zona.Id"
+						   class="btn btn-sm btn-ver-mapa flex-grow-1">
+							🗺️ Ver mesas
+						</a>
+						<form asp-action="ToggleHabilitarZona" method="post" class="m-0">
+							<input type="hidden" name="id" value="@zona.Id" />
+							<button type="submit"
+									class="btn btn-sm @(zona.Habilitada ? "btn-toggle-on" : "btn-toggle-off")">
+								@(zona.Habilitada ? "🔒 Deshabilitar" : "✅ Habilitar")
+							</button>
+						</form>
+					</div>
+				</div>
+			</div>
+		}
+	</div>
+</div>

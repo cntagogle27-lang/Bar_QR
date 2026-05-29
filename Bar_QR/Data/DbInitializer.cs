@@ -75,8 +75,10 @@ public static class DbInitializer
 			context.Database.ExecuteSqlRaw(@"
 				CREATE TABLE IF NOT EXISTS Zonas (
 					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-					Nombre TEXT NOT NULL
+					Nombre TEXT NOT NULL,
+					Habilitada INTEGER NOT NULL DEFAULT 1
 				)");
+			try { context.Database.ExecuteSqlRaw("ALTER TABLE Zonas ADD COLUMN Habilitada INTEGER NOT NULL DEFAULT 1"); } catch { }
 
 			context.Database.ExecuteSqlRaw(@"
 				CREATE TABLE IF NOT EXISTS Empleados (

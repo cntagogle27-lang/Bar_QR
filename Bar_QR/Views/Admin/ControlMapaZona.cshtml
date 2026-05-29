@@ -1,0 +1,108 @@
+@model Bar_QR.Models.Zona
+
+@{
+	ViewData["Title"] = "Control · " + Model.Nombre;
+	var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}";
+}
+
+<style>
+	body { background: #0f0f1a; }
+	#mapa-ctrl {
+		position: relative;
+		width: 100%;
+		min-height: 600px;
+		background: #13132a;
+		border: 1.5px solid #2a2a4a;
+		border-radius: 12px;
+		overflow: hidden;
+	}
+	.ctrl-card {
+		position: absolute;
+		border-radius: 10px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		font-size: 13px;
+		font-weight: 600;
+		user-select: none;
+		transition: opacity .2s, border-color .2s;
+		padding: 4px;
+	}
+	.ctrl-card.hab {
+		background: #0d1f3c;
+		border: 2px solid #0d6efd;
+		color: #6ea8fe;
+	}
+	.ctrl-card.desh {
+		background: #1f0d0d;
+		border: 2px solid #ff6b6b;
+		color: #ff6b6b;
+		opacity: .7;
+	}
+	.ctrl-card .badge-estado {
+		position: absolute;
+		top: 4px; left: 6px;
+		font-size: 10px;
+		padding: 1px 6px;
+		border-radius: 20px;
+		font-weight: 500;
+	}
+	.ctrl-card .badge-libre   { background: #1db95433; color: #1db954; border: 1px solid #1db95466; }
+	.ctrl-card .badge-ocupada { background: #ffc10733; color: #ffc107; border: 1px solid #ffc10766; }
+	.ctrl-card .btn-toggle-mesa {
+		position: absolute;
+		bottom: 4px; right: 4px;
+		font-size: 10px;
+		padding: 2px 7px;
+		border-radius: 6px;
+		border: none;
+		cursor: pointer;
+		font-weight: 600;
+	}
+	.ctrl-card.hab  .btn-toggle-mesa { background: #ff6b6b33; color: #ff6b6b; }
+	.ctrl-card.desh .btn-toggle-mesa { background: #1db95433; color: #1db954; }
+	.ctrl-card .mesa-nombre { pointer-events: none; }
+</style>
+
+<div class="container-fluid mt-4 px-4">
+	<div class="d-flex align-items-center gap-3 mb-3">
+		<a asp-action="ControlMesas" class="btn btn-outline-secondary btn-sm">← Volver a zonas</a>
+		<h4 class="mb-0 fw-bold" style="color:#e0e0e0;">🏠 @Model.Nombre</h4>
+		<span class="badge @(Model.Habilitada ? "" : "bg-danger") ms-1" style="@(Model.Habilitada ? "background:#1db954;" : "")">
+			Zona @(Model.Habilitada ? "habilitada" : "deshabilitada")
+		</span>
+	</div>
+	<p class="small mb-3" style="color:#555577;">
+		Haz clic en el botón de cada mesa para habilitarla o deshabilitarla individualmente.
+	</p>
+
+	@if (TempData["ControlOk"] is string ok)
+	{
+		<div class="alert alert-success alert-dismissible fade show" role="alert">@ok
+			<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+		</div>
+	}
+
+	<div id="mapa-ctrl">
+		@foreach (var mesa in Model.Mesas)
+		{
+			var cls = mesa.Habilitada ? "hab" : "desh";
+			var estadoLabel = mesa.Estado == Bar_QR.Models.EstadoMesa.Libre ? "Libre" : "Ocupada";
+			var estadoCls   = mesa.Estado == Bar_QR.Models.EstadoMesa.Libre ? "badge-libre" : "badge-ocupada";
+
+			<div class="ctrl-card @cls"
+				 style="left:@(mesa.PosX)px;top:@(mesa.PosY)px;width:@(mesa.Ancho)px;height:@(mesa.Alto)px;">
+				<span class="badge-estado @estadoCls">@estadoLabel</span>
+				<span class="mesa-nombre">@mesa.Nombre</span>
+				<form asp-action="ToggleHabilitarMesa" method="post" class="m-0">
+					<input type="hidden" name="id" value="@mesa.Id" />
+					<input type="hidden" name="returnZona" value="@Model.Id" />
+					<button type="submit" class="btn-toggle-mesa">
+						@(mesa.Habilitada ? "🔒" : "✅")
+					</button>
+				</form>
+			</div>
+		}
+	</div>
+</div>

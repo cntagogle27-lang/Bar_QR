@@ -432,7 +432,7 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    public IActionResult ToggleHabilitarMesa(int id)
+    public IActionResult ToggleHabilitarMesa(int id, int? returnZona)
     {
         var mesa = _db.Mesas.Find(id);
         if (mesa != null)
@@ -445,8 +445,10 @@ public class AdminController : Controller
                 _db.SesionesMesa.RemoveRange(sesiones);
             }
             _db.SaveChanges();
-            TempData["MesasOk"] = mesa.Habilitada ? $"Mesa habilitada." : "Mesa deshabilitada.";
+            TempData["ControlOk"] = mesa.Habilitada ? $"Mesa habilitada." : "Mesa deshabilitada.";
         }
+        if (returnZona.HasValue)
+            return RedirectToAction("ControlMapaZona", new { zonaId = returnZona.Value });
         return RedirectToAction("MapaMesas");
     }
 
@@ -459,6 +461,35 @@ public class AdminController : Controller
         s = System.Text.RegularExpressions.Regex.Replace(s, @"[^a-z0-9\-]", "");
         s = System.Text.RegularExpressions.Regex.Replace(s, @"-+", "-").Trim('-');
         return string.IsNullOrEmpty(s) ? $"mesa-{numero}" : s;
+    }
+
+    // ─── CONTROL MESAS ──────────────────────────────────────────────────────────
+
+    public IActionResult ControlMesas()
+    {
+        var zonas = _db.Zonas.Include(z => z.Mesas).OrderBy(z => z.Nombre).ToList();
+        return View(zonas);
+    }
+
+    [Route("Admin/ControlMapaZona/{zonaId:int}")]
+    public IActionResult ControlMapaZona(int zonaId)
+    {
+        var zona = _db.Zonas.Include(z => z.Mesas).FirstOrDefault(z => z.Id == zonaId);
+        if (zona == null) return NotFound();
+        return View(zona);
+    }
+
+    [HttpPost]
+    public IActionResult ToggleHabilitarZona(int id)
+    {
+        var zona = _db.Zonas.Find(id);
+        if (zona != null)
+        {
+            zona.Habilitada = !zona.Habilitada;
+            _db.SaveChanges();
+            TempData["ControlOk"] = zona.Habilitada ? $"Zona «{zona.Nombre}» habilitada." : $"Zona «{zona.Nombre}» deshabilitada.";
+        }
+        return RedirectToAction("ControlMesas");
     }
 
     // ─── EMPLEADOS ──────────────────────────────────────────────────────────────
