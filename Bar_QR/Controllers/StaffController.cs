@@ -47,10 +47,10 @@ public class StaffController : Controller
 				.Include(p => p.Lineas).ThenInclude(l => l.Producto)
 				.FirstOrDefault(p => p.Id == pedidoId.Value && p.MesaId == mesaId);
 
-		// Si no, buscar el más reciente con estado Abierto (0)
+		// Si no, buscar el más reciente con estado Abierto
 		pedido ??= _db.PedidosMesa
 			.Include(p => p.Lineas).ThenInclude(l => l.Producto)
-			.Where(p => p.MesaId == mesaId && (int)p.Estado == 0)
+			.Where(p => p.MesaId == mesaId && p.Estado == EstadoPedidoMesa.Abierto)
 			.OrderByDescending(p => p.CreadoEn)
 			.FirstOrDefault();
 
