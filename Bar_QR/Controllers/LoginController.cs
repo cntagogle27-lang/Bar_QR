@@ -63,12 +63,19 @@ public class LoginController : Controller
 		}
 
 		// Otros correos autorizados como camarero
-		using var scope = HttpContext.RequestServices.CreateScope();
-		var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
-		if (db.StaffEmails.Any(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
+		try
 		{
-			await LoguearCamarero(email);
-			return RedirectToAction("Index", "Staff");
+			using var scope = HttpContext.RequestServices.CreateScope();
+			var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
+			if (db.StaffEmails.Any(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
+			{
+				await LoguearCamarero(email);
+				return RedirectToAction("Index", "Staff");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"[AfterGoogle] Error al consultar StaffEmails: {ex.Message}");
 		}
 
 		TempData["LoginError"] = $"El correo {email} no está autorizado.";
@@ -85,11 +92,20 @@ public class LoginController : Controller
 		// Mantener el email disponible para el POST
 		TempData.Keep("GoogleAdminEmail");
 
-		using var scope = HttpContext.RequestServices.CreateScope();
-		var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
-		var camareros = db.StaffEmails.Select(e => e.Email).ToList();
-		ViewData["GoogleEmail"] = email;
-		return View(camareros);
+		try
+		{
+			using var scope = HttpContext.RequestServices.CreateScope();
+			var db = scope.ServiceProvider.GetRequiredService<Bar_QR.Data.AppDbContext>();
+			var camareros = db.StaffEmails.Select(e => e.Email).ToList();
+			ViewData["GoogleEmail"] = email;
+			return View(camareros);
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"[SeleccionarPerfil] Error BD: {ex.Message}");
+			ViewData["GoogleEmail"] = email;
+			return View(new List<string>());
+		}
 	}
 
 	private const string AdminPin = "1234";

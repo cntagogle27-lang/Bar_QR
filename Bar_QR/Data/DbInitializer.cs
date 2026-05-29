@@ -40,11 +40,13 @@ public static class DbInitializer
 		try
 		{
 			context.Database.Migrate();
+			Console.WriteLine("[DbInit] Migrate() completado OK.");
 		}
-		catch
+		catch (Exception exMig)
 		{
-			try { context.Database.EnsureCreated(); }
-			catch (Exception ex) { Console.Error.WriteLine($"[DbInit] No se pudo crear la BD: {ex.Message}"); }
+			Console.Error.WriteLine($"[DbInit] Migrate() falló: {exMig.Message}");
+			try { context.Database.EnsureCreated(); Console.WriteLine("[DbInit] EnsureCreated OK."); }
+			catch (Exception ex) { Console.Error.WriteLine($"[DbInit] EnsureCreated falló: {ex.Message}"); }
 		}
 
 		// Seed de datos iniciales
