@@ -201,7 +201,7 @@ public class AdminController : Controller
                 Ticket   = _db.TicketPlantillas.FirstOrDefault() ?? new Models.TicketPlantilla(),
                 TicketImagenes = _db.TicketImagenes.Select(i => new Models.TicketImagen { Id = i.Id, Nombre = i.Nombre, MimeType = i.MimeType, Zona = i.Zona, Data = new byte[0] }).ToList(),
                 Empleados = _db.Empleados.OrderBy(e => e.Nombre).ToList(),
-                Zonas     = _db.Zonas.OrderBy(z => z.Nombre).ToList(),
+                Zonas     = _db.Zonas.Include(z => z.Mesas).OrderBy(z => z.Nombre).ToList(),
             };
             return View(vm);
         }
