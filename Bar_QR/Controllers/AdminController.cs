@@ -60,8 +60,16 @@ public class AdminController : Controller
 
 	public IActionResult Listado()
 	{
-		var productos = _db.Productos.OrderBy(p => p.Grupo).ThenBy(p => p.Nombre).ToList();
-		return View(productos);
+		try
+		{
+			var productos = _db.Productos.OrderBy(p => p.Grupo).ThenBy(p => p.Nombre).ToList();
+			return View(productos);
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"[Admin.Listado] Error: {ex.Message}");
+			return View(new List<Producto>());
+		}
 	}
 
 	public IActionResult EditarProducto(int id)

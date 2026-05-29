@@ -10,10 +10,13 @@ COPY . .
 WORKDIR "/src/Bar_QR"
 RUN dotnet publish "Bar_QR.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Imagen final de ejecucin
+# Imagen final de ejecución
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
+
+# Crear directorio de datos para SQLite
+RUN mkdir -p /data && chmod 777 /data
 
 # Variables para Railway
 ENV ASPNETCORE_URLS=http://*:${PORT}

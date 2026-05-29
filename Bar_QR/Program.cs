@@ -92,6 +92,23 @@ builder.Services.AddAuthentication("CookieAuth")
 
 var app = builder.Build();
 
+// Asegurar que el directorio de datos existe antes de abrir SQLite
+try
+{
+    var dbPathRaw = sqlitePath.Replace("Data Source=", "").Split(';')[0].Trim();
+    var dbDir = Path.GetDirectoryName(dbPathRaw);
+    if (!string.IsNullOrEmpty(dbDir) && !Directory.Exists(dbDir))
+    {
+        Directory.CreateDirectory(dbDir);
+        Console.WriteLine($"[Startup] Directorio creado: {dbDir}");
+    }
+    Console.WriteLine($"[Startup] SQLite path: {dbPathRaw}");
+}
+catch (Exception exDir)
+{
+    Console.Error.WriteLine($"[Startup] No se pudo crear directorio de datos: {exDir.Message}");
+}
+
 // Inicializar DB y seed
 try
 {
@@ -101,7 +118,8 @@ try
 }
 catch (Exception ex)
 {
-    Console.Error.WriteLine($"[Startup] Error al inicializar la base de datos: {ex.Message}");
+    Console.Error.WriteLine($"[Startup] Error al inicializar la base de datos: {ex.GetType().Name}: {ex.Message}");
+    Console.Error.WriteLine($"[Startup] Stack: {ex.StackTrace}");
 }
 
 // Railway termina SSL en el proxy ? ForwardedHeaders lee X-Forwarded-Proto del proxy.
@@ -130,7 +148,16 @@ app.Use(async (context, next) =>
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-	app.UseExceptionHandler("/Home/Error");
+	app.UseExceptionHandler(errorApp =>
+	{
+		errorApp.Run(async context =>
+		{
+			var ex = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+			if (ex != null)
+				Console.Error.WriteLine($"[UnhandledException] {ex.Error.GetType().Name}: {ex.Error.Message}\n{ex.Error.StackTrace}");
+			context.Response.Redirect("/Home/Error");
+		});
+	});
 	app.UseHsts();
 }
 else
