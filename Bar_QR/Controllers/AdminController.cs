@@ -188,7 +188,9 @@ public class AdminController : Controller
                 Proxies  = _db.ProxyIps.Select(p => p.IpOrCidr).ToList(),
                 Tokens   = _db.SiteTokens.Select(t => t.Token).ToList(),
                 Ticket   = _db.TicketPlantillas.FirstOrDefault() ?? new Models.TicketPlantilla(),
-                TicketImagenes = _db.TicketImagenes.Select(i => new Models.TicketImagen { Id = i.Id, Nombre = i.Nombre, MimeType = i.MimeType, Zona = i.Zona, Data = new byte[0] }).ToList()
+                TicketImagenes = _db.TicketImagenes.Select(i => new Models.TicketImagen { Id = i.Id, Nombre = i.Nombre, MimeType = i.MimeType, Zona = i.Zona, Data = new byte[0] }).ToList(),
+                Empleados = _db.Empleados.OrderBy(e => e.Nombre).ToList(),
+                Zonas     = _db.Zonas.OrderBy(z => z.Nombre).ToList(),
             };
             return View(vm);
         }
@@ -429,4 +431,153 @@ public class AdminController : Controller
         return string.IsNullOrEmpty(s) ? $"mesa-{numero}" : s;
     }
 
-} // <-- Esta cierra la Clase
+    // ─── EMPLEADOS ──────────────────────────────────────────────────────────────
+
+    [HttpPost]
+    public async Task<IActionResult> AgregarEmpleado(string nombre, string avatarTipo, IFormFile? foto)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            TempData["AjustesError"] = "El nombre del empleado es obligatorio.";
+            return RedirectToAction("Ajustes", null, "empleados");
+        }
+        var emp = new Empleado { Nombre = nombre.Trim(), AvatarTipo = avatarTipo ?? "avatar_h1" };
+        if (foto != null && foto.Length > 0)
+        {
+            using var ms = new MemoryStream();
+            await foto.CopyToAsync(ms);
+            emp.FotoData = ms.ToArray();
+            emp.FotoMime = foto.ContentType;
+            emp.AvatarTipo = "custom";
+        }
+        _db.Empleados.Add(emp);
+        _db.SaveChanges();
+        return RedirectToAction("Ajustes", null, "empleados");
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> EditarEmpleado(int id, string nombre, string avatarTipo, IFormFile? foto)
+    {
+        var emp = _db.Empleados.Find(id);
+        if (emp == null) return NotFound();
+        emp.Nombre = string.IsNullOrWhiteSpace(nombre) ? emp.Nombre : nombre.Trim();
+        if (foto != null && foto.Length > 0)
+        {
+            using var ms = new MemoryStream();
+            await foto.CopyToAsync(ms);
+            emp.FotoData = ms.ToArray();
+            emp.FotoMime = foto.ContentType;
+            emp.AvatarTipo = "custom";
+        }
+        else
+        {
+            emp.AvatarTipo = avatarTipo ?? emp.AvatarTipo;
+        }
+        _db.SaveChanges();
+        return RedirectToAction("Ajustes", null, "empleados");
+    }
+
+    [HttpPost]
+    public IActionResult EliminarEmpleado(int id)
+    {
+        var emp = _db.Empleados.Find(id);
+        if (emp != null) { _db.Empleados.Remove(emp); _db.SaveChanges(); }
+        return RedirectToAction("Ajustes", null, "empleados");
+    }
+
+    [AllowAnonymous]
+    public IActionResult FotoEmpleado(int id)
+    {
+        var emp = _db.Empleados.Find(id);
+        if (emp?.FotoData == null) return NotFound();
+        return File(emp.FotoData, emp.FotoMime ?? "image/jpeg");
+    }
+
+    // ─── ZONAS ──────────────────────────────────────────────────────────────────
+
+    [HttpPost]
+    public IActionResult AgregarZona(string nombre)
+    {
+        if (!string.IsNullOrWhiteSpace(nombre))
+        {
+            _db.Zonas.Add(new Zona { Nombre = nombre.Trim() });
+            _db.SaveChanges();
+        }
+        return RedirectToAction("Ajustes", null, "mesas");
+    }
+
+    [HttpPost]
+    public IActionResult RenombrarZona(int id, string nombre)
+    {
+        var zona = _db.Zonas.Find(id);
+        if (zona != null && !string.IsNullOrWhiteSpace(nombre))
+        {
+            zona.Nombre = nombre.Trim();
+            _db.SaveChanges();
+        }
+        return RedirectToAction("Ajustes", null, "mesas");
+    }
+
+    [HttpPost]
+    public IActionResult EliminarZona(int id)
+    {
+        var zona = _db.Zonas.Include(z => z.Mesas).FirstOrDefault(z => z.Id == id);
+        if (zona != null)
+        {
+            foreach (var m in zona.Mesas) m.ZonaId = null;
+            _db.Zonas.Remove(zona);
+            _db.SaveChanges();
+        }
+        return RedirectToAction("Ajustes", null, "mesas");
+    }
+
+    // ─── MAPA DE ZONA ────────────────────────────────────────────────────────────
+
+    public IActionResult MapaZona(int id)
+    {
+        var zona = _db.Zonas.Include(z => z.Mesas).FirstOrDefault(z => z.Id == id);
+        if (zona == null) return NotFound();
+        return View(zona);
+    }
+
+    [HttpPost]
+    public IActionResult AgregarMesaZona(int zonaId)
+    {
+        var maxNum = _db.Mesas.Any() ? _db.Mesas.Max(m => m.NumeroMesa) + 1 : 1;
+        _db.Mesas.Add(new Mesa
+        {
+            NumeroMesa = maxNum,
+            Nombre = $"Mesa {maxNum}",
+            Slug = $"mesa-{maxNum}",
+            Estado = EstadoMesa.Libre,
+            ZonaId = zonaId,
+            PosX = 20, PosY = 20, Ancho = 100, Alto = 80
+        });
+        _db.SaveChanges();
+        return RedirectToAction("MapaZona", new { id = zonaId });
+    }
+
+    [HttpPost]
+    public IActionResult GuardarPosicionMesa(int id, int posX, int posY, int ancho, int alto, string? nombre)
+    {
+        var mesa = _db.Mesas.Find(id);
+        if (mesa == null) return NotFound();
+        mesa.PosX = posX; mesa.PosY = posY;
+        mesa.Ancho = ancho; mesa.Alto = alto;
+        if (!string.IsNullOrWhiteSpace(nombre))
+        {
+            mesa.Nombre = nombre.Trim();
+            mesa.Slug = GenerarSlug(nombre.Trim(), mesa.NumeroMesa);
+        }
+        _db.SaveChanges();
+        return Ok();
+    }
+
+    [HttpPost]
+    public IActionResult EliminarMesaZona(int id, int zonaId)
+    {
+        var mesa = _db.Mesas.Find(id);
+        if (mesa != null) { _db.Mesas.Remove(mesa); _db.SaveChanges(); }
+        return RedirectToAction("MapaZona", new { id = zonaId });
+    }
+}

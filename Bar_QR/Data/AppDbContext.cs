@@ -10,6 +10,8 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
 
     public DbSet<Producto> Productos { get; set; }
     public DbSet<Mesa> Mesas { get; set; }
+    public DbSet<Zona> Zonas { get; set; }
+    public DbSet<Empleado> Empleados { get; set; }
     public DbSet<StaffEmail> StaffEmails { get; set; }
     public DbSet<ProxyIp> ProxyIps { get; set; }
     public DbSet<SiteToken> SiteTokens { get; set; }
@@ -33,6 +35,10 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
             b.HasKey(m => m.Id);
             b.HasIndex(m => m.Slug).IsUnique();
             b.Property(m => m.Slug).IsRequired();
+            b.HasOne(m => m.Zona)
+             .WithMany(z => z.Mesas)
+             .HasForeignKey(m => m.ZonaId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         base.OnModelCreating(modelBuilder);

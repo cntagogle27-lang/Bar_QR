@@ -12,8 +12,31 @@ public static class DbInitializer
 {
 	public static void Initialize(AppDbContext context)
 	{
-		// Aplicar migraciones pendientes. Si la BD ya existe sin historial de migraciones,
-		// EnsureCreated se encarga de crear lo que falte sin borrar datos.
+		// Si la BD ya existe pero no tiene historial de migraciones, registrar las anteriores
+		try
+		{
+			context.Database.ExecuteSqlRaw(@"
+				CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
+					MigrationId TEXT NOT NULL PRIMARY KEY,
+					ProductVersion TEXT NOT NULL
+				)");
+			// Registrar migraciones que ya se aplicaron manualmente en la BD original
+			var knownMigrations = new[]
+			{
+				"20260516105820_InitialCreate",
+				"20260516113311_AddMesaNombreSlug",
+				"20260520152828_AddDataProtectionKeys",
+				"20260526190241_AddGrupoAndFotoToProducto",
+				"20260526210337_AddFotoDataToProducto",
+				"20260527172911_AddTicketPlantilla",
+			};
+			foreach (var m in knownMigrations)
+				context.Database.ExecuteSqlRaw(
+					$"INSERT OR IGNORE INTO __EFMigrationsHistory VALUES ('{m}','9.0.0')");
+		}
+		catch { }
+
+		// Aplicar migraciones pendientes
 		try
 		{
 			context.Database.Migrate();
@@ -77,6 +100,17 @@ context.SaveChanges();
 						Slug = $"mesa-{i}",
 						Estado = EstadoMesa.Libre
 					});
+				context.SaveChanges();
+			}
+
+			if (!context.Zonas.Any())
+			{
+				var salon = new Zona { Nombre = "Salón" };
+				context.Zonas.Add(salon);
+				context.SaveChanges();
+				// Asignar mesas existentes sin zona al salón
+				foreach (var m in context.Mesas.Where(m => m.ZonaId == null))
+					m.ZonaId = salon.Id;
 				context.SaveChanges();
 			}
 		}

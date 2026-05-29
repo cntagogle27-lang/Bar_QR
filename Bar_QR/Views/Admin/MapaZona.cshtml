@@ -1,0 +1,178 @@
+@model Bar_QR.Models.Zona
+
+@{
+	ViewData["Title"] = "Mapa de " + Model.Nombre;
+}
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+<script>
+// Guardar posición/tamaño de una mesa al servidor
+async function guardarMesa(id, posX, posY, ancho, alto, nombre) {
+	const form = new FormData();
+	form.append('id', id);
+	form.append('posX', posX);
+	form.append('posY', posY);
+	form.append('ancho', ancho);
+	form.append('alto', alto);
+	if (nombre !== undefined) form.append('nombre', nombre);
+	await fetch('/Admin/GuardarPosicionMesa', { method: 'POST', body: form });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+	// Interactividad: arrastrar y redimensionar
+	interact('.mesa-card')
+		.draggable({
+			listeners: {
+				move(event) {
+					const el = event.target;
+					const x = (parseFloat(el.getAttribute('data-x')) || 0) + event.dx;
+					const y = (parseFloat(el.getAttribute('data-y')) || 0) + event.dy;
+					el.style.transform = `translate(${x}px, ${y}px)`;
+					el.setAttribute('data-x', x);
+					el.setAttribute('data-y', y);
+				},
+				end(event) {
+					const el = event.target;
+					const baseX = parseInt(el.dataset.baseX) || 0;
+					const baseY = parseInt(el.dataset.baseY) || 0;
+					const dx = parseFloat(el.getAttribute('data-x')) || 0;
+					const dy = parseFloat(el.getAttribute('data-y')) || 0;
+					const posX = Math.max(0, Math.round(baseX + dx));
+					const posY = Math.max(0, Math.round(baseY + dy));
+					el.dataset.baseX = posX;
+					el.dataset.baseY = posY;
+					el.style.left = posX + 'px';
+					el.style.top  = posY + 'px';
+					el.style.transform = '';
+					el.setAttribute('data-x', 0);
+					el.setAttribute('data-y', 0);
+					guardarMesa(el.dataset.id, posX, posY, el.offsetWidth, el.offsetHeight);
+				}
+			}
+		})
+		.resizable({
+			edges: { right: true, bottom: true },
+			modifiers: [
+				interact.modifiers.restrictSize({ min: { width: 60, height: 50 } })
+			],
+			listeners: {
+				move(event) {
+					const el = event.target;
+					el.style.width  = event.rect.width + 'px';
+					el.style.height = event.rect.height + 'px';
+				},
+				end(event) {
+					const el = event.target;
+					const posX = parseInt(el.dataset.baseX) || 0;
+					const posY = parseInt(el.dataset.baseY) || 0;
+					guardarMesa(el.dataset.id, posX, posY, Math.round(el.offsetWidth), Math.round(el.offsetHeight));
+				}
+			}
+		});
+
+	// Editar nombre al doble clic
+	document.querySelectorAll('.mesa-nombre').forEach(span => {
+		span.addEventListener('dblclick', function() {
+			const nuevoNombre = prompt('Nuevo nombre de la mesa:', span.textContent.trim());
+			if (nuevoNombre && nuevoNombre.trim()) {
+				span.textContent = nuevoNombre.trim();
+				const card = span.closest('.mesa-card');
+				const posX = parseInt(card.dataset.baseX) || 0;
+				const posY = parseInt(card.dataset.baseY) || 0;
+				guardarMesa(card.dataset.id, posX, posY, card.offsetWidth, card.offsetHeight, nuevoNombre.trim());
+			}
+		});
+	});
+});
+</script>
+<style>
+	#mapa-container {
+		position: relative;
+		width: 100%;
+		min-height: 600px;
+		background: #f0f4f8;
+		border: 2px solid #ced4da;
+		border-radius: 10px;
+		overflow: hidden;
+	}
+	.mesa-card {
+		position: absolute;
+		background: #fff;
+		border: 2px solid #0d6efd;
+		border-radius: 8px;
+		box-shadow: 0 2px 8px rgba(0,0,0,.15);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		cursor: move;
+		user-select: none;
+		touch-action: none;
+		font-size: 13px;
+		font-weight: 600;
+		color: #0d6efd;
+		min-width: 60px;
+		min-height: 50px;
+		padding: 4px;
+	}
+	.mesa-card .btn-del-mesa {
+		position: absolute;
+		top: 3px; right: 4px;
+		font-size: 11px;
+		line-height: 1;
+		padding: 1px 5px;
+		cursor: pointer;
+	}
+	.mesa-nombre {
+		cursor: text;
+	}
+	.mesa-nombre:hover {
+		text-decoration: underline dotted;
+	}
+	.resize-handle {
+		position: absolute;
+		bottom: 4px;
+		right: 4px;
+		width: 12px;
+		height: 12px;
+		background: #0d6efd;
+		border-radius: 2px;
+		opacity: .5;
+		cursor: se-resize;
+	}
+</style>
+}
+
+<div class="container mt-4">
+	<div class="d-flex align-items-center gap-3 mb-3">
+		<a asp-action="Ajustes" asp-fragment="mesas" class="btn btn-outline-secondary btn-sm">← Volver a zonas</a>
+		<h4 class="mb-0">🏠 Zona: @Model.Nombre</h4>
+		<form asp-action="AgregarMesaZona" method="post" class="ms-auto">
+			<input type="hidden" name="zonaId" value="@Model.Id" />
+			<button class="btn btn-success btn-sm">➕ Nueva mesa</button>
+		</form>
+	</div>
+
+	<p class="text-muted small">💡 Arrastra para mover · Arrastra la esquina inferior derecha para redimensionar · Doble clic en el nombre para renombrarlo</p>
+
+	<div id="mapa-container">
+		@foreach (var mesa in Model.Mesas)
+		{
+			<div class="mesa-card"
+				 data-id="@mesa.Id"
+				 data-base-x="@mesa.PosX"
+				 data-base-y="@mesa.PosY"
+				 style="left:@(mesa.PosX)px;top:@(mesa.PosY)px;width:@(mesa.Ancho)px;height:@(mesa.Alto)px;">
+				<form asp-action="EliminarMesaZona" method="post" class="m-0">
+					<input type="hidden" name="id" value="@mesa.Id" />
+					<input type="hidden" name="zonaId" value="@Model.Id" />
+					<button type="submit" class="btn btn-sm btn-outline-danger btn-del-mesa"
+							onclick="return confirm('¿Eliminar @mesa.Nombre?')">✕</button>
+				</form>
+				<span class="mesa-nombre">@mesa.Nombre</span>
+				<div class="resize-handle"></div>
+			</div>
+		}
+	</div>
+</div>

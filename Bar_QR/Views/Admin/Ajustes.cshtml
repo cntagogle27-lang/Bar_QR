@@ -303,12 +303,12 @@ document.addEventListener('DOMContentLoaded', function() {
             <ul class="nav nav-tabs mb-4" id="ajustesTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="empleados-tab" data-bs-toggle="tab" data-bs-target="#empleados" type="button" role="tab">
-                        👤 Empleados y credenciales
+                        👤 Empleados
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="mesas-tab" data-bs-toggle="tab" data-bs-target="#mesas-tab-pane" type="button" role="tab">
-                        🗺 Mapa de mesas
+                        🗺 Mesas
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -322,12 +322,53 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 @* TAB: EMPLEADOS *@
                 <div class="tab-pane fade show active" id="empleados" role="tabpanel">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Empleados</h5>
+                        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoEmpleado">➕ Nuevo empleado</button>
+                    </div>
+
+                    <div class="row g-3">
+                        @foreach (var emp in Model.Empleados)
+                        {
+                            <div class="col-6 col-md-4 col-lg-3">
+                                <div class="card h-100 text-center p-2 shadow-sm">
+                                    @if (emp.AvatarTipo == "custom" && emp.FotoData != null)
+                                    {
+                                        <img src="/Admin/FotoEmpleado/@emp.Id" class="rounded-circle mx-auto mt-2" style="width:72px;height:72px;object-fit:cover;" />
+                                    }
+                                    else
+                                    {
+                                        <img src="/img/avatars/@(emp.AvatarTipo).svg" class="rounded-circle mx-auto mt-2" style="width:72px;height:72px;" onerror="this.src='/img/avatars/avatar_h1.svg'" />
+                                    }
+                                    <div class="card-body p-1">
+                                        <p class="fw-bold mb-1">@emp.Nombre</p>
+                                        <button class="btn btn-sm btn-outline-secondary w-100 mb-1"
+                                                data-bs-toggle="modal" data-bs-target="#modalEditarEmpleado"
+                                                data-id="@emp.Id" data-nombre="@emp.Nombre" data-avatar="@emp.AvatarTipo">✏️ Editar</button>
+                                        <form asp-action="EliminarEmpleado" method="post">
+                                            <input type="hidden" name="id" value="@emp.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                                                    onclick="return confirm('¿Eliminar empleado @emp.Nombre?')">🗑 Eliminar</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        @if (!Model.Empleados.Any())
+                        {
+                            <div class="col-12 text-muted">No hay empleados aún.</div>
+                        }
+                    </div>
+
+                    <hr class="my-4" />
+
                     <div class="row">
                         <div class="col-md-6">
                             <h5>Tokens para QR</h5>
                             <form asp-action="AgregarToken" method="post" class="d-flex mb-3">
                                 <input type="text" name="token" class="form-control me-2" placeholder="token-por-mesa-o-global" required />
-                                <button class="btn btn-primary">A�adir Token</button>
+                                <button class="btn btn-primary">Añadir Token</button>
                             </form>
                             <ul class="list-group">
                                 @foreach(var t in Model.Tokens)
@@ -346,7 +387,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <h5>IP permitidas (lista blanca)</h5>
                             <form asp-action="AgregarIP" method="post" class="d-flex mb-3">
                                 <input type="text" name="ip" class="form-control me-2" placeholder="127.0.0.1" required />
-                                <button class="btn btn-primary">A�adir IP</button>
+                                <button class="btn btn-primary">Añadir IP</button>
                             </form>
                             <ul class="list-group">
                                 @foreach(var ip in Model.Ips)
@@ -364,7 +405,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <h5>Proxies confiables</h5>
                             <form asp-action="AgregarProxy" method="post" class="d-flex mb-3">
                                 <input type="text" name="proxy" class="form-control me-2" placeholder="ip.del.proxy" required />
-                                <button class="btn btn-primary">A�adir Proxy</button>
+                                <button class="btn btn-primary">Añadir Proxy</button>
                             </form>
                             <ul class="list-group">
                                 @foreach(var p in Model.Proxies)
@@ -381,17 +422,42 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 </div>
-
-                @* TAB: MAPA DE MESAS *@
-                <div class="tab-pane fade" id="mesas-tab-pane" role="tabpanel">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0">Mesas del local</h5>
-                        <form asp-action="AgregarMesa" method="post">
-                            <button class="btn btn-success btn-sm">➕ Nueva mesa</button>
-                        </form>
-                    </div>
-                    <a asp-action="MapaMesas" class="btn btn-outline-secondary btn-sm mb-3">🗺 Ver mapa completo</a>
-                </div>
+                                @* TAB: MESAS (ZONAS) *@
+                                <div class="tab-pane fade" id="mesas-tab-pane" role="tabpanel">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h5 class="mb-0">Zonas del local</h5>
+                                        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaZona">➕ Nueva zona</button>
+                                    </div>
+                                    <div class="row g-3">
+                                        @foreach (var zona in Model.Zonas)
+                                        {
+                                            <div class="col-12 col-md-6 col-lg-4">
+                                                <div class="card shadow-sm">
+                                                    <div class="card-body d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <h6 class="mb-0 fw-bold">🏠 @zona.Nombre</h6>
+                                                        </div>
+                                                        <div class="d-flex gap-2">
+                                                            <a asp-action="MapaZona" asp-route-id="@zona.Id" class="btn btn-sm btn-outline-primary">🗺 Ver mapa</a>
+                                                            <button class="btn btn-sm btn-outline-secondary"
+                                                                    data-bs-toggle="modal" data-bs-target="#modalRenombrarZona"
+                                                                    data-id="@zona.Id" data-nombre="@zona.Nombre">✏️</button>
+                                                            <form asp-action="EliminarZona" method="post" class="m-0">
+                                                                <input type="hidden" name="id" value="@zona.Id" />
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                                        onclick="return confirm('¿Eliminar la zona @zona.Nombre y desvincular sus mesas?')">🗑</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (!Model.Zonas.Any())
+                                        {
+                                            <div class="col-12 text-muted">No hay zonas. Añade una para empezar.</div>
+                                        }
+                                    </div>
+                                </div>
 
                 @* TAB: TICKETS *@
                 <div class="tab-pane fade" id="tickets-tab-pane" role="tabpanel">
@@ -524,3 +590,160 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
+
+@* ─── MODALES ──────────────────────────────────────────────────────────────── *@
+
+@* Modal nuevo empleado *@
+<div class="modal fade" id="modalNuevoEmpleado" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="AgregarEmpleado" method="post" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Nuevo empleado</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nombre" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Avatar</label>
+                        <div class="d-flex flex-wrap gap-2 mb-2" id="avatarPicker">
+                            @foreach (var av in new[] { "avatar_h1","avatar_h2","avatar_h3","avatar_h4","avatar_m1","avatar_m2","avatar_m3","avatar_m4" })
+                            {
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="avatarTipo" value="@av" class="d-none avatar-radio" @(av == "avatar_h1" ? "checked" : "") />
+                                    <img src="/img/avatars/@(av).svg" style="width:52px;height:52px;border-radius:50%;border:3px solid transparent;"
+                                         class="avatar-opt" data-av="@av" />
+                                </label>
+                            }
+                        </div>
+                        <label class="form-label mt-1">O subir foto:</label>
+                        <input type="file" name="foto" class="form-control" accept="image/*" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Añadir</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Modal editar empleado *@
+<div class="modal fade" id="modalEditarEmpleado" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="EditarEmpleado" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="id" id="editEmpId" />
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Editar empleado</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nombre" id="editEmpNombre" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Avatar</label>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            @foreach (var av in new[] { "avatar_h1","avatar_h2","avatar_h3","avatar_h4","avatar_m1","avatar_m2","avatar_m3","avatar_m4" })
+                            {
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="avatarTipo" value="@av" class="d-none avatar-radio-edit" />
+                                    <img src="/img/avatars/@(av).svg" style="width:52px;height:52px;border-radius:50%;border:3px solid transparent;"
+                                         class="avatar-opt-edit" data-av="@av" />
+                                </label>
+                            }
+                        </div>
+                        <label class="form-label mt-1">O cambiar foto:</label>
+                        <input type="file" name="foto" class="form-control" accept="image/*" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Modal nueva zona *@
+<div class="modal fade" id="modalNuevaZona" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <form asp-action="AgregarZona" method="post">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Nueva zona</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="text" name="nombre" class="form-control" placeholder="Nombre de la zona" required />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Crear</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Modal renombrar zona *@
+<div class="modal fade" id="modalRenombrarZona" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <form asp-action="RenombrarZona" method="post">
+            <input type="hidden" name="id" id="renomZonaId" />
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Renombrar zona</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="text" name="nombre" id="renomZonaNombre" class="form-control" required />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Selección visual de avatares
+document.querySelectorAll('.avatar-opt').forEach(img => {
+    img.addEventListener('click', () => {
+        document.querySelectorAll('.avatar-opt').forEach(i => i.style.borderColor = 'transparent');
+        img.style.borderColor = '#0d6efd';
+        img.closest('label').querySelector('input').checked = true;
+    });
+    if (img.closest('label').querySelector('input').checked)
+        img.style.borderColor = '#0d6efd';
+});
+
+// Modal editar empleado: rellenar datos
+document.getElementById('modalEditarEmpleado')?.addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    document.getElementById('editEmpId').value = btn.dataset.id;
+    document.getElementById('editEmpNombre').value = btn.dataset.nombre;
+    const av = btn.dataset.avatar;
+    document.querySelectorAll('.avatar-opt-edit').forEach(img => {
+        img.style.borderColor = img.dataset.av === av ? '#0d6efd' : 'transparent';
+    });
+    document.querySelectorAll('.avatar-radio-edit').forEach(r => { r.checked = r.value === av; });
+});
+document.querySelectorAll('.avatar-opt-edit').forEach(img => {
+    img.addEventListener('click', () => {
+        document.querySelectorAll('.avatar-opt-edit').forEach(i => i.style.borderColor = 'transparent');
+        img.style.borderColor = '#0d6efd';
+        img.closest('label').querySelector('input').checked = true;
+    });
+});
+
+// Modal renombrar zona
+document.getElementById('modalRenombrarZona')?.addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    document.getElementById('renomZonaId').value = btn.dataset.id;
+    document.getElementById('renomZonaNombre').value = btn.dataset.nombre;
+});
+
+// Activar pestaña por hash
+document.addEventListener('DOMContentLoaded', function() {
+    if (location.hash === '#mesas') document.getElementById('mesas-tab')?.click();
+    if (location.hash === '#empleados') document.getElementById('empleados-tab')?.click();
+});
+</script>

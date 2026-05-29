@@ -8,4 +8,6 @@ public class AdminAjustesViewModel
     public List<string> Tokens  { get; set; } = new();
     public TicketPlantilla Ticket { get; set; } = new();
     public List<TicketImagen> TicketImagenes { get; set; } = new();
+    public List<Empleado> Empleados { get; set; } = new();
+    public List<Zona> Zonas { get; set; } = new();
 }
