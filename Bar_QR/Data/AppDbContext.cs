@@ -10,6 +10,7 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
 
     public DbSet<Producto> Productos { get; set; }
     public DbSet<Mesa> Mesas { get; set; }
+    public DbSet<SesionMesa> SesionesMesa { get; set; }
     public DbSet<Zona> Zonas { get; set; }
     public DbSet<Empleado> Empleados { get; set; }
     public DbSet<StaffEmail> StaffEmails { get; set; }
@@ -35,11 +36,23 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
             b.HasKey(m => m.Id);
             b.HasIndex(m => m.Slug).IsUnique();
             b.Property(m => m.Slug).IsRequired();
+            b.Property(m => m.Habilitada).HasDefaultValue(true);
             b.HasOne(m => m.Zona)
              .WithMany(z => z.Mesas)
              .HasForeignKey(m => m.ZonaId)
              .OnDelete(DeleteBehavior.SetNull)
              .IsRequired(false);
+        });
+
+        modelBuilder.Entity<SesionMesa>(b =>
+        {
+            b.HasKey(s => s.Id);
+            b.HasIndex(s => s.Token).IsUnique();
+            b.Property(s => s.Token).IsRequired();
+            b.HasOne(s => s.Mesa)
+             .WithMany()
+             .HasForeignKey(s => s.MesaId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         base.OnModelCreating(modelBuilder);

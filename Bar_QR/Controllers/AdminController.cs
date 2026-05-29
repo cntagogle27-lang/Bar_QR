@@ -431,6 +431,25 @@ public class AdminController : Controller
         return RedirectToAction("MapaMesas");
     }
 
+    [HttpPost]
+    public IActionResult ToggleHabilitarMesa(int id)
+    {
+        var mesa = _db.Mesas.Find(id);
+        if (mesa != null)
+        {
+            mesa.Habilitada = !mesa.Habilitada;
+            // Al deshabilitar, cerrar sesiones activas de esa mesa
+            if (!mesa.Habilitada)
+            {
+                var sesiones = _db.SesionesMesa.Where(s => s.MesaId == id);
+                _db.SesionesMesa.RemoveRange(sesiones);
+            }
+            _db.SaveChanges();
+            TempData["MesasOk"] = mesa.Habilitada ? $"Mesa habilitada." : "Mesa deshabilitada.";
+        }
+        return RedirectToAction("MapaMesas");
+    }
+
     private static string GenerarSlug(string nombre, int numero)
     {
         var s = nombre.ToLowerInvariant()

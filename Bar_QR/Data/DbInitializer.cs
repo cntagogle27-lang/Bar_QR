@@ -65,6 +65,7 @@ public static class DbInitializer
 				("PosY", "INTEGER NOT NULL DEFAULT 20"),
 				("Ancho", "INTEGER NOT NULL DEFAULT 100"),
 				("Alto", "INTEGER NOT NULL DEFAULT 80"),
+				("Habilitada", "INTEGER NOT NULL DEFAULT 1"),
 			})
 			{
 				try { context.Database.ExecuteSqlRaw($"ALTER TABLE Mesas ADD COLUMN {col} {tipo}"); }
@@ -108,6 +109,15 @@ public static class DbInitializer
 				CREATE TABLE IF NOT EXISTS SiteTokens (
 					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 					Token TEXT NOT NULL
+				)");
+
+			context.Database.ExecuteSqlRaw(@"
+				CREATE TABLE IF NOT EXISTS SesionesMesa (
+					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+					MesaId INTEGER NOT NULL,
+					Token TEXT NOT NULL UNIQUE,
+					Expira TEXT NOT NULL,
+					FOREIGN KEY (MesaId) REFERENCES Mesas(Id) ON DELETE CASCADE
 				)");
 
 			context.Database.ExecuteSqlRaw(@"

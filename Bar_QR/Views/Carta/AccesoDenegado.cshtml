@@ -1,0 +1,63 @@
+@model Bar_QR.Models.AccesoDenegadoViewModel
+@{
+	ViewData["HideNav"] = true;
+	Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Acceso no disponible</title>
+	<style>
+		* { box-sizing: border-box; margin: 0; padding: 0; }
+		body {
+			min-height: 100vh;
+			background: #0f0f1a;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-family: 'Segoe UI', sans-serif;
+			color: #e0e0e0;
+			padding: 2rem;
+		}
+		.card {
+			background: #1a1a2e;
+			border: 1px solid #2a2a4a;
+			border-radius: 16px;
+			padding: 3rem 2.5rem;
+			max-width: 420px;
+			width: 100%;
+			text-align: center;
+		}
+		.icono {
+			font-size: 3.5rem;
+			margin-bottom: 1.2rem;
+		}
+		h1 {
+			font-size: 1.4rem;
+			font-weight: 700;
+			color: #ff6b6b;
+			margin-bottom: 1rem;
+		}
+		p {
+			font-size: 1rem;
+			color: #a0a0c0;
+			line-height: 1.6;
+		}
+		.hint {
+			margin-top: 2rem;
+			font-size: 0.85rem;
+			color: #555577;
+		}
+	</style>
+</head>
+<body>
+	<div class="card">
+		<div class="icono">🔒</div>
+		<h1>Mesa no disponible</h1>
+		<p>@Model.Motivo</p>
+		<p class="hint">Si crees que es un error, pide ayuda al personal del local.</p>
+	</div>
+</body>
+</html>

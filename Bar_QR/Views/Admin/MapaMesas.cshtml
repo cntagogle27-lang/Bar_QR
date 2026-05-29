@@ -67,6 +67,12 @@
                             <button type="submit" class="btn btn-outline-danger btn-sm w-100"
                                     onclick="return confirm('¿Eliminar @mesa.Nombre?')">🗑️ Eliminar</button>
                         </form>
+                        <form asp-action="ToggleHabilitarMesa" method="post" class="mt-2">
+                            <input type="hidden" name="id" value="@mesa.Id" />
+                            <button type="submit" class="btn btn-sm w-100 @(mesa.Habilitada ? "btn-outline-warning" : "btn-outline-success")">
+                                @(mesa.Habilitada ? "🔒 Deshabilitar" : "✅ Habilitar")
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
