@@ -4,6 +4,9 @@
 	ViewData["Title"] = "Mesas - " + ViewData["ZonaNombre"];
 	Layout = "~/Views/Shared/_Layout.cshtml";
 	var zonaId = (int)ViewData["ZonaId"]!;
+	var mesas = Model.ToList();
+	int mapW = mesas.Any() ? Math.Max(700, mesas.Max(m => m.PosX + m.Ancho) + 40) : 700;
+	int mapH = mesas.Any() ? Math.Max(450, mesas.Max(m => m.PosY + m.Alto) + 40) : 450;
 }
 
 <style>
@@ -20,66 +23,71 @@
 	.mesas-header a { color: #aaa; text-decoration: none; font-size: 1.3rem; }
 	.mesas-header a:hover { color: #fff; }
 	.mesas-header h1 { margin: 0; font-size: 1.3rem; font-weight: 700; }
-	.leyenda { display: flex; gap: 1.2rem; font-size: 0.82rem; color: #666; padding: 0.8rem 1.5rem 0; }
-	.leyenda span { display: flex; align-items: center; gap: 0.35rem; }
-	.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+	.leyenda { display: flex; gap: 1.2rem; font-size: 0.82rem; color: #666; padding: 0.8rem 1.5rem 0.4rem; }
+	.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 	.dot-libre   { background: #2a9d5c; }
 	.dot-ocupada { background: #e63946; }
 
-	.mesa-btn {
-		width: 100%;
-		border: none;
-		border-radius: 10px;
-		padding: 1.4rem 0.5rem 1rem;
-		font-weight: 700;
-		font-size: 1rem;
-		cursor: pointer;
-		color: #fff;
+	#mapa-staff {
 		position: relative;
+		background: #eef2f7;
+		border: 2px solid #ced4da;
+		border-radius: 10px;
+		overflow: auto;
 	}
-	.mesa-btn.libre   { background: #2a9d5c; }
-	.mesa-btn.ocupada { background: #e63946; }
-	.mesa-btn .mesa-nombre { display: block; font-size: 1.05rem; }
-	.mesa-btn .mesa-estado { display: block; font-size: 0.78rem; font-weight: 400; opacity: 0.85; margin-top: 0.2rem; }
-	.mesa-btn .mesa-num {
-		position: absolute; top: 6px; right: 10px;
-		font-size: 0.7rem; opacity: 0.6; font-weight: 400;
+	.mesa-staff {
+		position: absolute;
+		border-radius: 8px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		font-weight: 700;
+		font-size: 0.85rem;
+		color: #fff;
+		padding: 4px;
+		cursor: pointer;
+		border: none;
+		box-shadow: 0 2px 6px rgba(0,0,0,.2);
 	}
+	.mesa-staff.libre   { background: #2a9d5c; }
+	.mesa-staff.ocupada { background: #e63946; }
+	.mesa-staff .m-num  { font-size: 0.65rem; opacity: 0.7; }
+	.mesa-staff .m-estado { font-size: 0.7rem; font-weight: 400; }
 </style>
 
 <div class="mesas-header">
-	<a href="@Url.Action("Zonas", "Staff")" title="Volver a zonas">&#8592;</a>
+	<a href="@Url.Action("Zonas", "Staff")" title="Volver">&#8592;</a>
 	<h1>@ViewData["ZonaNombre"]</h1>
 </div>
 
 <div class="leyenda">
 	<span><i class="dot dot-libre"></i> Libre</span>
-	<span><i class="dot dot-ocupada"></i> Ocupada</span>
+	<span><i class="dot dot-ocupada"></i> Ocupada — pulsa para cambiar estado</span>
 </div>
 
-<div class="container py-3">
-	@if (!Model.Any())
+<div class="container-fluid px-3 py-3">
+	@if (!mesas.Any())
 	{
 		<p class="text-center text-muted mt-4">Esta zona no tiene mesas asignadas.</p>
 	}
 	else
 	{
-		<div class="row g-3">
-			@foreach (var mesa in Model)
+		<div id="mapa-staff" style="width:100%; min-height:@(mapH)px; height:@(mapH)px;">
+			@foreach (var mesa in mesas)
 			{
 				var clase = mesa.Estado == Bar_QR.Models.EstadoMesa.Libre ? "libre" : "ocupada";
 				var texto = mesa.Estado == Bar_QR.Models.EstadoMesa.Libre ? "Libre" : "Ocupada";
-				<div class="col-6 col-sm-4 col-md-3">
-					<form asp-action="Toggle" method="post">
-						<input type="hidden" name="mesaId" value="@mesa.Id" />
-						<input type="hidden" name="zonaId" value="@zonaId" />
-						<button type="submit" class="mesa-btn @clase">
-							<span class="mesa-num">#@mesa.NumeroMesa</span>
-							<span class="mesa-nombre">@(string.IsNullOrWhiteSpace(mesa.Nombre) ? $"Mesa {mesa.NumeroMesa}" : mesa.Nombre)</span>
-							<span class="mesa-estado">@texto</span>
-						</button>
-					</form>
-				</div>
+				var nombre = string.IsNullOrWhiteSpace(mesa.Nombre) ? $"Mesa {mesa.NumeroMesa}" : mesa.Nombre;
+				<form asp-action="Toggle" method="post" style="position:absolute;left:@(mesa.PosX)px;top:@(mesa.PosY)px;width:@(mesa.Ancho)px;height:@(mesa.Alto)px;margin:0;">
+					<input type="hidden" name="mesaId" value="@mesa.Id" />
+					<input type="hidden" name="zonaId" value="@zonaId" />
+					<button type="submit" class="mesa-staff @clase" style="width:100%;height:100%;">
+						<span class="m-num">#@mesa.NumeroMesa</span>
+						<span>@nombre</span>
+						<span class="m-estado">@texto</span>
+					</button>
+				</form>
 			}
 		</div>
 	}

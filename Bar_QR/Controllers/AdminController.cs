@@ -445,14 +445,14 @@ public class AdminController : Controller
     // ─── EMPLEADOS ──────────────────────────────────────────────────────────────
 
     [HttpPost]
-    public async Task<IActionResult> AgregarEmpleado(string nombre, string avatarTipo, IFormFile? foto)
+    public async Task<IActionResult> AgregarEmpleado(string nombre, string avatarTipo, IFormFile? foto, string? pin, string? rol)
     {
         if (string.IsNullOrWhiteSpace(nombre))
         {
             TempData["AjustesError"] = "El nombre del empleado es obligatorio.";
             return RedirectToAction("Ajustes", null, "empleados");
         }
-        var emp = new Empleado { Nombre = nombre.Trim(), AvatarTipo = avatarTipo ?? "avatar_h1" };
+        var emp = new Empleado { Nombre = nombre.Trim(), AvatarTipo = avatarTipo ?? "avatar_h1", Pin = string.IsNullOrWhiteSpace(pin) ? null : pin.Trim(), Rol = string.IsNullOrWhiteSpace(rol) ? "Camarero" : rol.Trim() };
         if (foto != null && foto.Length > 0)
         {
             using var ms = new MemoryStream();
@@ -467,11 +467,13 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> EditarEmpleado(int id, string nombre, string avatarTipo, IFormFile? foto)
+    public async Task<IActionResult> EditarEmpleado(int id, string nombre, string avatarTipo, IFormFile? foto, string? pin, string? rol)
     {
         var emp = _db.Empleados.Find(id);
         if (emp == null) return NotFound();
         emp.Nombre = string.IsNullOrWhiteSpace(nombre) ? emp.Nombre : nombre.Trim();
+        emp.Pin = string.IsNullOrWhiteSpace(pin) ? null : pin.Trim();
+        emp.Rol = string.IsNullOrWhiteSpace(rol) ? emp.Rol : rol.Trim();
         if (foto != null && foto.Length > 0)
         {
             using var ms = new MemoryStream();
@@ -494,6 +496,14 @@ public class AdminController : Controller
         var emp = _db.Empleados.Find(id);
         if (emp != null) { _db.Empleados.Remove(emp); _db.SaveChanges(); }
         return RedirectToAction("Ajustes", null, "empleados");
+    }
+
+    /// <summary>Devuelve todas las zonas con sus mesas para la pestaña QR de Ajustes.</summary>
+    public IActionResult QrMesas()
+    {
+        var zonas = _db.Zonas.Include(z => z.Mesas).OrderBy(z => z.Nombre).ToList();
+        ViewData["BaseUrl"] = $"{Request.Scheme}://{Request.Host}";
+        return View(zonas);
     }
 
     [AllowAnonymous]

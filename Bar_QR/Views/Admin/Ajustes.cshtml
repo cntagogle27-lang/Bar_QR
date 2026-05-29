@@ -316,6 +316,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         🧾 Tickets
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="qr-tab" data-bs-toggle="tab" data-bs-target="#qr-tab-pane" type="button" role="tab">
+                        📱 QR
+                    </button>
+                </li>
             </ul>
 
             <div class="tab-content" id="ajustesTabContent">
@@ -345,7 +350,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <p class="fw-bold mb-1">@emp.Nombre</p>
                                         <button class="btn btn-sm btn-outline-secondary w-100 mb-1"
                                                 data-bs-toggle="modal" data-bs-target="#modalEditarEmpleado"
-                                                data-id="@emp.Id" data-nombre="@emp.Nombre" data-avatar="@emp.AvatarTipo">✏️ Editar</button>
+                                                data-id="@emp.Id" data-nombre="@emp.Nombre" data-avatar="@emp.AvatarTipo"
+                                                data-pin="@emp.Pin" data-rol="@emp.Rol">✏️ Editar</button>
                                         <form asp-action="EliminarEmpleado" method="post">
                                             <input type="hidden" name="id" value="@emp.Id" />
                                             <button type="submit" class="btn btn-sm btn-outline-danger w-100"
@@ -586,6 +592,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 </div><!-- /tickets-tab-pane -->
 
+                @* TAB: QR *@
+                <div class="tab-pane fade" id="qr-tab-pane" role="tabpanel">
+                    @{
+                        var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}";
+                        var zonasQr = Model.Zonas;
+                    }
+                    <h5 class="mb-3">📱 Códigos QR de todas las mesas</h5>
+                    @if (!zonasQr.Any())
+                    {
+                        <p class="text-muted">No hay zonas ni mesas configuradas.</p>
+                    }
+                    else
+                    {
+                        @foreach (var zona in zonasQr)
+                        {
+                            <h6 class="fw-bold mt-3 mb-2">🏠 @zona.Nombre</h6>
+                            <div class="row g-3 mb-3">
+                                @foreach (var mesa in zona.Mesas.OrderBy(m => m.NumeroMesa))
+                                {
+                                    var urlMesa = $"{baseUrl}/Carta/Mesa/{mesa.Slug}";
+                                    <div class="col-6 col-sm-4 col-md-3 col-lg-2 text-center">
+                                        <div class="border rounded p-2 bg-white shadow-sm">
+                                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=@Uri.EscapeDataString(urlMesa)"
+                                                 alt="QR @mesa.Nombre" class="img-fluid" style="width:110px;height:110px" />
+                                            <div class="mt-1 fw-bold small">@(string.IsNullOrWhiteSpace(mesa.Nombre) ? $"Mesa {mesa.NumeroMesa}" : mesa.Nombre)</div>
+                                            <a href="@urlMesa" class="d-block text-muted" style="font-size:0.7rem;word-break:break-all">@urlMesa</a>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </div><!-- /qr-tab-pane -->
+
             </div>
         </div>
     </div>
@@ -618,6 +658,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <label class="form-label mt-1">O subir foto:</label>
                         <input type="file" name="foto" class="form-control" accept="image/*" />
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">Rol</label>
+                            <select name="rol" class="form-select">
+                                <option value="Camarero">Camarero</option>
+                                <option value="Encargado">Encargado</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">PIN (opcional, 4 dígitos)</label>
+                            <input type="text" name="pin" class="form-control" maxlength="4" pattern="[0-9]{4}" placeholder="ej: 1234" />
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -655,6 +708,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <label class="form-label mt-1">O cambiar foto:</label>
                         <input type="file" name="foto" class="form-control" accept="image/*" />
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">Rol</label>
+                            <select name="rol" id="editEmpRol" class="form-select">
+                                <option value="Camarero">Camarero</option>
+                                <option value="Encargado">Encargado</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">PIN (4 dígitos)</label>
+                            <input type="text" name="pin" id="editEmpPin" class="form-control" maxlength="4" pattern="[0-9]{4}" placeholder="dejar vacío = sin PIN" />
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -720,6 +786,8 @@ document.getElementById('modalEditarEmpleado')?.addEventListener('show.bs.modal'
     const btn = e.relatedTarget;
     document.getElementById('editEmpId').value = btn.dataset.id;
     document.getElementById('editEmpNombre').value = btn.dataset.nombre;
+    if (document.getElementById('editEmpPin')) document.getElementById('editEmpPin').value = btn.dataset.pin || '';
+    if (document.getElementById('editEmpRol')) document.getElementById('editEmpRol').value = btn.dataset.rol || 'Camarero';
     const av = btn.dataset.avatar;
     document.querySelectorAll('.avatar-opt-edit').forEach(img => {
         img.style.borderColor = img.dataset.av === av ? '#0d6efd' : 'transparent';
@@ -745,5 +813,6 @@ document.getElementById('modalRenombrarZona')?.addEventListener('show.bs.modal',
 document.addEventListener('DOMContentLoaded', function() {
     if (location.hash === '#mesas') document.getElementById('mesas-tab')?.click();
     if (location.hash === '#empleados') document.getElementById('empleados-tab')?.click();
+    if (location.hash === '#qr') document.getElementById('qr-tab')?.click();
 });
 </script>

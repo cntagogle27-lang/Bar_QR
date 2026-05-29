@@ -11,4 +11,8 @@ public class Empleado
 	public string AvatarTipo { get; set; } = "avatar_h1";
 	public byte[]? FotoData { get; set; }
 	public string? FotoMime { get; set; }
+	/// <summary>PIN numérico opcional para login sin Google (4 dígitos).</summary>
+	public string? Pin { get; set; }
+	/// <summary>Rol: Camarero o Encargado.</summary>
+	public string Rol { get; set; } = "Camarero";
 }

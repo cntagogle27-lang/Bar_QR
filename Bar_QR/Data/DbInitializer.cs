@@ -83,8 +83,14 @@ public static class DbInitializer
 					Nombre TEXT NOT NULL,
 					AvatarTipo TEXT NOT NULL DEFAULT 'avatar_h1',
 					FotoData BLOB NULL,
-					FotoMime TEXT NULL
+					FotoMime TEXT NULL,
+					Pin TEXT NULL,
+					Rol TEXT NOT NULL DEFAULT 'Camarero'
 				)");
+
+			// Columnas nuevas para BDs existentes
+			try { context.Database.ExecuteSqlRaw("ALTER TABLE Empleados ADD COLUMN Pin TEXT NULL"); } catch { }
+			try { context.Database.ExecuteSqlRaw("ALTER TABLE Empleados ADD COLUMN Rol TEXT NOT NULL DEFAULT 'Camarero'"); } catch { }
 
 			context.Database.ExecuteSqlRaw(@"
 				CREATE TABLE IF NOT EXISTS StaffEmails (
