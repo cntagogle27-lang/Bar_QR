@@ -78,22 +78,12 @@ namespace Bar_QR.Migrations
                 table: "Mesas",
                 column: "ZonaId");
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_Mesas_Zonas_ZonaId",
-                table: "Mesas",
-                column: "ZonaId",
-                principalTable: "Zonas",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.SetNull);
+            // SQLite no soporta AddForeignKey en tablas existentes; la relación se gestiona por EF Core.
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_Mesas_Zonas_ZonaId",
-                table: "Mesas");
-
             migrationBuilder.DropTable(
                 name: "Empleados");
 

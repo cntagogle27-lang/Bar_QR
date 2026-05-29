@@ -38,7 +38,8 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
             b.HasOne(m => m.Zona)
              .WithMany(z => z.Mesas)
              .HasForeignKey(m => m.ZonaId)
-             .OnDelete(DeleteBehavior.SetNull);
+             .OnDelete(DeleteBehavior.SetNull)
+             .IsRequired(false);
         });
 
         base.OnModelCreating(modelBuilder);
