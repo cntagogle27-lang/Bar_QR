@@ -112,7 +112,7 @@ public class LoginController : Controller
 	private const string AdminPin = "1234";
 
 	[HttpPost]
-	public async Task<IActionResult> SeleccionarPerfil(int? empleadoId, string? adminPin)
+	public async Task<IActionResult> SeleccionarPerfil(int? empleadoId, string? adminPin, string? pinEmpleado)
 	{
 		if (TempData["GoogleAdminEmail"] is not string adminEmail)
 			return RedirectToAction("Index");
@@ -142,6 +142,17 @@ public class LoginController : Controller
 			TempData["LoginError"] = "Perfil no válido.";
 			TempData["GoogleAdminEmail"] = adminEmail;
 			return RedirectToAction("SeleccionarPerfil");
+		}
+
+		// Si el empleado tiene PIN, verificarlo
+		if (!string.IsNullOrWhiteSpace(empleado.Pin))
+		{
+			if (string.IsNullOrWhiteSpace(pinEmpleado) || pinEmpleado.Trim() != empleado.Pin.Trim())
+			{
+				TempData["LoginError"] = $"PIN incorrecto para {empleado.Nombre}.";
+				TempData["GoogleAdminEmail"] = adminEmail;
+				return RedirectToAction("SeleccionarPerfil");
+			}
 		}
 
 		var rol = string.IsNullOrWhiteSpace(empleado.Rol) ? "Camarero" : empleado.Rol.Trim();

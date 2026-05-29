@@ -34,29 +34,42 @@ public class StaffController : Controller
 
 	// ─── PANEL DE PEDIDO ────────────────────────────────────────────────────────
 
-	public IActionResult Panel(int mesaId, int zonaId)
+	public IActionResult Panel(int mesaId, int zonaId, int? pedidoId = null)
 	{
 		var mesa = _db.Mesas.Find(mesaId);
 		if (mesa == null) return RedirectToAction("MapaMesas", new { zonaId });
 
-		// Buscar o crear pedido abierto para esta mesa
-		var pedido = _db.PedidosMesa
+		PedidoMesa? pedido = null;
+
+		// Si viene pedidoId explícito, cargarlo directamente
+		if (pedidoId.HasValue)
+			pedido = _db.PedidosMesa
+				.Include(p => p.Lineas).ThenInclude(l => l.Producto)
+				.FirstOrDefault(p => p.Id == pedidoId.Value && p.MesaId == mesaId);
+
+		// Si no, buscar el más reciente con estado Abierto (0)
+		pedido ??= _db.PedidosMesa
 			.Include(p => p.Lineas).ThenInclude(l => l.Producto)
-			.FirstOrDefault(p => p.MesaId == mesaId && p.Estado == EstadoPedidoMesa.Abierto);
+			.Where(p => p.MesaId == mesaId && (int)p.Estado == 0)
+			.OrderByDescending(p => p.CreadoEn)
+			.FirstOrDefault();
 
 		if (pedido == null)
 		{
-			pedido = new PedidoMesa { MesaId = mesaId, CreadoEn = DateTime.UtcNow };
-			_db.PedidosMesa.Add(pedido);
+			var nuevo = new PedidoMesa { MesaId = mesaId, CreadoEn = DateTime.UtcNow, Estado = EstadoPedidoMesa.Abierto };
+			_db.PedidosMesa.Add(nuevo);
 			_db.SaveChanges();
+			pedido = _db.PedidosMesa
+				.Include(p => p.Lineas).ThenInclude(l => l.Producto)
+				.First(p => p.Id == nuevo.Id);
 		}
 
 		var productos = _db.Productos.OrderBy(p => (int)p.Grupo).ThenBy(p => p.Nombre).ToList();
 
-		ViewData["ZonaId"]     = zonaId;
-		ViewData["MesaNombre"] = mesa.Nombre;
-		ViewData["MesaId"]     = mesaId;
-		ViewData["PedidoId"]   = pedido.Id;
+		ViewData["ZonaId"]      = zonaId;
+		ViewData["MesaNombre"]  = mesa.Nombre;
+		ViewData["MesaId"]      = mesaId;
+		ViewData["PedidoId"]    = pedido.Id;
 		ViewData["EsEncargado"] = User.IsInRole("Encargado") || User.IsInRole("Admin");
 		return View((pedido, productos));
 	}
@@ -67,10 +80,9 @@ public class StaffController : Controller
 		var pedido = _db.PedidosMesa.Include(p => p.Lineas).FirstOrDefault(p => p.Id == pedidoId);
 		if (pedido == null) return RedirectToAction("MapaMesas", new { zonaId });
 
-		// Solo modificable si está abierto O si es encargado
 		var esEncargado = User.IsInRole("Encargado") || User.IsInRole("Admin");
 		if (pedido.Estado == EstadoPedidoMesa.Enviado && !esEncargado)
-			return RedirectToAction("Panel", new { mesaId, zonaId });
+			return RedirectToAction("Panel", new { mesaId, zonaId, pedidoId });
 
 		var linea = pedido.Lineas.FirstOrDefault(l => l.ProductoId == productoId);
 		if (linea != null)
@@ -79,7 +91,7 @@ public class StaffController : Controller
 			pedido.Lineas.Add(new LineaPedido { PedidoMesaId = pedidoId, ProductoId = productoId, Cantidad = 1 });
 
 		_db.SaveChanges();
-		return RedirectToAction("Panel", new { mesaId, zonaId });
+		return RedirectToAction("Panel", new { mesaId, zonaId, pedidoId });
 	}
 
 	[HttpPost]
@@ -89,11 +101,11 @@ public class StaffController : Controller
 		var linea  = _db.LineasPedido.FirstOrDefault(l => l.Id == lineaId && l.PedidoMesaId == pedidoId);
 
 		if (pedido == null || linea == null)
-			return RedirectToAction("Panel", new { mesaId, zonaId });
+			return RedirectToAction("Panel", new { mesaId, zonaId, pedidoId });
 
 		var esEncargado = User.IsInRole("Encargado") || User.IsInRole("Admin");
 		if (pedido.Estado == EstadoPedidoMesa.Enviado && !esEncargado)
-			return RedirectToAction("Panel", new { mesaId, zonaId });
+			return RedirectToAction("Panel", new { mesaId, zonaId, pedidoId });
 
 		if (linea.Cantidad > 1)
 			linea.Cantidad--;
@@ -101,7 +113,7 @@ public class StaffController : Controller
 			_db.LineasPedido.Remove(linea);
 
 		_db.SaveChanges();
-		return RedirectToAction("Panel", new { mesaId, zonaId });
+		return RedirectToAction("Panel", new { mesaId, zonaId, pedidoId });
 	}
 
 	[HttpPost]
@@ -111,7 +123,6 @@ public class StaffController : Controller
 		if (pedido != null && pedido.Estado == EstadoPedidoMesa.Abierto)
 		{
 			pedido.Estado = EstadoPedidoMesa.Enviado;
-			// Marcar mesa como ocupada
 			var mesa = _db.Mesas.Find(pedido.MesaId);
 			if (mesa != null) mesa.Estado = EstadoMesa.Ocupada;
 			_db.SaveChanges();

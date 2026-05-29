@@ -60,6 +60,7 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
         modelBuilder.Entity<PedidoMesa>(b =>
         {
             b.HasKey(p => p.Id);
+            b.Property(p => p.Estado).HasConversion<int>();
             b.HasOne(p => p.Mesa)
              .WithMany()
              .HasForeignKey(p => p.MesaId)

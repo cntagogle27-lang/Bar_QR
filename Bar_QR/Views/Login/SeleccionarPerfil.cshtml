@@ -41,20 +41,40 @@
         <div class="d-grid gap-3">
             @foreach (var emp in Model)
             {
-                <form asp-action="SeleccionarPerfil" method="post">
-                    <input type="hidden" name="empleadoId" value="@emp.Id" />
-                    <button type="submit" class="btn-perfil">
+                var tienePin = !string.IsNullOrWhiteSpace(emp.Pin);
+                @if (tienePin)
+                {
+                    <button type="button" class="btn-perfil @(emp.Rol == "Encargado" ? "btn-admin" : "")"
+                            data-bs-toggle="modal" data-bs-target="#modalPinEmp"
+                            data-empid="@emp.Id" data-nombre="@emp.Nombre">
                         @if (emp.AvatarTipo == "custom" && emp.FotoData != null)
                         {
                             <img src="/Login/AvatarEmpleado/@emp.Id" style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px" />
                         }
                         else
                         {
-                            <span style="margin-right:8px">🧑‍🍳</span>
+                            <span style="margin-right:8px">@(emp.Rol == "Encargado" ? "👔" : "🧑‍🍳")</span>
                         }
-                        @emp.Nombre
+                        @emp.Nombre <small style="opacity:.6;font-size:.75rem">(@emp.Rol)</small>
                     </button>
-                </form>
+                }
+                else
+                {
+                    <form asp-action="SeleccionarPerfil" method="post">
+                        <input type="hidden" name="empleadoId" value="@emp.Id" />
+                        <button type="submit" class="btn-perfil">
+                            @if (emp.AvatarTipo == "custom" && emp.FotoData != null)
+                            {
+                                <img src="/Login/AvatarEmpleado/@emp.Id" style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px" />
+                            }
+                            else
+                            {
+                                <span style="margin-right:8px">🧑‍🍳</span>
+                            }
+                            @emp.Nombre
+                        </button>
+                    </form>
+                }
             }
 
             <hr style="border-color:rgba(255,255,255,.2)" />
@@ -62,6 +82,43 @@
             <button type="button" class="btn-perfil btn-admin" data-bs-toggle="modal" data-bs-target="#modalPin">
                 ⚙️ Entrar como Administrador
             </button>
+        </div>
+    </div>
+
+    @* Modal PIN empleado (encargado u otro con PIN) *@
+    <div class="modal fade" id="modalPinEmp" tabindex="-1" aria-labelledby="modalPinEmpLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-dark border-0 shadow-lg" style="border-radius:30px;width:350px;margin:auto">
+                <div class="modal-body p-4">
+                    <h4 class="text-center fw-bold mb-4" id="modalPinEmpLabel">🔑 PIN</h4>
+                    <form asp-action="SeleccionarPerfil" method="post">
+                        <input type="hidden" name="empleadoId" id="inputEmpId" value="" />
+                        <input type="password" name="pinEmpleado" id="pinEmpInput" class="form-control text-center mb-4" readonly maxlength="4" style="background:#f8f9fa;color:#333;border:2px solid #ddd;font-size:35px;letter-spacing:15px;border-radius:10px;" />
+                        <div class="text-center">
+                            <div class="d-flex justify-content-center">
+                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="pressEmp(1)">1</button>
+                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="pressEmp(2)">2</button>
+                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="pressEmp(3)">3</button>
+                            </div>
+                            <div class="d-flex justify-content-center">
+                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="pressEmp(4)">4</button>
+                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="pressEmp(5)">5</button>
+                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="pressEmp(6)">6</button>
+                            </div>
+                            <div class="d-flex justify-content-center">
+                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="pressEmp(7)">7</button>
+                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="pressEmp(8)">8</button>
+                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="pressEmp(9)">9</button>
+                            </div>
+                            <div class="d-flex justify-content-center align-items-center">
+                                <button type="button" class="btn btn-link text-danger fw-bold" style="text-decoration:none;width:65px" onclick="clsEmp()">BORRAR</button>
+                                <button type="button" class="btn btn-light pin-btn shadow-sm" onclick="pressEmp(0)">0</button>
+                                <button type="submit" class="btn btn-success pin-btn shadow">OK</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -106,6 +163,20 @@
     <script>
         function press(n) { const i = document.getElementById("pinInput"); if(i.value.length < 4) i.value += n; }
         function cls() { document.getElementById("pinInput").value = ""; }
+
+        // Modal PIN empleado
+        function pressEmp(n) { const i = document.getElementById("pinEmpInput"); if(i.value.length < 4) i.value += n; }
+        function clsEmp() { document.getElementById("pinEmpInput").value = ""; }
+
+        const modalPinEmp = document.getElementById('modalPinEmp');
+        if (modalPinEmp) {
+            modalPinEmp.addEventListener('show.bs.modal', function(e) {
+                const btn = e.relatedTarget;
+                document.getElementById('pinEmpInput').value = '';
+                document.getElementById('inputEmpId').value = btn.dataset.empid;
+                document.getElementById('modalPinEmpLabel').textContent = '🔑 PIN · ' + btn.dataset.nombre;
+            });
+        }
     </script>
 </body>
 </html>
