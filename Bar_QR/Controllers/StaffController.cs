@@ -1,50 +1,46 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Bar_QR.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bar_QR.Controllers;
 
-[Authorize(Roles = "Camarero")] // Solo camareros
+[Authorize(Roles = "Camarero")]
 public class StaffController : Controller
 {
-    // Simulamos un mapa de mesas
-    private static List<Mesa> Mesas = Enumerable.Range(1, 12).Select(n => new Mesa { NumeroMesa = n }).ToList();
-    private readonly Bar_QR.Data.AppDbContext _db;
+	private readonly Bar_QR.Data.AppDbContext _db;
 
-    public StaffController(Bar_QR.Data.AppDbContext db)
-    {
-        _db = db;
-        // ensure mesas in db
-        if (!_db.Mesas.Any())
-        {
-            for (int i = 1; i <= 12; i++) _db.Mesas.Add(new Mesa { NumeroMesa = i, Estado = EstadoMesa.Libre });
-            _db.SaveChanges();
-        }
-    }
+	public StaffController(Bar_QR.Data.AppDbContext db)
+	{
+		_db = db;
+	}
 
-    // Método público para que la parte cliente pueda obtener las mesas (usa DB)
-    public static List<Mesa> GetMesasPublic()
-    {
-        // Leer desde el contexto requiere crear un scope; para simplicidad devolvemos la estática si existe
-        if (Mesas != null && Mesas.Any()) return Mesas;
-        return Enumerable.Range(1,12).Select(n => new Mesa { NumeroMesa = n }).ToList();
-    }
+	public IActionResult Index() => RedirectToAction("Zonas");
 
-    public IActionResult Index()
-    {
-        var dbMesas = _db.Mesas.OrderBy(m => m.NumeroMesa).ToList();
-        return View(dbMesas);
-    }
+	public IActionResult Zonas()
+	{
+		var zonas = _db.Zonas.Include(z => z.Mesas).OrderBy(z => z.Nombre).ToList();
+		return View(zonas);
+	}
 
-    [HttpPost]
-    public IActionResult Toggle(int numero)
-    {
-        var m = _db.Mesas.FirstOrDefault(x => x.NumeroMesa == numero);
-        if (m != null)
-        {
-            m.Estado = m.Estado == EstadoMesa.Libre ? EstadoMesa.Ocupada : EstadoMesa.Libre;
-            _db.SaveChanges();
-        }
-        return RedirectToAction("Index");
-    }
+	public IActionResult MapaMesas(int zonaId)
+	{
+		var zona = _db.Zonas.Include(z => z.Mesas).FirstOrDefault(z => z.Id == zonaId);
+		if (zona == null) return RedirectToAction("Zonas");
+		ViewData["ZonaId"] = zonaId;
+		ViewData["ZonaNombre"] = zona.Nombre;
+		return View(zona.Mesas.OrderBy(m => m.NumeroMesa).ToList());
+	}
+
+	[HttpPost]
+	public IActionResult Toggle(int mesaId, int zonaId)
+	{
+		var m = _db.Mesas.Find(mesaId);
+		if (m != null)
+		{
+			m.Estado = m.Estado == EstadoMesa.Libre ? EstadoMesa.Ocupada : EstadoMesa.Libre;
+			_db.SaveChanges();
+		}
+		return RedirectToAction("MapaMesas", new { zonaId });
+	}
 }

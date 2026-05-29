@@ -1,0 +1,66 @@
+@model IEnumerable<Bar_QR.Models.Zona>
+
+@{
+	ViewData["Title"] = "Seleccionar zona";
+	Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+	body { background: #f4f1eb; }
+	.zonas-header {
+		background: #1a1a2e;
+		color: #fff;
+		padding: 2rem 1rem 1.5rem;
+		text-align: center;
+		border-bottom: 4px solid #e63946;
+	}
+	.zonas-header h1 { font-size: 1.6rem; font-weight: 700; margin: 0; letter-spacing: 0.03em; }
+	.zonas-header p  { margin: 0.4rem 0 0; color: #aaa; font-size: 0.95rem; }
+	.zona-card {
+		display: block;
+		background: #fff;
+		border: 2px solid #e0ddd5;
+		border-radius: 12px;
+		padding: 2rem 1.5rem;
+		text-align: center;
+		text-decoration: none;
+		color: #1a1a2e;
+	}
+	.zona-card:hover { border-color: #e63946; color: #e63946; }
+	.zona-card .zona-icon { font-size: 2.4rem; display: block; margin-bottom: 0.6rem; }
+	.zona-card .zona-nombre { font-size: 1.2rem; font-weight: 700; display: block; }
+	.zona-card .zona-mesas { font-size: 0.85rem; color: #888; margin-top: 0.3rem; display: block; }
+	.vacia { text-align: center; padding: 3rem; color: #999; }
+</style>
+
+<div class="zonas-header">
+	<h1>☕ Café Joplin</h1>
+	<p>Selecciona tu zona de trabajo</p>
+</div>
+
+<div class="container py-4">
+	@if (!Model.Any())
+	{
+		<div class="vacia">
+			<p>No hay zonas configuradas. Pide al administrador que cree zonas en el panel.</p>
+		</div>
+	}
+	else
+	{
+		<div class="row g-3">
+			@foreach (var zona in Model)
+			{
+				var total   = zona.Mesas.Count;
+				var libres  = zona.Mesas.Count(m => m.Estado == Bar_QR.Models.EstadoMesa.Libre);
+				var ocupadas = total - libres;
+				<div class="col-12 col-sm-6 col-md-4">
+					<a href="@Url.Action("MapaMesas", "Staff", new { zonaId = zona.Id })" class="zona-card">
+						<span class="zona-icon">🪑</span>
+						<span class="zona-nombre">@zona.Nombre</span>
+						<span class="zona-mesas">@total mesas · <span style="color:#2a9d5c">@libres libres</span> · <span style="color:#e63946">@ocupadas ocupadas</span></span>
+					</a>
+				</div>
+			}
+		</div>
+	}
+</div>
