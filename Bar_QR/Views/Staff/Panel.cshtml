@@ -118,8 +118,10 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 
 <!-- CABECERA -->
 <div id="cabecera">
-	<span style="font-size:1.3rem">🍽️</span>
-	<h2>@mesaNombre</h2>
+	<a href="@Url.Action("MapaMesas","Staff",new{zonaId})" style="font-size:1.3rem;text-decoration:none;color:inherit" title="Volver al salón">🍽️</a>
+	<a href="@Url.Action("MapaMesas","Staff",new{zonaId})" style="text-decoration:none;color:inherit" title="Volver al salón">
+		<h2 style="margin:0">@mesaNombre</h2>
+	</a>
 	<span class="badge-estado @(pedidoEnv?"estado-enviado":"estado-abierto")">@(pedidoEnv?"Enviado":"Abierto")</span>
 	@if (pedidoEnv && !esEncargado)
 	{

@@ -23,6 +23,7 @@
     </style>
 </head>
 <body>
+    <a href="@Url.Action("Logout","Login")" class="btn btn-outline-light btn-sm" style="position:fixed;top:1rem;left:1rem;z-index:10">← Cerrar sesión</a>
     <div class="perfil-card">
         <div style="font-size:3rem;margin-bottom:.5rem">👋</div>
         <h2 class="fw-bold mb-1">Hola, <span style="color:#7dd3fc">@(adminEmail?.Split("@")[0])</span></h2>
