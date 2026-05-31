@@ -5,7 +5,8 @@ public enum EstadoMesa
 	Libre,
 	Ocupada,
 	Reservada,
-	EsperandoPedido
+	EsperandoPedido,
+	PendientePago
 }
 
 public class Mesa

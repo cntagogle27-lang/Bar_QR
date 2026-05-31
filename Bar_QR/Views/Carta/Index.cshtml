@@ -213,8 +213,36 @@
     {
     <script>
         const PRODUCTOS = @Html.Raw(productosJs);
-        let carrito   = [];   // items pendientes de enviar: [{ productoId, nombre, precio, cantidad }]
-        let historial = [];   // items ya enviados (acumulado)
+        let carrito   = [];   // items pendientes de enviar
+        let historial = [];   // items ya en el servidor (cargados/sincronizados)
+
+        // ── Sincronizar con el servidor ──────────────────────────────────────
+        async function sincronizarDesdeServidor() {
+            try {
+                const res  = await fetch('@Url.Action("ObtenerPedido","Carta")');
+                const data = await res.json();
+                if (data.success && data.items) {
+                    // Actualizar historial con lo que ya está en el servidor
+                    // No sobreescribir items que el cliente tiene en carrito pendiente
+                    historial = data.items.map(i => ({
+                        productoId: i.productoId,
+                        nombre:     i.nombre,
+                        precio:     i.precio,
+                        cantidad:   i.cantidad
+                    }));
+                    // Quitar del carrito pendiente lo que ya está en historial
+                    carrito = carrito.filter(c => !historial.find(h => h.productoId === c.productoId));
+                    actualizarInterfaz();
+                    if (historial.length > 0)
+                        document.getElementById('btn-pedir-cuenta').classList.remove('d-none');
+                }
+            } catch { /* silencioso */ }
+        }
+
+        // Cargar al inicio
+        sincronizarDesdeServidor();
+        // Polling cada 30s para ver si el camarero añadió algo
+        setInterval(sincronizarDesdeServidor, 30000);
 
         // ── Añadir al carrito
         document.addEventListener('click', (e) => {
@@ -257,14 +285,8 @@
                 const data = await res.json();
                 mostrarMsg(data.message);
                 if (data.success) {
-                    // Mover carrito al historial
-                    carrito.forEach(c => {
-                        const h = historial.find(i => i.productoId === c.productoId);
-                        if (h) h.cantidad += c.cantidad;
-                        else   historial.push({ ...c });
-                    });
                     carrito = [];
-                    actualizarInterfaz();
+                    await sincronizarDesdeServidor();
                     document.getElementById('btn-pedir-cuenta').classList.remove('d-none');
                 }
             } catch { mostrarMsg('Error de conexión.'); }

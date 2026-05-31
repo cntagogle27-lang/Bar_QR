@@ -201,7 +201,8 @@ public class StaffController : Controller
 		if (!User.IsInRole("Encargado") && !User.IsInRole("Admin"))
 			return RedirectToAction("Panel", new { mesaId, zonaId });
 
-		var linea = _db.LineasPedido.FirstOrDefault(l => l.Id == lineaId && l.PedidoMesaId == pedidoId);
+		// Buscar la línea por id (el pedidoId puede ser de cualquier pedido de la mesa)
+		var linea = _db.LineasPedido.FirstOrDefault(l => l.Id == lineaId);
 		if (linea != null)
 		{
 			linea.PrecioOverride = precio >= 0 ? precio : null;
@@ -270,24 +271,36 @@ public class StaffController : Controller
 
 	// ─── IMPRESIÓN ────────────────────────────────────────────────────────────────
 
-	/// <summary>Genera e imprime una Factura Proforma para la mesa.</summary>
+	/// <summary>Genera e imprime una Factura Proforma para la mesa y la marca como PendientePago.</summary>
 	[HttpPost]
 	public async Task<IActionResult> ImprimirProforma(int mesaId, int zonaId)
 	{
 		await _print.EnolarProformaAsync(mesaId);
+
+		var mesa = _db.Mesas.Find(mesaId);
+		if (mesa != null)
+		{
+			mesa.Estado = EstadoMesa.PendientePago;
+			await _db.SaveChangesAsync();
+		}
+
 		return RedirectToAction("Panel", new { mesaId, zonaId });
 	}
 
-	/// <summary>Genera la Factura Simple, la encola e imprime, cierra la mesa.</summary>
+	/// <summary>Genera la Factura Simple, la encola e imprime, cierra la mesa y elimina sesiones de cliente.</summary>
 	[HttpPost]
 	[Authorize(Roles = "Camarero,Encargado")]
 	public async Task<IActionResult> Pagar(int mesaId, int zonaId, MetodoPago metodoPago)
 	{
 		await _print.EnolarFacturaSimpleAsync(mesaId, metodoPago);
 
-		// Eliminar todos los pedidos de la mesa y liberarla
+		// Eliminar todos los pedidos de la mesa
 		var pedidos = _db.PedidosMesa.Where(p => p.MesaId == mesaId).ToList();
 		_db.PedidosMesa.RemoveRange(pedidos);
+
+		// Eliminar sesiones activas del cliente (libera la mesa para nuevo escaneo QR)
+		var sesiones = _db.SesionesMesa.Where(s => s.MesaId == mesaId).ToList();
+		_db.SesionesMesa.RemoveRange(sesiones);
 
 		var mesa = _db.Mesas.Find(mesaId);
 		if (mesa != null) mesa.Estado = EstadoMesa.Libre;

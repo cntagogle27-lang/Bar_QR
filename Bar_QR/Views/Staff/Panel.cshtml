@@ -327,7 +327,7 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 <!-- ═══ MODAL: CAMBIAR PRECIO ═══ -->
 <form asp-controller="Staff" asp-action="CambiarPrecio" method="post" id="formPrec">
 	<input type="hidden" name="lineaId"  id="prec-lineaId"  value="0"/>
-	<input type="hidden" name="pedidoId" value="@pedidoId"/>
+	<input type="hidden" name="pedidoId" id="prec-pedidoId" value="0"/>
 	<input type="hidden" name="zonaId"   value="@zonaId"/>
 	<input type="hidden" name="mesaId"   value="@mesaId"/>
 	<input type="hidden" name="precio"   id="prec-valor"    value="0"/>
@@ -415,8 +415,9 @@ function selLinea(el, id, nombre, cant, pedidoIdLinea) {
 function accionPrec() {
 	if (!lineaSelId) { alert('Selecciona primero un producto del carrito.'); return; }
 	const euro = numVal() >= 100 ? (numVal() / 100).toFixed(2) : numVal().toFixed(2);
-	document.getElementById('prec-lineaId').value = lineaSelId;
-	document.getElementById('prec-valor').value   = euro;
+	document.getElementById('prec-lineaId').value  = lineaSelId;
+	document.getElementById('prec-pedidoId').value = lineaSelPedido;
+	document.getElementById('prec-valor').value    = euro;
 	document.getElementById('formPrec').submit();
 }
 

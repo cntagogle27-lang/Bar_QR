@@ -62,11 +62,10 @@
                                 </button>
                             </div>
                         </form>
-                        <form asp-action="EliminarMesa" method="post" class="mt-2">
-                            <input type="hidden" name="id" value="@mesa.Id" />
-                            <button type="submit" class="btn btn-outline-danger btn-sm w-100"
-                                    onclick="return confirm('¿Eliminar @mesa.Nombre?')">🗑️ Eliminar</button>
-                        </form>
+                        <button type="button" class="btn btn-outline-danger btn-sm w-100 mt-2"
+                                onclick="confirmarEliminar(@mesa.Id, '@Html.Raw(mesa.Nombre.Replace("'","\\'"))')">
+                            🗑️ Eliminar
+                        </button>
                     </div>
                 </div>
             </div>
@@ -94,9 +93,35 @@
     </div>
 </div>
 
+@* Modal confirmar eliminar mesa *@
+<div class="modal fade" id="modalEliminar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="background:#1a1a2e;color:#e0e0e0;border:1.5px solid #dc3545;border-radius:14px">
+            <div class="modal-body text-center py-4 px-4">
+                <div style="font-size:3rem;line-height:1">🗑️</div>
+                <h5 class="fw-bold mt-3 mb-1">¿Eliminar mesa?</h5>
+                <p id="eliminar-nombre" class="text-secondary small mb-4"></p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-secondary flex-grow-1" data-bs-dismiss="modal">Cancelar</button>
+                    <form id="form-eliminar" asp-action="EliminarMesa" method="post" class="flex-grow-1">
+                        <input type="hidden" name="id" id="eliminar-id" value="0"/>
+                        <button type="submit" class="btn btn-danger w-100">Eliminar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+    function confirmarEliminar(id, nombre) {
+        document.getElementById('eliminar-id').value = id;
+        document.getElementById('eliminar-nombre').textContent = 'Se eliminará "' + nombre + '" de forma permanente.';
+        new bootstrap.Modal(document.getElementById('modalEliminar')).show();
+    }
+
     function copiarUrl(inputId) {
         var el = document.getElementById(inputId);
         el.select();

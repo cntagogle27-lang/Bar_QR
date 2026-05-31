@@ -50,8 +50,9 @@
 		border: none;
 		box-shadow: 0 2px 6px rgba(0,0,0,.2);
 	}
-	.mesa-staff.libre   { background: #2a9d5c; }
-	.mesa-staff.ocupada { background: #e63946; }
+	.mesa-staff.libre          { background: #2a9d5c; }
+	.mesa-staff.ocupada        { background: #e63946; }
+	.mesa-staff.pendiente-pago { background: #e69500; }
 	.mesa-staff .m-num  { font-size: 0.65rem; opacity: 0.7; }
 	.mesa-staff .m-estado { font-size: 0.7rem; font-weight: 400; }
 </style>
@@ -72,6 +73,7 @@
 <div class="leyenda">
 	<span><i class="dot dot-libre"></i> Libre</span>
 	<span><i class="dot dot-ocupada"></i> Ocupada — pulsa para cambiar estado</span>
+	<span><i class="dot" style="background:#e69500"></i> Pendiente de pago</span>
 </div>
 
 <div class="container-fluid px-3 py-3">
@@ -84,8 +86,16 @@
 		<div id="mapa-staff" style="width:100%; min-height:@(mapH)px; height:@(mapH)px;">
 			@foreach (var mesa in mesas)
 			{
-				var clase = mesa.Estado == Bar_QR.Models.EstadoMesa.Libre ? "libre" : "ocupada";
-				var texto = mesa.Estado == Bar_QR.Models.EstadoMesa.Libre ? "Libre" : "Ocupada";
+				var clase = mesa.Estado switch {
+					Bar_QR.Models.EstadoMesa.Libre         => "libre",
+					Bar_QR.Models.EstadoMesa.PendientePago => "pendiente-pago",
+					_                                      => "ocupada"
+				};
+				var texto = mesa.Estado switch {
+					Bar_QR.Models.EstadoMesa.Libre         => "Libre",
+					Bar_QR.Models.EstadoMesa.PendientePago => "🧾 Cuenta",
+					_                                      => "Ocupada"
+				};
 				var nombre = string.IsNullOrWhiteSpace(mesa.Nombre) ? $"Mesa {mesa.NumeroMesa}" : mesa.Nombre;
 				<a href="@Url.Action("Panel","Staff",new{mesaId=mesa.Id,zonaId})"
 				   class="mesa-staff @clase"

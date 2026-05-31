@@ -143,28 +143,94 @@ public class CartaController : Controller
 		public int Cantidad   { get; set; }
 	}
 
+	/// <summary>Devuelve las líneas de todos los pedidos de la mesa para que el cliente vea el carrito completo.</summary>
+	[HttpGet]
+	public async Task<IActionResult> ObtenerPedido()
+	{
+		var tokenCookie = Request.Cookies[CookieSesionMesa];
+		if (string.IsNullOrEmpty(tokenCookie))
+			return Json(new { success = false });
+
+		var ahora = DateTime.UtcNow;
+		var sesion = await _db.SesionesMesa
+			.FirstOrDefaultAsync(s => s.Token == tokenCookie && s.Expira > ahora);
+		if (sesion == null)
+			return Json(new { success = false });
+
+		var pedidos = await _db.PedidosMesa
+			.Include(p => p.Lineas).ThenInclude(l => l.Producto)
+			.Where(p => p.MesaId == sesion.MesaId)
+			.ToListAsync();
+
+		var items = pedidos
+			.SelectMany(p => p.Lineas)
+			.GroupBy(l => l.ProductoId)
+			.Select(g => new {
+				productoId = g.Key,
+				nombre     = g.First().Producto?.Nombre ?? "",
+				precio     = g.First().PrecioOverride ?? g.First().Producto?.Precio ?? 0m,
+				cantidad   = g.Sum(l => l.Cantidad)
+			})
+			.ToList();
+
+		return Json(new { success = true, items });
+	}
+
 	// Acceso por URL única de mesa (escaneo de QR)
 	[Route("Carta/Mesa/{slug}")]
 	public IActionResult Mesa(string slug)
 	{
-		// 1. Buscar la mesa
-		var mesa = _db.Mesas.FirstOrDefault(m => m.Slug == slug);
+		// 1. Buscar la mesa (con zona)
+		var mesa = _db.Mesas.Include(m => m.Zona).FirstOrDefault(m => m.Slug == slug);
 		if (mesa == null) return NotFound("Mesa no encontrada.");
 
-		// 2. Validar que la mesa está habilitada (conectada)
+		// 2. Validar que la mesa está habilitada
 		if (!mesa.Habilitada)
 			return View("AccesoDenegado", new AccesoDenegadoViewModel
 			{
 				Motivo = "Esta mesa no está disponible en este momento."
 			});
 
-		// 3. Limpiar sesiones expiradas de esta mesa
+		// 2b. Si está pendiente de pago, nadie más puede acceder
+		if (mesa.Estado == EstadoMesa.PendientePago)
+			return View("AccesoDenegado", new AccesoDenegadoViewModel
+			{
+				Motivo = "Esta mesa está pendiente de pago. El camarero pasará en breve."
+			});
+
+		// 3. Verificar reglas de cierre automático de la zona
+		var ahoraLocal = DateTime.Now;
+		var hoyDow     = (int)ahoraLocal.DayOfWeek;
+		var ahoraTs    = ahoraLocal.TimeOfDay;
+		var reglasZona = _db.ReglasCierre.Where(r => r.Activa && r.ZonaId == mesa.ZonaId).ToList();
+		foreach (var regla in reglasZona)
+		{
+			List<int> dias;
+			try { dias = System.Text.Json.JsonSerializer.Deserialize<List<int>>(regla.DiasJson) ?? new(); }
+			catch { dias = new(); }
+
+			if (dias.Any() && !dias.Contains(hoyDow)) continue;
+
+			if (TimeSpan.TryParse(regla.HoraInicio, out var ini) && TimeSpan.TryParse(regla.HoraFin, out var fin))
+			{
+				bool enRango = ini <= fin
+					? ahoraTs >= ini && ahoraTs < fin
+					: ahoraTs >= ini || ahoraTs < fin;
+				if (enRango)
+					return View("AccesoDenegado", new AccesoDenegadoViewModel
+					{
+						Motivo = $"Este área está cerrada en este horario ({regla.HoraInicio}–{regla.HoraFin})."
+					});
+			}
+		}
+
+		// 4. Limpiar sesiones expiradas de esta mesa
 		var ahora = DateTime.UtcNow;
 		var expiradas = _db.SesionesMesa.Where(s => s.MesaId == mesa.Id && s.Expira <= ahora);
 		_db.SesionesMesa.RemoveRange(expiradas);
 		_db.SaveChanges();
 
-		// 4. Comprobar si hay una sesión activa (otra persona ya está usando esta mesa)
+		// 5. Comprobar si hay una sesión activa
 		var tokenCookie = Request.Cookies[CookieSesionMesa];
 		var sesionActiva = _db.SesionesMesa
 			.FirstOrDefault(s => s.MesaId == mesa.Id && s.Expira > ahora);
@@ -179,11 +245,10 @@ public class CartaController : Controller
 					Motivo = "Esta mesa ya tiene una sesión activa. Vuelve a escanear cuando esté libre."
 				});
 			}
-			// El usuario ya tiene sesión válida, dejar pasar
 		}
 		else
 		{
-			// 5. No hay sesión activa: crear una nueva con token dinámico (válida 4h)
+			// 6. No hay sesión activa: crear una nueva con token dinámico (válida 4h)
 			var nuevoToken = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
 			var sesion = new SesionMesa
 			{
