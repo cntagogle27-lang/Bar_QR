@@ -185,20 +185,22 @@ public class StaffController : Controller
 	// ─── CAMBIAR CANTIDAD (encargado) ────────────────────────────────────────────
 
 	[HttpPost]
-	public IActionResult CambiarCantidad(int lineaId, int pedidoId, int zonaId, int mesaId, int cantidad)
+	public IActionResult CambiarCantidad(int lineaId, int pedidoId, int zonaId, int mesaId, int cantidad, string? motivo = null)
 	{
 		if (!User.IsInRole("Encargado") && !User.IsInRole("Admin"))
 			return RedirectToAction("Panel", new { mesaId, zonaId });
 
-		var linea = _db.LineasPedido.FirstOrDefault(l => l.Id == lineaId && l.PedidoMesaId == pedidoId);
-		if (linea != null)
-		{
-			if (cantidad <= 0)
-				_db.LineasPedido.Remove(linea);
-			else
-				linea.Cantidad = cantidad;
-			_db.SaveChanges();
-		}
+		// Buscar la línea en cualquier pedido de la mesa (el pedidoId viene del item del carrito)
+		var linea = _db.LineasPedido.FirstOrDefault(l => l.Id == lineaId);
+		if (linea == null)
+			return RedirectToAction("Panel", new { mesaId, zonaId });
+
+		if (cantidad <= 0)
+			_db.LineasPedido.Remove(linea);
+		else
+			linea.Cantidad = cantidad;
+
+		_db.SaveChanges();
 		return RedirectToAction("Panel", new { mesaId, zonaId });
 	}
 

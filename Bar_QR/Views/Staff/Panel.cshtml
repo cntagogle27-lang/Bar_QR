@@ -195,47 +195,46 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 			{
 				<p style="color:#555577;text-align:center;padding:1.5rem;font-size:.82rem">Sin productos aún</p>
 			}
-			@foreach (var ag in lineasAgrupadas)
-			{
-				var precioTotal  = ag.PrecioUnit * ag.CantidadTotal;
-				var puedeBorrar  = ag.TieneAbierto || esEncargado;
-				var lineaId      = ag.LineaRef.Linea.Id;
-				var pedidoDeLinea= ag.LineaRef.Pedido.Id;
-				var esEnviada    = ag.TieneEnviado && !ag.TieneAbierto;
-				<div class="linea-item @(esEnviada?"linea-env":"")" data-linea-id="@lineaId"
-					 onclick="selLinea(this,@lineaId,'@(ag.Nombre.Replace("'","\\'")))' ">
-					<span class="l-cant">@ag.CantidadTotal×</span>
-					<span class="l-nombre">@ag.Nombre</span>
-					<span class="l-precio">@precioTotal.ToString("0.00") €</span>
-					@if (puedeBorrar)
+					@foreach (var ag in lineasAgrupadas)
 						{
-							@if (!esEncargado && !esEnviada)
-							{
-								@* Camarero + pedido abierto: borrar directo sin modal *@
-								<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0"
-									  onclick="event.stopPropagation()">
-									<input type="hidden" name="lineaId"  value="@lineaId"/>
-									<input type="hidden" name="pedidoId" value="@pedidoDeLinea"/>
-									<input type="hidden" name="zonaId"   value="@zonaId"/>
-									<input type="hidden" name="mesaId"   value="@mesaId"/>
-									<button type="submit" class="btn-quitar">−</button>
-								</form>
-							}
-										else
+							var precioTotal   = ag.PrecioUnit * ag.CantidadTotal;
+							var puedeBorrar   = ag.TieneAbierto || esEncargado;
+							var lineaId       = ag.LineaRef.Linea.Id;
+							var pedidoDeLinea = ag.LineaRef.Pedido.Id;
+							var esEnviada     = ag.TieneEnviado && !ag.TieneAbierto;
+							<div class="linea-item @(esEnviada?"linea-env":"")"
+								 data-linea-id="@lineaId"
+								 data-cantidad="@ag.CantidadTotal"
+								 data-pedido-id="@pedidoDeLinea"
+								 onclick="selLinea(this,@lineaId,'@(ag.Nombre.Replace("'","\\'"))',@ag.CantidadTotal,@pedidoDeLinea)">
+								<span class="l-cant">@ag.CantidadTotal×</span>
+								<span class="l-nombre">@ag.Nombre</span>
+								<span class="l-precio">@precioTotal.ToString("0.00") €</span>
+								@if (puedeBorrar)
+								{
+									@if (!esEncargado && !esEnviada)
 									{
-										@* Encargado (cualquier estado) o línea enviada: modal con motivo *@
+										<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0"
+											  onclick="event.stopPropagation()">
+											<input type="hidden" name="lineaId"  value="@lineaId"/>
+											<input type="hidden" name="pedidoId" value="@pedidoDeLinea"/>
+											<input type="hidden" name="zonaId"   value="@zonaId"/>
+											<input type="hidden" name="mesaId"   value="@mesaId"/>
+											<button type="submit" class="btn-quitar">−</button>
+										</form>
+									}
+									else
+									{
 										<button type="button" class="btn-quitar"
 												onclick="event.stopPropagation();abrirModalBorrar(@lineaId,'@(ag.Nombre.Replace("'","\\'"))',@pedidoDeLinea)">−</button>
-																}
-																}
-																</div>
-															}
-											</div>
-											<div id="total-row">
-												Total: @totalGlobal.ToString("0.00") €
-											</div>
-										</div>
-									</div>
+									}
+								}
+							</div>
+						}
+					</div>
+					<div id="total-row">Total: @totalGlobal.ToString("0.00") €</div>
+				</div>
+			</div>
 
 <!-- BARRA INFERIOR -->
 <div id="barra-inferior">
@@ -335,11 +334,35 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 <!-- ═══ MODAL: CAMBIAR CANTIDAD ═══ -->
 <form asp-controller="Staff" asp-action="CambiarCantidad" method="post" id="formCan">
 	<input type="hidden" name="lineaId"  id="can-lineaId"   value="0"/>
-	<input type="hidden" name="pedidoId" value="@pedidoId"/>
+	<input type="hidden" name="pedidoId" id="can-pedidoId"  value="@pedidoId"/>
 	<input type="hidden" name="zonaId"   value="@zonaId"/>
 	<input type="hidden" name="mesaId"   value="@mesaId"/>
 	<input type="hidden" name="cantidad" id="can-valor"     value="0"/>
+	<input type="hidden" name="motivo"   id="can-motivo"    value=""/>
 </form>
+
+<!-- ═══ MODAL: MOTIVO REDUCCIÓN CANTIDAD ═══ -->
+<div class="modal fade modal-dark" id="modalCantidad" tabindex="-1">
+	<div class="modal-dialog modal-sm modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="tituloCantModal">Reducir cantidad</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+			</div>
+			<div class="modal-body">
+				<p style="font-size:.85rem;color:#aaa">Motivo de reducción:</p>
+				@foreach (var m in new[]{"Error Cliente","Error Cocina","Error Camarero"})
+				{
+					<button type="button" class="motivo-btn"
+							onclick="confirmarCantidad('@m')">@m</button>
+				}
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+			</div>
+		</div>
+	</div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -373,20 +396,22 @@ function inyectarCantidad(form) {
 }
 
 // ── Línea seleccionada en el carrito ─────────────────────────────────────────
-let lineaSelId   = 0;
-let lineaSelNom  = '';
-function selLinea(el, id, nombre) {
+let lineaSelId     = 0;
+let lineaSelNom    = '';
+let lineaSelCant   = 0;
+let lineaSelPedido = 0;
+function selLinea(el, id, nombre, cant, pedidoIdLinea) {
 	document.querySelectorAll('.linea-item').forEach(x => x.classList.remove('sel'));
 	el.classList.add('sel');
-	lineaSelId  = id;
-	lineaSelNom = nombre;
+	lineaSelId     = id;
+	lineaSelNom    = nombre;
+	lineaSelCant   = cant;
+	lineaSelPedido = pedidoIdLinea;
 }
 
 // ── Prec ─────────────────────────────────────────────────────────────────────
 function accionPrec() {
 	if (!lineaSelId) { alert('Selecciona primero un producto del carrito.'); return; }
-	const v = (numVal() / 100).toFixed(2); // si escribes 130 → 1.30
-	// Interpretamos el número como céntimos si < 100, como euros si lleva coma o > 99
 	const euro = numVal() >= 100 ? (numVal() / 100).toFixed(2) : numVal().toFixed(2);
 	document.getElementById('prec-lineaId').value = lineaSelId;
 	document.getElementById('prec-valor').value   = euro;
@@ -396,9 +421,16 @@ function accionPrec() {
 // ── Can ──────────────────────────────────────────────────────────────────────
 function accionCan() {
 	if (!lineaSelId) { alert('Selecciona primero un producto del carrito.'); return; }
-	document.getElementById('can-lineaId').value = lineaSelId;
-	document.getElementById('can-valor').value   = numVal();
-	document.getElementById('formCan').submit();
+	const nueva = numVal();
+	if (nueva < lineaSelCant) {
+		// Cantidad menor: pedir motivo (modal borrar reutilizado con acción cambio cant)
+		abrirModalCantidad(lineaSelId, lineaSelNom, lineaSelPedido, nueva);
+	} else {
+		document.getElementById('can-lineaId').value = lineaSelId;
+		document.getElementById('can-valor').value   = nueva;
+		document.getElementById('can-pedidoId').value = lineaSelPedido;
+		document.getElementById('formCan').submit();
+	}
 }
 
 // ── Modal borrar con motivo ───────────────────────────────────────────────────
@@ -411,6 +443,22 @@ function abrirModalBorrar(lineaId, nombre, pedidoIdLinea) {
 		if (elPedido && pedidoIdLinea) elPedido.value = pedidoIdLinea;
 	});
 	new bootstrap.Modal(document.getElementById('modalBorrar')).show();
+}
+
+// ── Modal reducir cantidad con motivo ─────────────────────────────────────────
+var _cantPendNueva = 0;
+function abrirModalCantidad(lineaId, nombre, pedidoIdLinea, nuevaCant) {
+	_cantPendNueva = nuevaCant;
+	document.getElementById('tituloCantModal').textContent = 'Reducir "' + nombre + '" a ' + nuevaCant;
+	document.getElementById('can-lineaId').value  = lineaId;
+	document.getElementById('can-pedidoId').value = pedidoIdLinea;
+	document.getElementById('can-valor').value    = nuevaCant;
+	new bootstrap.Modal(document.getElementById('modalCantidad')).show();
+}
+function confirmarCantidad(motivo) {
+	document.getElementById('can-motivo').value = motivo;
+	bootstrap.Modal.getInstance(document.getElementById('modalCantidad'))?.hide();
+	document.getElementById('formCan').submit();
 }
 </script>
 
