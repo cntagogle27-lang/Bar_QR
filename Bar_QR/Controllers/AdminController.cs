@@ -651,4 +651,52 @@ public class AdminController : Controller
         if (mesa != null) { _db.Mesas.Remove(mesa); _db.SaveChanges(); }
         return RedirectToAction("MapaZona", new { id = zonaId });
     }
+
+    // ── IMPRESORAS ──────────────────────────────────────────────────────────
+
+    public IActionResult Impresoras() =>
+        View(_db.Impresoras.OrderBy(i => i.Id).ToList());
+
+    [HttpPost]
+    public IActionResult CrearImpresora(string nombre, string direccion, RolImpresora rol)
+    {
+        if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(direccion))
+            return RedirectToAction("Impresoras");
+        _db.Impresoras.Add(new Impresora { Nombre = nombre.Trim(), Direccion = direccion.Trim(), Rol = rol });
+        _db.SaveChanges();
+        return RedirectToAction("Impresoras");
+    }
+
+    [HttpPost]
+    public IActionResult EditarImpresora(int id, string nombre, string direccion, RolImpresora rol, bool activa)
+    {
+        var imp = _db.Impresoras.Find(id);
+        if (imp is null) return NotFound();
+        imp.Nombre    = nombre.Trim();
+        imp.Direccion = direccion.Trim();
+        imp.Rol       = rol;
+        imp.Activa    = activa;
+        _db.SaveChanges();
+        return RedirectToAction("Impresoras");
+    }
+
+    [HttpPost]
+    public IActionResult EliminarImpresora(int id)
+    {
+        var imp = _db.Impresoras.Find(id);
+        if (imp != null) { _db.Impresoras.Remove(imp); _db.SaveChanges(); }
+        return RedirectToAction("Impresoras");
+    }
+
+    // ── DESTINO IMPRESIÓN DE PRODUCTOS ──────────────────────────────────────
+
+    [HttpPost]
+    public IActionResult EditarDestinoProducto(int id, DestinoImpresion destino)
+    {
+        var prod = _db.Productos.Find(id);
+        if (prod is null) return NotFound();
+        prod.DestinoImpresion = destino;
+        _db.SaveChanges();
+        return Ok();
+    }
 }

@@ -33,6 +33,8 @@ var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddControllers(); // para PrintApiController
+builder.Services.AddScoped<Bar_QR.Services.PrintService>();
 
 // DataProtection base (necesario para cookies de sesión)
 builder.Services.AddDataProtection()
@@ -240,6 +242,8 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
+
+app.MapControllers(); // endpoints API (PrintApiController, etc.)
 
 // Comprobar si la base de datos tiene mesas y crear 10 por defecto si está vacía
 try

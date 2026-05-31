@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Bar_QR.Models;
+using Bar_QR.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bar_QR.Controllers;
@@ -9,7 +10,12 @@ namespace Bar_QR.Controllers;
 public class StaffController : Controller
 {
 	private readonly Bar_QR.Data.AppDbContext _db;
-	public StaffController(Bar_QR.Data.AppDbContext db) => _db = db;
+	private readonly PrintService _print;
+	public StaffController(Bar_QR.Data.AppDbContext db, PrintService print)
+	{
+		_db    = db;
+		_print = print;
+	}
 
 	public IActionResult Index() => RedirectToAction("Zonas");
 
@@ -227,5 +233,33 @@ public class StaffController : Controller
 		}
 		sb.AppendLine("</pre>");
 		return Content(sb.ToString(), "text/html");
+	}
+
+	// ─── IMPRESIÓN ────────────────────────────────────────────────────────────────
+
+	/// <summary>Genera e imprime una Factura Proforma para la mesa.</summary>
+	[HttpPost]
+	public async Task<IActionResult> ImprimirProforma(int mesaId, int zonaId)
+	{
+		await _print.EnolarProformaAsync(mesaId);
+		return RedirectToAction("Panel", new { mesaId, zonaId });
+	}
+
+	/// <summary>Genera la Factura Simple, la encola e imprime, cierra la mesa.</summary>
+	[HttpPost]
+	[Authorize(Roles = "Camarero,Encargado")]
+	public async Task<IActionResult> Pagar(int mesaId, int zonaId, MetodoPago metodoPago)
+	{
+		await _print.EnolarFacturaSimpleAsync(mesaId, metodoPago);
+
+		// Eliminar todos los pedidos de la mesa y liberarla
+		var pedidos = _db.PedidosMesa.Where(p => p.MesaId == mesaId).ToList();
+		_db.PedidosMesa.RemoveRange(pedidos);
+
+		var mesa = _db.Mesas.Find(mesaId);
+		if (mesa != null) mesa.Estado = EstadoMesa.Libre;
+
+		await _db.SaveChangesAsync();
+		return RedirectToAction("MapaMesas", new { zonaId });
 	}
 }

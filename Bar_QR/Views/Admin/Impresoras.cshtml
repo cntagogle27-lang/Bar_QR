@@ -1,0 +1,142 @@
+@model List<Bar_QR.Models.Impresora>
+@{
+	ViewData["Title"] = "Impresoras";
+	Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container py-4">
+	<h2 class="mb-4">🖨️ Gestión de Impresoras</h2>
+
+	@if (!Model.Any())
+	{
+		<div class="alert alert-info">No hay impresoras configuradas.</div>
+	}
+	else
+	{
+		<table class="table table-dark table-striped align-middle mb-4">
+			<thead>
+				<tr>
+					<th>Nombre</th>
+					<th>Dirección (USB/COM/IP)</th>
+					<th>Rol</th>
+					<th>Activa</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				@foreach (var imp in Model)
+				{
+					<tr>
+						<td>@imp.Nombre</td>
+						<td><code>@imp.Direccion</code></td>
+						<td>
+							<span class="badge bg-@(imp.Rol == Bar_QR.Models.RolImpresora.Barra ? "info" : imp.Rol == Bar_QR.Models.RolImpresora.Cocina ? "warning text-dark" : "secondary")">
+								@imp.Rol
+							</span>
+						</td>
+						<td>@(imp.Activa ? "✅" : "❌")</td>
+						<td class="text-end">
+							<button class="btn btn-sm btn-outline-light me-1"
+									data-bs-toggle="modal" data-bs-target="#modalEditar"
+									data-id="@imp.Id" data-nombre="@imp.Nombre"
+									data-dir="@imp.Direccion" data-rol="@((int)imp.Rol)"
+									data-activa="@imp.Activa.ToString().ToLower()">
+								Editar
+							</button>
+							<form asp-action="EliminarImpresora" method="post" class="d-inline"
+								  onsubmit="return confirm('¿Eliminar impresora?')">
+								<input type="hidden" name="id" value="@imp.Id" />
+								<button class="btn btn-sm btn-outline-danger">Eliminar</button>
+							</form>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+
+	<button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCrear">
+		+ Nueva impresora
+	</button>
+</div>
+
+<!-- Modal crear -->
+<div class="modal fade" id="modalCrear" tabindex="-1">
+	<div class="modal-dialog">
+		<form asp-action="CrearImpresora" method="post" class="modal-content bg-dark text-white">
+			<div class="modal-header"><h5 class="modal-title">Nueva impresora</h5></div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label class="form-label">Nombre</label>
+					<input name="nombre" class="form-control bg-secondary text-white border-0" required />
+				</div>
+				<div class="mb-3">
+					<label class="form-label">Dirección</label>
+					<input name="direccion" class="form-control bg-secondary text-white border-0"
+						   placeholder="USB001 | COM3 | 192.168.1.100:9100" required />
+				</div>
+				<div class="mb-3">
+					<label class="form-label">Rol</label>
+					<select name="rol" class="form-select bg-secondary text-white border-0">
+						<option value="0">Barra</option>
+						<option value="1">Cocina</option>
+						<option value="2" selected>Todas</option>
+					</select>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+				<button class="btn btn-success">Guardar</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<!-- Modal editar -->
+<div class="modal fade" id="modalEditar" tabindex="-1">
+	<div class="modal-dialog">
+		<form asp-action="EditarImpresora" method="post" class="modal-content bg-dark text-white">
+			<input type="hidden" name="id" id="editId" />
+			<div class="modal-header"><h5 class="modal-title">Editar impresora</h5></div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label class="form-label">Nombre</label>
+					<input name="nombre" id="editNombre" class="form-control bg-secondary text-white border-0" required />
+				</div>
+				<div class="mb-3">
+					<label class="form-label">Dirección</label>
+					<input name="direccion" id="editDir" class="form-control bg-secondary text-white border-0" required />
+				</div>
+				<div class="mb-3">
+					<label class="form-label">Rol</label>
+					<select name="rol" id="editRol" class="form-select bg-secondary text-white border-0">
+						<option value="0">Barra</option>
+						<option value="1">Cocina</option>
+						<option value="2">Todas</option>
+					</select>
+				</div>
+				<div class="form-check">
+					<input type="checkbox" class="form-check-input" name="activa" id="editActiva" value="true" />
+					<label class="form-check-label" for="editActiva">Activa</label>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+				<button class="btn btn-primary">Guardar</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+@section Scripts {
+<script>
+document.getElementById('modalEditar').addEventListener('show.bs.modal', function (e) {
+	var btn = e.relatedTarget;
+	document.getElementById('editId').value     = btn.dataset.id;
+	document.getElementById('editNombre').value = btn.dataset.nombre;
+	document.getElementById('editDir').value    = btn.dataset.dir;
+	document.getElementById('editRol').value    = btn.dataset.rol;
+	document.getElementById('editActiva').checked = btn.dataset.activa === 'true';
+});
+</script>
+}

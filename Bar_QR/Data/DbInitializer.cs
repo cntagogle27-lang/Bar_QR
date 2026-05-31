@@ -170,6 +170,30 @@ public static class DbInitializer
 					Xml TEXT NULL
 				)");
 
+			context.Database.ExecuteSqlRaw(@"
+				CREATE TABLE IF NOT EXISTS Impresoras (
+					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+					Nombre TEXT NOT NULL DEFAULT '',
+					Direccion TEXT NOT NULL DEFAULT '',
+					Rol INTEGER NOT NULL DEFAULT 2,
+					Activa INTEGER NOT NULL DEFAULT 1
+				)");
+
+			context.Database.ExecuteSqlRaw(@"
+				CREATE TABLE IF NOT EXISTS TrabajosPrint (
+					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+					Tipo INTEGER NOT NULL DEFAULT 0,
+					Estado INTEGER NOT NULL DEFAULT 0,
+					DestinoRol INTEGER NOT NULL DEFAULT 2,
+					CreadoEn TEXT NOT NULL,
+					ImprestoEn TEXT NULL,
+					ContenidoBase64 TEXT NOT NULL DEFAULT '',
+					Referencia TEXT NOT NULL DEFAULT ''
+				)");
+
+			// Columna DestinoImpresion en Productos (0=Barra, 1=Cocina)
+			try { context.Database.ExecuteSqlRaw("ALTER TABLE Productos ADD COLUMN DestinoImpresion INTEGER NOT NULL DEFAULT 0"); } catch { }
+
 			// Registrar todas las migraciones como aplicadas
 			foreach (var m in new[] {
 				"20260516105820_InitialCreate",

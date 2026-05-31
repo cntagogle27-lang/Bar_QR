@@ -21,6 +21,8 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<TicketImagen> TicketImagenes { get; set; }
     public DbSet<PedidoMesa> PedidosMesa { get; set; }
     public DbSet<LineaPedido> LineasPedido { get; set; }
+    public DbSet<Impresora> Impresoras { get; set; }
+    public DbSet<TrabajoPrint> TrabajosPrint { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -78,6 +80,23 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
              .WithMany()
              .HasForeignKey(l => l.ProductoId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Impresora>(b =>
+        {
+            b.HasKey(i => i.Id);
+            b.Property(i => i.Nombre).IsRequired();
+            b.Property(i => i.Direccion).IsRequired();
+            b.Property(i => i.Rol).HasConversion<int>();
+        });
+
+        modelBuilder.Entity<TrabajoPrint>(b =>
+        {
+            b.HasKey(t => t.Id);
+            b.Property(t => t.Tipo).HasConversion<int>();
+            b.Property(t => t.Estado).HasConversion<int>();
+            b.Property(t => t.DestinoRol).HasConversion<int>();
+            b.Property(t => t.ContenidoBase64).IsRequired();
         });
 
         base.OnModelCreating(modelBuilder);

@@ -18,6 +18,8 @@
 		.SelectMany(p => p.Lineas)
 		.Sum(l => (l.PrecioOverride ?? l.Producto?.Precio ?? 0) * l.Cantidad);
 
+	bool hayLineas = todosPedidos.SelectMany(p => p.Lineas).Any();
+
 	var grupos = Model.Productos.GroupBy(p => p.Grupo).OrderBy(g => (int)g.Key).ToList();
 
 	static string NombreGrupo(GrupoProducto g) => g switch {
@@ -269,6 +271,23 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 			← Volver al mapa
 		</a>
 	}
+
+	@* Botones Imprimir y Pagar siempre visibles cuando hay líneas *@
+	@if (hayLineas)
+	{
+		<form asp-controller="Staff" asp-action="ImprimirProforma" method="post" class="d-inline">
+			<input type="hidden" name="mesaId" value="@mesaId"/>
+			<input type="hidden" name="zonaId" value="@zonaId"/>
+			<button type="submit" class="btn-enviar" style="background:#1a3a5a;color:#e0e0e0">
+				🖨 Imprimir
+			</button>
+		</form>
+
+		<button type="button" class="btn-enviar" style="background:#3a5a1a;color:#e0e0e0"
+				data-bs-toggle="modal" data-bs-target="#modalPagar">
+			💳 Pagar
+		</button>
+	}
 </div>
 </div>
 
@@ -390,5 +409,32 @@ function abrirModalBorrar(lineaId, nombre) {
 	new bootstrap.Modal(document.getElementById('modalBorrar')).show();
 }
 </script>
+
+<!-- ═══ MODAL: PAGAR ═══ -->
+<div class="modal fade modal-dark" id="modalPagar" tabindex="-1">
+	<div class="modal-dialog modal-sm modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Método de pago</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+			</div>
+			<div class="modal-body d-grid gap-2">
+				@foreach (var mp in Enum.GetValues<Bar_QR.Models.MetodoPago>())
+				{
+					<form asp-controller="Staff" asp-action="Pagar" method="post">
+						<input type="hidden" name="mesaId"     value="@mesaId"/>
+						<input type="hidden" name="zonaId"     value="@zonaId"/>
+						<input type="hidden" name="metodoPago" value="@((int)mp)"/>
+						<button class="btn btn-outline-light w-100">
+							@(mp == Bar_QR.Models.MetodoPago.Efectivo ? "💵 Efectivo"
+							: mp == Bar_QR.Models.MetodoPago.Tarjeta ? "💳 Tarjeta"
+							: "💵+💳 Mixto")
+						</button>
+					</form>
+				}
+			</div>
+		</div>
+	</div>
+</div>
 </body>
 </html>
