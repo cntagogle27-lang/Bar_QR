@@ -172,52 +172,59 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 		<h3>🧾 Pedido</h3>
 		<div id="lineas-list">
 			@{
-				var todasLineas = todosPedidos.SelectMany(p => p.Lineas).ToList();
+				// Agrupar todas las líneas de todos los pedidos por productoId
+				var lineasAgrupadas = todosPedidos
+					.SelectMany(p => p.Lineas.Select(l => new { Linea = l, Pedido = p }))
+					.GroupBy(x => x.Linea.ProductoId)
+					.Select(g => new {
+						ProductoId   = g.Key,
+						Nombre       = g.First().Linea.Producto?.Nombre ?? "",
+						CantidadTotal = g.Sum(x => x.Linea.Cantidad),
+						PrecioUnit   = g.First().Linea.PrecioOverride ?? g.First().Linea.Producto?.Precio ?? 0m,
+						// Para borrar: usamos la linea del pedido abierto si existe, sino la última
+						LineaRef     = g.FirstOrDefault(x => x.Pedido.Estado == EstadoPedidoMesa.Abierto)
+									   ?? g.Last(),
+						TieneAbierto = g.Any(x => x.Pedido.Estado == EstadoPedidoMesa.Abierto),
+						TieneEnviado = g.Any(x => x.Pedido.Estado == EstadoPedidoMesa.Enviado)
+					})
+					.ToList();
 			}
-			@if (!todasLineas.Any())
+			@if (!lineasAgrupadas.Any())
 			{
 				<p style="color:#555577;text-align:center;padding:1.5rem;font-size:.82rem">Sin productos aún</p>
 			}
-			@foreach (var pedido in todosPedidos.OrderBy(p => p.CreadoEn))
+			@foreach (var ag in lineasAgrupadas)
 			{
-				var esteEnviado = pedido.Estado == EstadoPedidoMesa.Enviado;
-				@foreach (var lin in pedido.Lineas)
-				{
-					var precioPorUnidad = lin.PrecioOverride ?? lin.Producto?.Precio ?? 0;
-					var precioTotal     = precioPorUnidad * lin.Cantidad;
-					var puedeBorrar     = !esteEnviado || esEncargado;
-					<div class="linea-item @(esteEnviado?"linea-env":"")" data-linea-id="@lin.Id"
-						 onclick="selLinea(this,@lin.Id,'@(lin.Producto?.Nombre?.Replace("'","\\'")??"")') ">
-						<span class="l-cant">@lin.Cantidad×</span>
-						<span class="l-nombre">@lin.Producto?.Nombre</span>
-						<span class="l-precio">@precioTotal.ToString("0.00") €</span>
-						@if (puedeBorrar)
+				var precioTotal  = ag.PrecioUnit * ag.CantidadTotal;
+				var puedeBorrar  = ag.TieneAbierto || esEncargado;
+				var lineaId      = ag.LineaRef.Linea.Id;
+				var pedidoDeLinea= ag.LineaRef.Pedido.Id;
+				var esEnviada    = ag.TieneEnviado && !ag.TieneAbierto;
+				<div class="linea-item @(esEnviada?"linea-env":"")" data-linea-id="@lineaId"
+					 onclick="selLinea(this,@lineaId,'@(ag.Nombre.Replace("'","\\'")))' ">
+					<span class="l-cant">@ag.CantidadTotal×</span>
+					<span class="l-nombre">@ag.Nombre</span>
+					<span class="l-precio">@precioTotal.ToString("0.00") €</span>
+					@if (puedeBorrar)
+					{
+						if (esEnviada || (ag.TieneEnviado && esEncargado))
 						{
-							if (esteEnviado)
-							{
-								<button type="button" class="btn-quitar"
-										onclick="event.stopPropagation();abrirModalBorrar(@lin.Id,'@(lin.Producto?.Nombre?.Replace("'","\\'")??"")') ">−</button>
-							}
-							else
-							{
-								<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0"
-									  onclick="event.stopPropagation()">
-									<input type="hidden" name="lineaId"  value="@lin.Id"/>
-									<input type="hidden" name="pedidoId" value="@pedido.Id"/>
-									<input type="hidden" name="zonaId"   value="@zonaId"/>
-									<input type="hidden" name="mesaId"   value="@mesaId"/>
-									<button type="submit" class="btn-quitar">−</button>
-								</form>
-							}
+							<button type="button" class="btn-quitar"
+									onclick="event.stopPropagation();abrirModalBorrar(@lineaId,'@(ag.Nombre.Replace("'","\\'")))' ">−</button>
 						}
-					</div>
-				}
-				@if (esteEnviado && pedido.Lineas.Any())
-				{
-					<div style="border-top:1px dashed #2a2a4a;margin:4px 0 6px;font-size:.7rem;color:#555577;text-align:center">
-						— enviado —
-					</div>
-				}
+						else
+						{
+							<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0"
+								  onclick="event.stopPropagation()">
+								<input type="hidden" name="lineaId"  value="@lineaId"/>
+								<input type="hidden" name="pedidoId" value="@pedidoDeLinea"/>
+								<input type="hidden" name="zonaId"   value="@zonaId"/>
+								<input type="hidden" name="mesaId"   value="@mesaId"/>
+								<button type="submit" class="btn-quitar">−</button>
+							</form>
+						}
+					}
+				</div>
 			}
 		</div>
 		<div id="total-row">
