@@ -21,6 +21,13 @@ public class PrintService
 		_cabecera = cfg["Ticket:Cabecera"] ?? "Bar_QR\nTicket de consumo";
 	}
 
+	public async Task EnolarCuentaAsync(int mesaId, string mesaNombre, int numeroMesa, string zonaNombre)
+	{
+		var bytes = EscPosService.GenerarSolicitudCuenta(zonaNombre, mesaNombre, numeroMesa);
+		await GuardarTrabajoAsync(TipoTrabajoPrint.SolicitudCuenta, RolImpresora.Todas, bytes,
+			$"Cuenta – Mesa {numeroMesa}");
+	}
+
 	// ─────────────────────────────────────────────────────────────────────────
 	// Comandas
 	// ─────────────────────────────────────────────────────────────────────────

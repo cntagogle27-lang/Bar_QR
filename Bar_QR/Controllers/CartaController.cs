@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Bar_QR.Models;
 using Bar_QR.Data;
+using Bar_QR.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bar_QR.Controllers;
@@ -9,10 +10,12 @@ public class CartaController : Controller
 {
 	private const string CookieSesionMesa = "sesion_mesa";
 	private readonly AppDbContext _db;
+	private readonly PrintService _print;
 
-	public CartaController(AppDbContext db)
+	public CartaController(AppDbContext db, PrintService print)
 	{
-		_db = db;
+		_db   = db;
+		_print = print;
 	}
 
 	// Página inicial: acceso público para ver la carta (sin mesa).
@@ -39,9 +42,98 @@ public class CartaController : Controller
 
 	// Este método servirá para cuando el cliente le dé a "Pedir"
 	[HttpPost]
-	public IActionResult EnviarPedido(List<Producto> carrito, int numMesa)
+	public async Task<IActionResult> EnviarPedido([FromBody] PedidoClienteDto dto)
 	{
-		return Json(new { success = true, message = "Pedido enviado a cocina" });
+		if (dto?.Items == null || dto.Items.Count == 0)
+			return Json(new { success = false, message = "Carrito vacío." });
+
+		// Validar sesión activa
+		var tokenCookie = Request.Cookies[CookieSesionMesa];
+		if (string.IsNullOrEmpty(tokenCookie))
+			return Json(new { success = false, message = "Sesión expirada. Reescanea el QR." });
+
+		var ahora = DateTime.UtcNow;
+		var sesion = await _db.SesionesMesa
+			.Include(s => s.Mesa).ThenInclude(m => m!.Zona)
+			.FirstOrDefaultAsync(s => s.Token == tokenCookie && s.Expira > ahora);
+
+		if (sesion == null)
+			return Json(new { success = false, message = "Sesión no válida." });
+
+		var mesa = sesion.Mesa!;
+
+		// Buscar o crear pedido abierto
+		var pedido = await _db.PedidosMesa
+			.Include(p => p.Lineas)
+			.FirstOrDefaultAsync(p => p.MesaId == mesa.Id && p.Estado == EstadoPedidoMesa.Abierto);
+
+		if (pedido == null)
+		{
+			pedido = new PedidoMesa { MesaId = mesa.Id };
+			_db.PedidosMesa.Add(pedido);
+			await _db.SaveChangesAsync();
+		}
+
+		// Añadir líneas (agrupa por producto)
+		foreach (var item in dto.Items)
+		{
+			var producto = await _db.Productos.FindAsync(item.ProductoId);
+			if (producto == null) continue;
+
+			var linea = pedido.Lineas.FirstOrDefault(l => l.ProductoId == item.ProductoId);
+			if (linea != null)
+				linea.Cantidad += item.Cantidad;
+			else
+				pedido.Lineas.Add(new LineaPedido
+				{
+					PedidoMesaId = pedido.Id,
+					ProductoId   = item.ProductoId,
+					Cantidad     = item.Cantidad
+				});
+		}
+
+		// Marcar mesa como Ocupada
+		mesa.Estado = EstadoMesa.Ocupada;
+		await _db.SaveChangesAsync();
+
+		// Imprimir comandas
+		await _print.EnolarComandasAsync(pedido.Id);
+
+		return Json(new { success = true, message = "¡Pedido enviado!" });
+	}
+
+	// El cliente solicita la cuenta → imprime ticket en barra
+	[HttpPost]
+	public async Task<IActionResult> PedirCuenta()
+	{
+		var tokenCookie = Request.Cookies[CookieSesionMesa];
+		if (string.IsNullOrEmpty(tokenCookie))
+			return Json(new { success = false, message = "Sesión expirada." });
+
+		var ahora = DateTime.UtcNow;
+		var sesion = await _db.SesionesMesa
+			.Include(s => s.Mesa).ThenInclude(m => m!.Zona)
+			.FirstOrDefaultAsync(s => s.Token == tokenCookie && s.Expira > ahora);
+
+		if (sesion == null)
+			return Json(new { success = false, message = "Sesión no válida." });
+
+		var mesa = sesion.Mesa!;
+		var zonaNombre = mesa.Zona?.Nombre ?? "";
+		await _print.EnolarCuentaAsync(mesa.Id, mesa.Nombre, mesa.NumeroMesa, zonaNombre);
+
+		return Json(new { success = true, message = "Solicitud de cuenta enviada." });
+	}
+
+	// DTO para recibir el pedido del cliente
+	public class PedidoClienteDto
+	{
+		public List<ItemPedidoDto> Items { get; set; } = new();
+	}
+	public class ItemPedidoDto
+	{
+		public int ProductoId { get; set; }
+		public int Cantidad   { get; set; }
 	}
 
 	// Acceso por URL única de mesa (escaneo de QR)

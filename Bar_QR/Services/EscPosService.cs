@@ -24,6 +24,39 @@ public static class EscPosService
 
 	// ── API pública ─────────────────────────────────────────────────────────
 
+	/// <summary>Genera un ticket de solicitud de cuenta por el cliente.</summary>
+	public static byte[] GenerarSolicitudCuenta(string zonaNombre, string mesaNombre, int numeroMesa)
+	{
+		using var ms = new MemoryStream();
+		ms.Write(Init);
+		ms.Write(Align_Center);
+		ms.Write(Bold_On);
+		ms.Write(Font_Double);
+		ms.WriteLine(Centrar("⚡ CUENTA"));
+		ms.Write(Font_Normal);
+		ms.Write(Bold_Off);
+		ms.WriteLine(Separador('='));
+		if (!string.IsNullOrWhiteSpace(zonaNombre))
+		{
+			ms.Write(Bold_On);
+			ms.WriteLine(Centrar(zonaNombre.ToUpperInvariant()));
+			ms.Write(Bold_Off);
+		}
+		ms.WriteLine(Separador('-'));
+		ms.Write(Align_Left);
+		ms.Write(Bold_On);
+		ms.WriteLine($"Mesa:   {mesaNombre}");
+		ms.WriteLine($"Número: {numeroMesa}");
+		ms.Write(Bold_Off);
+		ms.WriteLine(Separador('='));
+		ms.Write(Align_Center);
+		ms.WriteLine(Centrar("El cliente solicita la cuenta"));
+		ms.Write(LineFeed);
+		ms.Write(LineFeed);
+		ms.Write(Cut);
+		return ms.ToArray();
+	}
+
 	/// <summary>Genera un ticket de comanda (Barra o Cocina).</summary>
 	public static byte[] GenerarComanda(
 		int numeroMesa,

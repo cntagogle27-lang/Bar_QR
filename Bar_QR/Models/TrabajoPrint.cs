@@ -1,6 +1,6 @@
 namespace Bar_QR.Models;
 
-public enum TipoTrabajoPrint { ComandaBarra, ComandaCocina, Proforma, FacturaSimple }
+public enum TipoTrabajoPrint { ComandaBarra, ComandaCocina, Proforma, FacturaSimple, SolicitudCuenta }
 public enum EstadoTrabajoPrint { Pendiente, Impreso, Error }
 public enum MetodoPago { Efectivo, Tarjeta, Mixto }
 

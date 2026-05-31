@@ -1,6 +1,10 @@
 ﻿@model IEnumerable<Bar_QR.Models.Producto>
 @{
     ViewData["HideNav"] = true;
+    // Serializar productos con Id para el carrito
+    var productosJs = System.Text.Json.JsonSerializer.Serialize(
+        Model.Select(p => new { id = p.Id, nombre = p.Nombre, precio = p.Precio })
+    );
 }
 <style>
     /* Hero de cabecera */
@@ -118,6 +122,7 @@
                                     @if (puedesPedir)
                                     {
                                         <button class="btn btn-primary rounded-pill px-3 btn-agregar"
+                                                data-id="@item.Id"
                                                 data-nombre="@System.Text.Encodings.Web.HtmlEncoder.Default.Encode(item.Nombre)"
                                                 data-precio="@item.Precio.ToString(System.Globalization.CultureInfo.InvariantCulture)">
                                             ➕
@@ -143,14 +148,18 @@
                         <li class="list-group-item text-center text-muted py-4">Tu carrito está vacío</li>
                     </ul>
                 </div>
-                <div class="card-footer bg-white">
-                    <div class="d-flex justify-content-between fw-bold fs-5 mb-3">
+                <div class="card-footer" style="background:#1a1a2e">
+                    <div class="d-flex justify-content-between fw-bold fs-5 mb-3" style="color:#e0e0e0">
                         <span>Total:</span>
                         <span id="total-precio">0.00 €</span>
                     </div>
-                    <button class="btn btn-success w-100 btn-lg fw-bold" id="btn-enviar-pedido">
+                    <button class="btn btn-success w-100 btn-lg fw-bold mb-2" id="btn-enviar-pedido">
                         🚀 ENVIAR PEDIDO
                     </button>
+                    <button class="btn btn-warning w-100 fw-bold d-none" id="btn-pedir-cuenta">
+                        🧾 PEDIR LA CUENTA
+                    </button>
+                    <div id="msg-pedido" class="mt-2 small text-center" style="color:#4ecca3"></div>
                 </div>
             </div>
         </div>
@@ -185,42 +194,79 @@
     @if (puedesPedir)
     {
     <script>
-        let carrito = [];
-        let total = 0;
+        const PRODUCTOS = @Html.Raw(productosJs);
+        let carrito = [];   // [{ productoId, nombre, precio, cantidad }]
+        let pedidoEnviado = false;
 
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-agregar');
             if (!btn) return;
+            const id     = parseInt(btn.dataset.id);
             const nombre = btn.dataset.nombre;
             const precio = parseFloat(btn.dataset.precio);
             if (isNaN(precio)) return;
-            carrito.push({ nombre, precio });
-            total += precio;
+            const item = carrito.find(i => i.productoId === id);
+            if (item) item.cantidad++;
+            else      carrito.push({ productoId: id, nombre, precio, cantidad: 1 });
             actualizarInterfaz();
         });
 
-        document.getElementById('btn-enviar-pedido').addEventListener('click', () => {
-            if (carrito.length === 0) return alert("¡Añade algo antes de pedir!");
-            const mesaElem = document.querySelector('[data-mesa]');
-            const mesa = mesaElem ? mesaElem.dataset.mesa : null;
-            alert("¡Pedido enviado! En breve lo recibirás.");
-            carrito = [];
-            total = 0;
-            actualizarInterfaz();
+        document.getElementById('btn-enviar-pedido').addEventListener('click', async () => {
+            if (carrito.length === 0) return mostrarMsg('Añade algo antes de pedir.');
+            const btn = document.getElementById('btn-enviar-pedido');
+            btn.disabled = true;
+            btn.textContent = 'Enviando…';
+            try {
+                const res = await fetch('@Url.Action("EnviarPedido","Carta")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: carrito.map(i => ({ productoId: i.productoId, cantidad: i.cantidad })) })
+                });
+                const data = await res.json();
+                mostrarMsg(data.message);
+                if (data.success) {
+                    pedidoEnviado = true;
+                    carrito = [];
+                    actualizarInterfaz();
+                    document.getElementById('btn-pedir-cuenta').classList.remove('d-none');
+                }
+            } catch { mostrarMsg('Error de conexión.'); }
+            finally { btn.disabled = false; btn.textContent = '🚀 ENVIAR PEDIDO'; }
         });
+
+        document.getElementById('btn-pedir-cuenta').addEventListener('click', async () => {
+            if (!confirm('¿Solicitar la cuenta al camarero?')) return;
+            const btn = document.getElementById('btn-pedir-cuenta');
+            btn.disabled = true;
+            try {
+                const res  = await fetch('@Url.Action("PedirCuenta","Carta")', { method: 'POST' });
+                const data = await res.json();
+                mostrarMsg(data.message);
+                if (data.success) btn.textContent = '✅ Cuenta solicitada';
+            } catch { mostrarMsg('Error de conexión.'); }
+            finally { btn.disabled = false; }
+        });
+
+        function mostrarMsg(txt) {
+            const el = document.getElementById('msg-pedido');
+            el.textContent = txt;
+            setTimeout(() => el.textContent = '', 4000);
+        }
 
         function actualizarInterfaz() {
-            const lista = document.getElementById('lista-carrito');
+            const lista    = document.getElementById('lista-carrito');
             const totalTxt = document.getElementById('total-precio');
+            const total    = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
             if (carrito.length === 0) {
                 lista.innerHTML = '<li class="list-group-item text-center text-muted py-4">Tu carrito está vacío</li>';
             } else {
                 lista.innerHTML = carrito.map(i => `
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        ${i.nombre} <span class="text-success fw-bold">${i.precio.toFixed(2)} €</span>
+                    <li class="list-group-item d-flex justify-content-between align-items-center" style="background:#16213e;color:#e0e0e0">
+                        <span>${i.nombre} <span class="badge bg-secondary">${i.cantidad}</span></span>
+                        <span class="text-success fw-bold">${(i.precio * i.cantidad).toFixed(2)} €</span>
                     </li>`).join('');
             }
-            totalTxt.innerText = total.toFixed(2) + " €";
+            totalTxt.innerText = total.toFixed(2) + ' €';
         }
     </script>
     }
