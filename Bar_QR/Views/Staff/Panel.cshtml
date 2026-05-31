@@ -3,19 +3,15 @@
 
 @{
 	Layout = null;
-	var zonaId      = (int)ViewData["ZonaId"]!;
-	var mesaId      = (int)ViewData["MesaId"]!;
-	var pedidoId    = (int)ViewData["PedidoId"]!;
-	var mesaNombre  = ViewData["MesaNombre"]?.ToString() ?? "Mesa";
-	var esEncargado = (bool)(ViewData["EsEncargado"] ?? false);
-	var pedidoEnviado = Model.Pedido.Estado == EstadoPedidoMesa.Enviado;
+	var zonaId       = (int)ViewData["ZonaId"]!;
+	var mesaId       = (int)ViewData["MesaId"]!;
+	var pedidoId     = (int)ViewData["PedidoId"]!;
+	var mesaNombre   = ViewData["MesaNombre"]?.ToString() ?? "Mesa";
+	var esEncargado  = (bool)(ViewData["EsEncargado"] ?? false);
+	var pedidoEnv    = Model.Pedido.Estado == EstadoPedidoMesa.Enviado;
 
-	var grupos = Model.Productos
-		.GroupBy(p => p.Grupo)
-		.OrderBy(g => (int)g.Key)
-		.ToList();
+	var grupos = Model.Productos.GroupBy(p => p.Grupo).OrderBy(g => (int)g.Key).ToList();
 
-	// Nombre amigable de grupos
 	static string NombreGrupo(GrupoProducto g) => g switch {
 		GrupoProducto.CafeInfusiones  => "☕ Café",
 		GrupoProducto.Desayunos       => "🥐 Desayunos",
@@ -34,240 +30,337 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-	<meta charset="utf-8"/>
-	<meta name="viewport" content="width=device-width,initial-scale=1"/>
-	<title>@mesaNombre · Pedido</title>
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
-	<style>
-		*, *::before, *::after { box-sizing: border-box; }
-		html, body { height: 100%; margin: 0; background: #0f0f1a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>@mesaNombre · Pedido</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Segoe UI',sans-serif;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh}
 
-		/* ── LAYOUT ── */
-		#app { display: flex; flex-direction: column; height: 100vh; }
+/* cabecera */
+#cabecera{background:#1a1a2e;border-bottom:2px solid #2a2a4a;padding:.6rem 1.2rem;display:flex;align-items:center;gap:.8rem;flex-shrink:0}
+#cabecera h2{margin:0;font-size:1.05rem;font-weight:700}
+.badge-estado{font-size:.7rem;padding:3px 10px;border-radius:20px}
+.estado-abierto{background:#1db95433;color:#1db954;border:1px solid #1db95466}
+.estado-enviado{background:#ffc10733;color:#ffc107;border:1px solid #ffc10766}
 
-		/* Cabecera */
-		#cabecera {
-			background: #1a1a2e;
-			border-bottom: 2px solid #2a2a4a;
-			padding: .7rem 1.2rem;
-			display: flex;
-			align-items: center;
-			gap: 1rem;
-			flex-shrink: 0;
-		}
-		#cabecera h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
-		.badge-estado-pedido {
-			font-size: .72rem; padding: 3px 10px; border-radius: 20px;
-		}
-		.estado-abierto { background: #1db95433; color: #1db954; border: 1px solid #1db95466; }
-		.estado-enviado { background: #ffc10733; color: #ffc107; border: 1px solid #ffc10766; }
+/* centro */
+#centro{display:flex;flex:1;overflow:hidden}
 
-		/* Zona central */
-		#centro { display: flex; flex: 1; overflow: hidden; }
+/* izquierda */
+#panel-izq{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#cats{display:flex;flex-wrap:wrap;gap:5px;padding:.7rem 1rem .4rem;background:#13132a;border-bottom:1px solid #2a2a4a;flex-shrink:0}
+.btn-cat{background:#1a1a2e;border:1.5px solid #2a2a4a;color:#a0a0c0;border-radius:8px;padding:5px 12px;font-size:.8rem;cursor:pointer;transition:all .15s}
+.btn-cat.activa,.btn-cat:hover{background:#0d6efd22;border-color:#0d6efd;color:#6ea8fe}
+#productos-grid{flex:1;overflow-y:auto;padding:.8rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;align-content:start}
+.prod-btn{background:#1a1a2e;border:1.5px solid #2a2a4a;border-radius:10px;color:#e0e0e0;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.8rem;width:100%}
+.prod-btn:hover:not(:disabled){background:#0d6efd22;border-color:#0d6efd}
+.prod-btn:disabled{opacity:.4;cursor:not-allowed}
+.prod-btn img{width:44px;height:44px;object-fit:cover;border-radius:6px}
+.p-precio{color:#6ea8fe;font-size:.75rem}
 
-		/* Panel izquierdo: categorías + productos */
-		#panel-izq { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+/* carrito */
+#carrito{width:270px;flex-shrink:0;background:#13132a;border-left:1.5px solid #2a2a4a;display:flex;flex-direction:column;overflow:hidden}
+#carrito h3{font-size:.9rem;padding:.7rem 1rem .3rem;border-bottom:1px solid #2a2a4a;margin:0}
+#lineas-list{flex:1;overflow-y:auto;padding:.4rem}
+.linea-item{display:flex;align-items:center;gap:6px;background:#1a1a2e;border:1px solid #2a2a4a;border-radius:8px;padding:5px 8px;margin-bottom:5px;font-size:.8rem;cursor:pointer;transition:border-color .15s}
+.linea-item.sel{border-color:#0d6efd;background:#0d6efd11}
+.l-cant{color:#6ea8fe;font-weight:700;min-width:22px;text-align:center}
+.l-nombre{flex:1}
+.l-precio{color:#aaa;font-size:.73rem;white-space:nowrap}
+.btn-quitar{background:#ff6b6b22;border:1px solid #ff6b6b55;color:#ff6b6b;border-radius:6px;padding:1px 7px;font-size:.76rem;cursor:pointer}
+#total-row{padding:.6rem 1rem;border-top:1px solid #2a2a4a;font-weight:700;font-size:.9rem}
 
-		/* Tabs de categorías */
-		#cats {
-			display: flex; flex-wrap: wrap; gap: 6px;
-			padding: .8rem 1rem .4rem;
-			background: #13132a;
-			border-bottom: 1px solid #2a2a4a;
-			flex-shrink: 0;
-		}
-		.btn-cat {
-			background: #1a1a2e; border: 1.5px solid #2a2a4a; color: #a0a0c0;
-			border-radius: 8px; padding: 6px 14px; font-size: .82rem; cursor: pointer;
-			transition: all .15s;
-		}
-		.btn-cat.activa, .btn-cat:hover {
-			background: #0d6efd22; border-color: #0d6efd; color: #6ea8fe;
-		}
+/* barra inferior */
+#barra-inferior{background:#1a1a2e;border-top:2px solid #2a2a4a;padding:.6rem 1rem;display:flex;align-items:flex-end;gap:10px;flex-shrink:0}
 
-		/* Grid de productos */
-		#productos-grid {
-			flex: 1; overflow-y: auto;
-			padding: 1rem;
-			display: grid;
-			grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-			gap: 10px;
-			align-content: start;
-		}
-		.prod-btn {
-			background: #1a1a2e; border: 1.5px solid #2a2a4a; border-radius: 10px;
-			color: #e0e0e0; padding: 12px 8px; text-align: center;
-			cursor: pointer; transition: all .15s; display: flex; flex-direction: column;
-			align-items: center; gap: 4px; font-size: .82rem;
-		}
-		.prod-btn:hover { background: #0d6efd22; border-color: #0d6efd; }
-		.prod-btn img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; }
-		.prod-btn .p-precio { color: #6ea8fe; font-size: .78rem; }
+/* teclado numérico */
+#teclado{background:#13132a;border:1.5px solid #2a2a4a;border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:5px;min-width:210px}
+#display-num{background:#0f0f1a;border:1px solid #2a2a4a;border-radius:6px;padding:4px 10px;font-size:1.1rem;font-weight:700;color:#6ea8fe;text-align:right;min-height:32px;letter-spacing:1px}
+.teclas{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.tecla{background:#1a1a2e;border:1.5px solid #2a2a4a;color:#e0e0e0;border-radius:7px;padding:6px 0;font-size:.88rem;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
+.tecla:hover{background:#2a2a4a}
+.teclas-extra{display:flex;gap:4px}
+.tecla-ext{flex:1;background:#1a1a2e;border:1.5px solid #2a2a4a;color:#e0e0e0;border-radius:7px;padding:5px 0;font-size:.78rem;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
+.tecla-ext:hover:not(:disabled){background:#2a2a4a}
+.tecla-ext:disabled{opacity:.35;cursor:not-allowed}
+.tecla-clr{color:#ff6b6b;border-color:#ff6b6b55}
+.tecla-prec{color:#ffc107;border-color:#ffc10755}
+.tecla-can{color:#0d6efd;border-color:#0d6efd55}
 
-		/* Carrito derecho */
-		#carrito {
-			width: 280px; flex-shrink: 0;
-			background: #13132a; border-left: 1.5px solid #2a2a4a;
-			display: flex; flex-direction: column; overflow: hidden;
-		}
-		#carrito h3 { font-size: .95rem; padding: .8rem 1rem .4rem; border-bottom: 1px solid #2a2a4a; margin: 0; }
-		#lineas-list { flex: 1; overflow-y: auto; padding: .5rem; }
-		.linea-item {
-			display: flex; align-items: center; gap: 8px;
-			background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px;
-			padding: 6px 10px; margin-bottom: 6px; font-size: .82rem;
-		}
-		.linea-item .l-nombre { flex: 1; }
-		.linea-item .l-cant { color: #6ea8fe; font-weight: 700; min-width: 20px; text-align: center; }
-		.linea-item .l-precio { color: #aaa; font-size: .75rem; }
-		.btn-quitar {
-			background: #ff6b6b22; border: 1px solid #ff6b6b55; color: #ff6b6b;
-			border-radius: 6px; padding: 2px 8px; font-size: .78rem; cursor: pointer;
-		}
-		.btn-quitar:disabled { opacity: .35; cursor: not-allowed; }
-		#total-row { padding: .7rem 1rem; border-top: 1px solid #2a2a4a; font-weight: 700; font-size: .95rem; }
+/* botón enviar+volver */
+.btn-enviar{background:#1db954;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:.9rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-enviar:hover{background:#17a349}
 
-		/* Barra inferior */
-		#barra-inferior {
-			background: #1a1a2e; border-top: 2px solid #2a2a4a;
-			padding: .7rem 1.2rem; display: flex; gap: 10px; flex-shrink: 0;
-		}
-		.btn-accion {
-			border-radius: 10px; padding: 10px 22px; font-size: .9rem;
-			font-weight: 600; border: none; cursor: pointer; transition: all .15s;
-		}
-		.btn-volver { background: #2a2a4a; color: #aaa; }
-		.btn-volver:hover { background: #3a3a5a; color: #e0e0e0; }
-
-		/* Mensaje vacío */
-		.vacio { color: #555577; text-align: center; padding: 2rem; font-size: .85rem; }
-	</style>
+/* modal */
+.modal-dark .modal-content{background:#1a1a2e;color:#e0e0e0;border:1px solid #2a2a4a}
+.modal-dark .modal-header{border-bottom:1px solid #2a2a4a}
+.modal-dark .modal-footer{border-top:1px solid #2a2a4a}
+.motivo-btn{background:#13132a;border:1.5px solid #2a2a4a;color:#e0e0e0;border-radius:8px;padding:8px 16px;cursor:pointer;transition:all .15s;width:100%;margin-bottom:6px;text-align:left}
+.motivo-btn:hover{border-color:#ff6b6b;color:#ff6b6b}
+</style>
 </head>
 <body>
 <div id="app">
 
-	<!-- CABECERA -->
-	<div id="cabecera">
-		<span style="font-size:1.4rem;">🍽️</span>
-		<h2>@mesaNombre</h2>
-		<span class="badge-estado-pedido @(pedidoEnviado ? "estado-enviado" : "estado-abierto")">
-			@(pedidoEnviado ? "Enviado" : "Abierto")
-		</span>
-		@if (pedidoEnviado && !esEncargado)
-		{
-			<span style="font-size:.78rem;color:#ffc107;margin-left:auto;">Solo el encargado puede modificar</span>
-		}
+<!-- CABECERA -->
+<div id="cabecera">
+	<span style="font-size:1.3rem">🍽️</span>
+	<h2>@mesaNombre</h2>
+	<span class="badge-estado @(pedidoEnv?"estado-enviado":"estado-abierto")">@(pedidoEnv?"Enviado":"Abierto")</span>
+	@if (pedidoEnv && !esEncargado)
+	{
+		<span style="font-size:.75rem;color:#ffc107;margin-left:auto">Solo el encargado puede modificar</span>
+	}
+</div>
+
+<!-- CENTRO -->
+<div id="centro">
+
+	<!-- Categorías + productos -->
+	<div id="panel-izq">
+		<div id="cats">
+			@foreach (var g in grupos)
+			{
+				<button class="btn-cat" data-grupo="@((int)g.Key)" onclick="filtrarGrupo(@((int)g.Key),this)">
+					@NombreGrupo(g.Key)
+				</button>
+			}
+		</div>
+		<div id="productos-grid">
+			@foreach (var p in Model.Productos)
+			{
+				var dis = (pedidoEnv && !esEncargado) ? "disabled" : "";
+				<form asp-controller="Staff" asp-action="AgregarLinea" method="post"
+					  class="prod-card" data-grupo="@((int)p.Grupo)" style="display:contents"
+					  onsubmit="inyectarCantidad(this)">
+					<input type="hidden" name="pedidoId"   value="@pedidoId"/>
+					<input type="hidden" name="productoId" value="@p.Id"/>
+					<input type="hidden" name="zonaId"     value="@zonaId"/>
+					<input type="hidden" name="mesaId"     value="@mesaId"/>
+					<input type="hidden" name="cantidad"   value="1" class="inp-cant"/>
+					<button type="submit" class="prod-btn" @dis>
+						@if (p.FotoData != null)
+						{
+							<img src="/Admin/FotoProducto/@p.Id" alt="@p.Nombre"/>
+						}
+						else
+						{
+							<span style="font-size:1.8rem">🍽️</span>
+						}
+						<span>@p.Nombre</span>
+						<span class="p-precio">@p.Precio.ToString("0.00") €</span>
+					</button>
+				</form>
+			}
+		</div>
 	</div>
 
-	<!-- CENTRO -->
-	<div id="centro">
-
-		<!-- Izquierda: categorías + productos -->
-		<div id="panel-izq">
-			<!-- Tabs categorías -->
-			<div id="cats">
-				@foreach (var g in grupos)
-				{
-					<button class="btn-cat" data-grupo="@((int)g.Key)" onclick="filtrarGrupo(@((int)g.Key), this)">
-						@NombreGrupo(g.Key)
-					</button>
-				}
-			</div>
-
-			<!-- Grid productos -->
-			<div id="productos-grid">
-				@foreach (var p in Model.Productos)
-				{
-					var disabled = pedidoEnviado && !esEncargado ? "disabled" : "";
-					<form asp-controller="Staff" asp-action="AgregarLinea" method="post"
-						  class="prod-card" data-grupo="@((int)p.Grupo)" style="display:contents">
-						<input type="hidden" name="pedidoId"  value="@pedidoId"/>
-						<input type="hidden" name="productoId" value="@p.Id"/>
-						<input type="hidden" name="zonaId"    value="@zonaId"/>
-						<input type="hidden" name="mesaId"    value="@mesaId"/>
-						<button type="submit" class="prod-btn" @disabled>
-							@if (p.FotoData != null)
-							{
-								<img src="/Admin/FotoProducto/@p.Id" alt="@p.Nombre"/>
-							}
-							else
-							{
-								<span style="font-size:2rem;">🍽️</span>
-							}
-							<span>@p.Nombre</span>
-							<span class="p-precio">@p.Precio.ToString("0.00") €</span>
-						</button>
-					</form>
-				}
-			</div>
-		</div>
-
-		<!-- Carrito -->
-		<div id="carrito">
-			<h3>🧾 Pedido</h3>
-			<div id="lineas-list">
-				@if (!Model.Pedido.Lineas.Any())
-				{
-					<p class="vacio">Sin productos aún</p>
-				}
-				@foreach (var linea in Model.Pedido.Lineas)
-				{
-					var puedeBorrar = !pedidoEnviado || esEncargado;
-					<div class="linea-item">
-						<span class="l-cant">@linea.Cantidad×</span>
-						<span class="l-nombre">@linea.Producto?.Nombre</span>
-						<span class="l-precio">@((linea.Producto?.Precio * linea.Cantidad)?.ToString("0.00")) €</span>
-						@if (puedeBorrar)
+	<!-- Carrito -->
+	<div id="carrito">
+		<h3>🧾 Pedido</h3>
+		<div id="lineas-list">
+			@if (!Model.Pedido.Lineas.Any())
+			{
+				<p style="color:#555577;text-align:center;padding:1.5rem;font-size:.82rem">Sin productos aún</p>
+			}
+			@foreach (var lin in Model.Pedido.Lineas)
+			{
+				var precioPorUnidad = lin.PrecioOverride ?? lin.Producto?.Precio ?? 0;
+				var precioTotal     = precioPorUnidad * lin.Cantidad;
+				var puedeBorrar     = !pedidoEnv || esEncargado;
+				<div class="linea-item" data-linea-id="@lin.Id" onclick="selLinea(this,@lin.Id,'@(lin.Producto?.Nombre?.Replace("'","\\'")??"")') ">
+					<span class="l-cant">@lin.Cantidad×</span>
+					<span class="l-nombre">@lin.Producto?.Nombre</span>
+					<span class="l-precio">@precioTotal.ToString("0.00") €</span>
+					@if (puedeBorrar)
+					{
+						if (pedidoEnv)
 						{
-							<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0">
-								<input type="hidden" name="lineaId"  value="@linea.Id"/>
+							<!-- Encargado borrando producto ya enviado: pide motivo -->
+							<button type="button" class="btn-quitar"
+									onclick="event.stopPropagation();abrirModalBorrar(@lin.Id,'@(lin.Producto?.Nombre?.Replace("'","\\'")??"")') ">−</button>
+						}
+						else
+						{
+							<!-- Pedido abierto: borrar directo -->
+							<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0"
+								  onclick="event.stopPropagation()">
+								<input type="hidden" name="lineaId"  value="@lin.Id"/>
 								<input type="hidden" name="pedidoId" value="@pedidoId"/>
 								<input type="hidden" name="zonaId"   value="@zonaId"/>
 								<input type="hidden" name="mesaId"   value="@mesaId"/>
 								<button type="submit" class="btn-quitar">−</button>
 							</form>
 						}
-					</div>
-				}
-			</div>
-			<div id="total-row">
-				Total: @Model.Pedido.Lineas.Sum(l => (l.Producto?.Precio ?? 0) * l.Cantidad).ToString("0.00") €
-			</div>
+					}
+				</div>
+			}
 		</div>
-	</div>
-
-	<!-- BARRA INFERIOR -->
-	<div id="barra-inferior">
-		@if (!pedidoEnviado)
-		{
-			<form asp-controller="Staff" asp-action="EnviarPedido" method="post" style="margin:0">
-				<input type="hidden" name="pedidoId" value="@pedidoId"/>
-				<input type="hidden" name="zonaId"   value="@zonaId"/>
-				<input type="hidden" name="mesaId"   value="@mesaId"/>
-				<button type="submit" class="btn-accion"
-						style="background:#1db954;color:#fff;">
-					✅ Enviar y volver
-				</button>
-			</form>
-		}
-		<a href="@Url.Action("MapaMesas","Staff",new{zonaId})" class="btn-accion btn-volver">
-			← Volver al mapa
-		</a>
+		<div id="total-row">
+			Total: @Model.Pedido.Lineas.Sum(l => (l.PrecioOverride ?? l.Producto?.Precio ?? 0) * l.Cantidad).ToString("0.00") €
+		</div>
 	</div>
 </div>
 
-<script>
-	// Filtro de categoría
-	function filtrarGrupo(grupo, btn) {
-		document.querySelectorAll('.btn-cat').forEach(b => b.classList.remove('activa'));
-		btn.classList.add('activa');
-		document.querySelectorAll('.prod-card').forEach(f => {
-			f.style.display = f.dataset.grupo == grupo ? 'contents' : 'none';
-		});
+<!-- BARRA INFERIOR -->
+<div id="barra-inferior">
+
+	<!-- Teclado numérico -->
+	<div id="teclado">
+		<div id="display-num">1</div>
+		<div class="teclas">
+			@foreach (var n in new[]{7,8,9,4,5,6,1,2,3})
+			{
+				<button class="tecla" onclick="presNum('@n')">@n</button>
+			}
+			<button class="tecla" onclick="presNum('0')" style="grid-column:span 2">0</button>
+			<button class="tecla tecla-clr" onclick="clrNum()" style="color:#ff6b6b">CLR</button>
+		</div>
+		<div class="teclas-extra">
+			<button class="tecla-ext tecla-prec" id="btn-prec" @(esEncargado?"":"disabled") onclick="accionPrec()">Prec</button>
+			<button class="tecla-ext tecla-can"  id="btn-can"  @(esEncargado?"":"disabled") onclick="accionCan()">Can</button>
+		</div>
+	</div>
+
+	<!-- Enviar y volver -->
+	@if (!pedidoEnv)
+	{
+		<form asp-controller="Staff" asp-action="EnviarPedido" method="post" style="margin:0">
+			<input type="hidden" name="pedidoId" value="@pedidoId"/>
+			<input type="hidden" name="zonaId"   value="@zonaId"/>
+			<input type="hidden" name="mesaId"   value="@mesaId"/>
+			<button type="submit" class="btn-enviar">✅ Enviar y volver</button>
+		</form>
 	}
-	// Activar primera categoría al cargar
-	const primera = document.querySelector('.btn-cat');
-	if (primera) primera.click();
+	else
+	{
+		<a href="@Url.Action("MapaMesas","Staff",new{zonaId})" class="btn-enviar" style="background:#2a2a4a;color:#e0e0e0;text-decoration:none">
+			← Volver al mapa
+		</a>
+	}
+</div>
+</div>
+
+<!-- ═══ MODAL: BORRAR con motivo ═══ -->
+<div class="modal fade modal-dark" id="modalBorrar" tabindex="-1">
+	<div class="modal-dialog modal-sm modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="tituloModalBorrar">Eliminar producto</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+			</div>
+			<div class="modal-body">
+				<p style="font-size:.85rem;color:#aaa">Selecciona el motivo de eliminación:</p>
+				@foreach (var m in new[]{"Error Cliente","Error Cocina","Error Camarero"})
+				{
+					<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0">
+						<input type="hidden" name="lineaId"  id="borrar-lineaId-@m.Replace(" ","_")" value="0"/>
+						<input type="hidden" name="pedidoId" value="@pedidoId"/>
+						<input type="hidden" name="zonaId"   value="@zonaId"/>
+						<input type="hidden" name="mesaId"   value="@mesaId"/>
+						<input type="hidden" name="motivo"   value="@m"/>
+						<button type="submit" class="motivo-btn" data-motivo-form="@m.Replace(" ","_")">@m</button>
+					</form>
+				}
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- ═══ MODAL: CAMBIAR PRECIO ═══ -->
+<form asp-controller="Staff" asp-action="CambiarPrecio" method="post" id="formPrec">
+	<input type="hidden" name="lineaId"  id="prec-lineaId"  value="0"/>
+	<input type="hidden" name="pedidoId" value="@pedidoId"/>
+	<input type="hidden" name="zonaId"   value="@zonaId"/>
+	<input type="hidden" name="mesaId"   value="@mesaId"/>
+	<input type="hidden" name="precio"   id="prec-valor"    value="0"/>
+</form>
+
+<!-- ═══ MODAL: CAMBIAR CANTIDAD ═══ -->
+<form asp-controller="Staff" asp-action="CambiarCantidad" method="post" id="formCan">
+	<input type="hidden" name="lineaId"  id="can-lineaId"   value="0"/>
+	<input type="hidden" name="pedidoId" value="@pedidoId"/>
+	<input type="hidden" name="zonaId"   value="@zonaId"/>
+	<input type="hidden" name="mesaId"   value="@mesaId"/>
+	<input type="hidden" name="cantidad" id="can-valor"     value="0"/>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── Filtro categoría ──────────────────────────────────────────────────────────
+function filtrarGrupo(grupo, btn) {
+	document.querySelectorAll('.btn-cat').forEach(b => b.classList.remove('activa'));
+	btn.classList.add('activa');
+	document.querySelectorAll('.prod-card').forEach(f => {
+		f.style.display = f.dataset.grupo == grupo ? 'contents' : 'none';
+	});
+}
+const primera = document.querySelector('.btn-cat');
+if (primera) primera.click();
+
+// ── Teclado numérico ──────────────────────────────────────────────────────────
+let numStr = '1';
+const disp = document.getElementById('display-num');
+
+function presNum(d) {
+	numStr = numStr === '1' ? d : numStr + d;   // primer dígito reemplaza el 1
+	if (numStr.length > 6) numStr = numStr.slice(-6);
+	disp.textContent = numStr;
+}
+function clrNum() { numStr = '1'; disp.textContent = '1'; }
+function numVal()  { return parseInt(numStr, 10) || 1; }
+
+// ── Al enviar formulario de producto, inyecta la cantidad del display ─────────
+function inyectarCantidad(form) {
+	form.querySelector('.inp-cant').value = numVal();
+	clrNum(); // reset después de añadir
+}
+
+// ── Línea seleccionada en el carrito ─────────────────────────────────────────
+let lineaSelId   = 0;
+let lineaSelNom  = '';
+function selLinea(el, id, nombre) {
+	document.querySelectorAll('.linea-item').forEach(x => x.classList.remove('sel'));
+	el.classList.add('sel');
+	lineaSelId  = id;
+	lineaSelNom = nombre;
+}
+
+// ── Prec ─────────────────────────────────────────────────────────────────────
+function accionPrec() {
+	if (!lineaSelId) { alert('Selecciona primero un producto del carrito.'); return; }
+	const v = (numVal() / 100).toFixed(2); // si escribes 130 → 1.30
+	// Interpretamos el número como céntimos si < 100, como euros si lleva coma o > 99
+	const euro = numVal() >= 100 ? (numVal() / 100).toFixed(2) : numVal().toFixed(2);
+	document.getElementById('prec-lineaId').value = lineaSelId;
+	document.getElementById('prec-valor').value   = euro;
+	document.getElementById('formPrec').submit();
+}
+
+// ── Can ──────────────────────────────────────────────────────────────────────
+function accionCan() {
+	if (!lineaSelId) { alert('Selecciona primero un producto del carrito.'); return; }
+	document.getElementById('can-lineaId').value = lineaSelId;
+	document.getElementById('can-valor').value   = numVal();
+	document.getElementById('formCan').submit();
+}
+
+// ── Modal borrar con motivo ───────────────────────────────────────────────────
+function abrirModalBorrar(lineaId, nombre) {
+	document.getElementById('tituloModalBorrar').textContent = 'Eliminar: ' + nombre;
+	// Poner el lineaId en todos los botones de motivo
+	document.querySelectorAll('[data-motivo-form]').forEach(btn => {
+		const form = btn.closest('form');
+		form.querySelector('[name="lineaId"]').value = lineaId;
+	});
+	new bootstrap.Modal(document.getElementById('modalBorrar')).show();
+}
 </script>
 </body>
 </html>

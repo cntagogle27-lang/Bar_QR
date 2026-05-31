@@ -137,9 +137,11 @@ public static class DbInitializer
 					PedidoMesaId INTEGER NOT NULL,
 					ProductoId INTEGER NOT NULL,
 					Cantidad INTEGER NOT NULL DEFAULT 1,
+					PrecioOverride REAL NULL,
 					FOREIGN KEY (PedidoMesaId) REFERENCES PedidosMesa(Id) ON DELETE CASCADE,
 					FOREIGN KEY (ProductoId) REFERENCES Productos(Id) ON DELETE CASCADE
 				)");
+			try { context.Database.ExecuteSqlRaw("ALTER TABLE LineasPedido ADD COLUMN PrecioOverride REAL NULL"); } catch { }
 
 			context.Database.ExecuteSqlRaw(@"
 				CREATE TABLE IF NOT EXISTS TicketPlantillas (

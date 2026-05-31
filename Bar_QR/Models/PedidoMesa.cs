@@ -26,4 +26,6 @@ public class LineaPedido
 	public int ProductoId { get; set; }
 	public Producto? Producto { get; set; }
 	public int Cantidad { get; set; } = 1;
+	/// <summary>Precio puntual modificado por el encargado (null = usar Producto.Precio)</summary>
+	public decimal? PrecioOverride { get; set; }
 }
