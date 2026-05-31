@@ -221,21 +221,21 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 									<button type="submit" class="btn-quitar">−</button>
 								</form>
 							}
-							else
-							{
-								@* Encargado (cualquier estado) o línea enviada: modal con motivo *@
-								<button type="button" class="btn-quitar"
-										onclick="event.stopPropagation();abrirModalBorrar(@lineaId,'@(ag.Nombre.Replace("'","\\'")),@pedidoDeLinea')">−</button>
-										}
-									}
-								</div>
-							}
-		</div>
-		<div id="total-row">
-			Total: @totalGlobal.ToString("0.00") €
-		</div>
-	</div>
-</div>
+										else
+									{
+										@* Encargado (cualquier estado) o línea enviada: modal con motivo *@
+										<button type="button" class="btn-quitar"
+												onclick="event.stopPropagation();abrirModalBorrar(@lineaId,'@(ag.Nombre.Replace("'","\\'"))',@pedidoDeLinea)">−</button>
+																}
+																}
+																</div>
+															}
+											</div>
+											<div id="total-row">
+												Total: @totalGlobal.ToString("0.00") €
+											</div>
+										</div>
+									</div>
 
 <!-- BARRA INFERIOR -->
 <div id="barra-inferior">

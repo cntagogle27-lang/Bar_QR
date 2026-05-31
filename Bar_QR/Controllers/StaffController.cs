@@ -148,12 +148,15 @@ public class StaffController : Controller
 
 		var esEnc = User.IsInRole("Encargado") || User.IsInRole("Admin");
 
-		// Pedido enviado: solo encargado puede borrar (motivo requerido)
+		// Pedido enviado: solo encargado puede borrar
 		if (pedido.Estado == EstadoPedidoMesa.Enviado && !esEnc)
 			return RedirectToAction("Panel", new { mesaId, zonaId });
 
-		// Pedido enviado y encargado: registrar motivo antes de borrar (motivo llega del modal)
-		if (linea.Cantidad > 1 && pedido.Estado == EstadoPedidoMesa.Abierto)
+		// Encargado sobre pedido enviado: borrar directamente (sin decrementar)
+		if (pedido.Estado == EstadoPedidoMesa.Enviado)
+			_db.LineasPedido.Remove(linea);
+		// Pedido abierto: decrementar si hay más de 1, si no borrar
+		else if (linea.Cantidad > 1)
 			linea.Cantidad--;
 		else
 			_db.LineasPedido.Remove(linea);
