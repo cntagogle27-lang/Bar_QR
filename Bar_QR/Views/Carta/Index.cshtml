@@ -139,27 +139,45 @@
         @if (puedesPedir)
         {
         <div class="col-lg-4">
-            <div class="card shadow border-primary sticky-top" style="top: 20px;">
-                <div class="card-header bg-primary text-white text-center">
+            <div class="card shadow sticky-top" style="top:20px;background:#1a1a2e;border:1.5px solid #0d6efd;">
+                <div class="card-header text-white text-center" style="background:linear-gradient(135deg,#0d6efd,#0a58ca);">
                     <h4 class="mb-0">🛒 Mi Pedido</h4>
                 </div>
                 <div class="card-body p-0">
-                    <ul id="lista-carrito" class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
-                        <li class="list-group-item text-center text-muted py-4">Tu carrito está vacío</li>
+                    <ul id="lista-carrito" class="list-group list-group-flush" style="max-height:420px;overflow-y:auto;">
+                        <li class="list-group-item text-center py-4" style="background:#1a1a2e;color:#888;">Tu carrito está vacío</li>
                     </ul>
                 </div>
-                <div class="card-footer" style="background:#1a1a2e">
+                <div class="card-footer" style="background:#13132a;border-top:1px solid #2a2a4a">
                     <div class="d-flex justify-content-between fw-bold fs-5 mb-3" style="color:#e0e0e0">
                         <span>Total:</span>
-                        <span id="total-precio">0.00 €</span>
+                        <span id="total-precio" style="color:#4ecca3">0.00 €</span>
                     </div>
                     <button class="btn btn-success w-100 btn-lg fw-bold mb-2" id="btn-enviar-pedido">
                         🚀 ENVIAR PEDIDO
                     </button>
-                    <button class="btn btn-warning w-100 fw-bold d-none" id="btn-pedir-cuenta">
+                    <button class="btn btn-warning w-100 fw-bold d-none" id="btn-pedir-cuenta" style="color:#000">
                         🧾 PEDIR LA CUENTA
                     </button>
                     <div id="msg-pedido" class="mt-2 small text-center" style="color:#4ecca3"></div>
+                </div>
+            </div>
+        </div>
+
+        @* ── Modal confirmación cuenta ── *@
+        <div class="modal fade" id="modalCuenta" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="background:#1a1a2e;color:#e0e0e0;border:1.5px solid #ffc107;border-radius:16px">
+                    <div class="modal-body text-center py-4 px-4">
+                        <div style="font-size:3.5rem;line-height:1">🧾</div>
+                        <h4 class="fw-bold mt-3 mb-1">¿Pedir la cuenta?</h4>
+                        <p class="text-secondary small mb-3">Se avisará al camarero para que traiga la cuenta a tu mesa.</p>
+                        <div id="resumen-cuenta" class="mb-3 text-start" style="background:#13132a;border-radius:10px;padding:12px 16px;font-size:.9rem"></div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-secondary flex-grow-1" data-bs-dismiss="modal">Cancelar</button>
+                            <button class="btn btn-warning fw-bold flex-grow-1" id="btn-confirmar-cuenta" style="color:#000">✅ Confirmar</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -198,6 +216,7 @@
         let carrito = [];   // [{ productoId, nombre, precio, cantidad }]
         let pedidoEnviado = false;
 
+        // ── Añadir al carrito
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-agregar');
             if (!btn) return;
@@ -211,11 +230,24 @@
             actualizarInterfaz();
         });
 
+        // ── Quitar una unidad del carrito
+        document.getElementById('lista-carrito').addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-quitar');
+            if (!btn) return;
+            const id = parseInt(btn.dataset.id);
+            const idx = carrito.findIndex(i => i.productoId === id);
+            if (idx === -1) return;
+            carrito[idx].cantidad--;
+            if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
+            actualizarInterfaz();
+        });
+
+        // ── Enviar pedido
         document.getElementById('btn-enviar-pedido').addEventListener('click', async () => {
             if (carrito.length === 0) return mostrarMsg('Añade algo antes de pedir.');
             const btn = document.getElementById('btn-enviar-pedido');
             btn.disabled = true;
-            btn.textContent = 'Enviando…';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando…';
             try {
                 const res = await fetch('@Url.Action("EnviarPedido","Carta")', {
                     method: 'POST',
@@ -231,20 +263,34 @@
                     document.getElementById('btn-pedir-cuenta').classList.remove('d-none');
                 }
             } catch { mostrarMsg('Error de conexión.'); }
-            finally { btn.disabled = false; btn.textContent = '🚀 ENVIAR PEDIDO'; }
+            finally { btn.disabled = false; btn.innerHTML = '🚀 ENVIAR PEDIDO'; }
         });
 
-        document.getElementById('btn-pedir-cuenta').addEventListener('click', async () => {
-            if (!confirm('¿Solicitar la cuenta al camarero?')) return;
-            const btn = document.getElementById('btn-pedir-cuenta');
+        // ── Abrir modal cuenta
+        document.getElementById('btn-pedir-cuenta').addEventListener('click', () => {
+            // Cargar resumen de lo ya pedido (del DOM del carrito histórico, o texto genérico)
+            const resumen = document.getElementById('resumen-cuenta');
+            resumen.innerHTML = '<p class="mb-1" style="color:#ffc107">Se solicitará la cuenta al camarero para tu mesa.</p><p class="text-secondary mb-0 small">Asegúrate de que has pedido todo lo que deseas.</p>';
+            new bootstrap.Modal(document.getElementById('modalCuenta')).show();
+        });
+
+        // ── Confirmar cuenta
+        document.getElementById('btn-confirmar-cuenta').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-confirmar-cuenta');
             btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando…';
             try {
                 const res  = await fetch('@Url.Action("PedirCuenta","Carta")', { method: 'POST' });
                 const data = await res.json();
+                bootstrap.Modal.getInstance(document.getElementById('modalCuenta')).hide();
                 mostrarMsg(data.message);
-                if (data.success) btn.textContent = '✅ Cuenta solicitada';
+                if (data.success) {
+                    const btnC = document.getElementById('btn-pedir-cuenta');
+                    btnC.disabled = true;
+                    btnC.innerHTML = '✅ Cuenta solicitada';
+                }
             } catch { mostrarMsg('Error de conexión.'); }
-            finally { btn.disabled = false; }
+            finally { btn.disabled = false; btn.innerHTML = '✅ Confirmar'; }
         });
 
         function mostrarMsg(txt) {
@@ -258,12 +304,20 @@
             const totalTxt = document.getElementById('total-precio');
             const total    = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
             if (carrito.length === 0) {
-                lista.innerHTML = '<li class="list-group-item text-center text-muted py-4">Tu carrito está vacío</li>';
+                lista.innerHTML = '<li class="list-group-item text-center py-4" style="background:#1a1a2e;color:#888;">Tu carrito está vacío</li>';
             } else {
                 lista.innerHTML = carrito.map(i => `
-                    <li class="list-group-item d-flex justify-content-between align-items-center" style="background:#16213e;color:#e0e0e0">
-                        <span>${i.nombre} <span class="badge bg-secondary">${i.cantidad}</span></span>
-                        <span class="text-success fw-bold">${(i.precio * i.cantidad).toFixed(2)} €</span>
+                    <li class="list-group-item" style="background:#16213e;color:#e0e0e0;border-color:#2a2a4a">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">${i.nombre}</span>
+                            <span class="text-success fw-bold ms-2">${(i.precio * i.cantidad).toFixed(2)} €</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            <button class="btn btn-sm btn-outline-danger rounded-circle btn-quitar" data-id="${i.productoId}" style="width:28px;height:28px;padding:0;line-height:1">−</button>
+                            <span class="badge" style="background:#0d6efd;font-size:.85rem">${i.cantidad}</span>
+                            <button class="btn btn-sm btn-outline-success rounded-circle btn-agregar" data-id="${i.productoId}" data-nombre="${i.nombre}" data-precio="${i.precio}" style="width:28px;height:28px;padding:0;line-height:1">+</button>
+                            <span class="text-secondary small ms-auto">${i.precio.toFixed(2)} €/ud</span>
+                        </div>
                     </li>`).join('');
             }
             totalTxt.innerText = total.toFixed(2) + ' €';
