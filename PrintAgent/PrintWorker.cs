@@ -89,8 +89,9 @@ public class PrintWorker : BackgroundService
 		};
 		return _cfg[$"Printers:{seccion}"]
 			?? _cfg["Printers:Todas"]
-			?? PrinterSettings.InstalledPrinters.Cast<string>().FirstOrDefault()
-			?? throw new InvalidOperationException("No se encontró ninguna impresora configurada.");
+			?? throw new InvalidOperationException(
+				$"No hay impresora configurada para el rol '{seccion}'. " +
+				"Añádela en appsettings.json → Printers.");
 	}
 
 	/// <summary>
