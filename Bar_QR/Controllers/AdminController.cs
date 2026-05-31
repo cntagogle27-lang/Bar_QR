@@ -482,6 +482,7 @@ public class AdminController : Controller
     }
 
     [HttpPost]
+    [IgnoreAntiforgeryToken]
     public IActionResult ToggleHabilitarZona(int id)
     {
         var zona = _db.Zonas.Find(id);
