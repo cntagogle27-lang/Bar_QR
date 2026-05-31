@@ -117,7 +117,7 @@ public class StaffController : Controller
 		else
 			pedido.Lineas.Add(new LineaPedido
 			{
-				PedidoMesaId = pedidoId,
+				PedidoMesaId = pedido.Id,   // usar el id real del pedido, no el parámetro
 				ProductoId   = productoId,
 				Cantidad     = 1
 			});
@@ -160,5 +160,25 @@ public class StaffController : Controller
 			_db.SaveChanges();
 		}
 		return RedirectToAction("MapaMesas", new { zonaId });
+	}
+
+	// ─── DIAGNÓSTICO (solo admin) ────────────────────────────────────────────────
+	[AllowAnonymous]
+	public IActionResult DiagPedidos(int mesaId = 0)
+	{
+		var pedidos = mesaId > 0
+			? _db.PedidosMesa.Include(p => p.Lineas).ThenInclude(l => l.Producto).Where(p => p.MesaId == mesaId).ToList()
+			: _db.PedidosMesa.Include(p => p.Lineas).ThenInclude(l => l.Producto).ToList();
+
+		var sb = new System.Text.StringBuilder();
+		sb.AppendLine($"<pre>Pedidos en BD ({pedidos.Count}):\n");
+		foreach (var p in pedidos)
+		{
+			sb.AppendLine($"  PedidoId={p.Id} MesaId={p.MesaId} Estado={p.Estado}({(int)p.Estado}) CreadoEn={p.CreadoEn} Lineas={p.Lineas.Count}");
+			foreach (var l in p.Lineas)
+				sb.AppendLine($"    LineaId={l.Id} Producto={l.Producto?.Nombre} Cantidad={l.Cantidad}");
+		}
+		sb.AppendLine("</pre>");
+		return Content(sb.ToString(), "text/html");
 	}
 }
