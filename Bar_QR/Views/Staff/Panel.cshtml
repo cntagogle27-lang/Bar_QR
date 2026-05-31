@@ -132,7 +132,7 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 		<div id="productos-grid">
 			@foreach (var p in Model.Productos)
 			{
-				var dis = (pedidoEnv && !esEncargado) ? "disabled" : "";
+				var dis = "";
 				<form asp-controller="Staff" asp-action="AgregarLinea" method="post"
 					  class="prod-card" data-grupo="@((int)p.Grupo)" style="display:contents"
 					  onsubmit="inyectarCantidad(this)">

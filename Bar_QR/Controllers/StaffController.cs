@@ -90,8 +90,15 @@ public class StaffController : Controller
 		if (pedido == null) return RedirectToAction("MapaMesas", new { zonaId });
 
 		var esEnc = User.IsInRole("Encargado") || User.IsInRole("Admin");
+
+		// Si el pedido está enviado y es camarero → crear un nuevo pedido Abierto
 		if (pedido.Estado == EstadoPedidoMesa.Enviado && !esEnc)
-			return RedirectToAction("Panel", new { mesaId, zonaId });
+		{
+			pedido = new PedidoMesa { MesaId = mesaId, CreadoEn = DateTime.UtcNow, Estado = EstadoPedidoMesa.Abierto };
+			_db.PedidosMesa.Add(pedido);
+			_db.SaveChanges();
+			pedido = _db.PedidosMesa.Include(p => p.Lineas).First(p => p.Id == pedido.Id);
+		}
 
 		if (cantidad < 1) cantidad = 1;
 
