@@ -481,15 +481,19 @@ public class AdminController : Controller
         return View(zona);
     }
 
+    [HttpGet]
     [HttpPost]
     [IgnoreAntiforgeryToken]
     public IActionResult ToggleHabilitarZona(int id)
     {
+        Console.WriteLine($"[ToggleZona] id={id}");
         var zona = _db.Zonas.Find(id);
+        Console.WriteLine($"[ToggleZona] zona={zona?.Nombre ?? "NULL"} Habilitada={zona?.Habilitada}");
         if (zona != null)
         {
             zona.Habilitada = !zona.Habilitada;
             _db.SaveChanges();
+            Console.WriteLine($"[ToggleZona] Guardado. Nuevo valor Habilitada={zona.Habilitada}");
             TempData["ControlOk"] = zona.Habilitada ? $"Zona «{zona.Nombre}» habilitada." : $"Zona «{zona.Nombre}» deshabilitada.";
         }
         return RedirectToAction("ControlMesas");
