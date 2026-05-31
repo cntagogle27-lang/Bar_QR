@@ -71,8 +71,10 @@ public class PrintService
 		var lineas = await ObtenerLineasAgrupadasAsync(mesaId);
 		if (!lineas.Any()) return;
 
+		var mesa = await _db.Mesas.FindAsync(mesaId);
+		var zonaId = mesa?.ZonaId ?? 0;
 		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
-		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal);
+		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal, zonaId);
 		var bytes = EscPosService.GenerarProforma(_cabecera, mesaId, lineasConPluses, total);
 		await GuardarTrabajoAsync(TipoTrabajoPrint.Proforma, RolImpresora.Todas, bytes,
 			$"Mesa {mesaId} – Proforma");
@@ -87,8 +89,10 @@ public class PrintService
 		var lineas = await ObtenerLineasAgrupadasAsync(mesaId);
 		if (!lineas.Any()) return;
 
+		var mesa = await _db.Mesas.FindAsync(mesaId);
+		var zonaId = mesa?.ZonaId ?? 0;
 		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
-		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal);
+		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal, zonaId);
 		var bytes = EscPosService.GenerarFacturaSimple(_cabecera, mesaId, lineasConPluses, total, metodoPago);
 		await GuardarTrabajoAsync(TipoTrabajoPrint.FacturaSimple, RolImpresora.Todas, bytes,
 			$"Mesa {mesaId} – Factura Simple");
@@ -121,10 +125,10 @@ public class PrintService
 			/// Solo aplica pluses activos cuyo DiasJson incluya el día actual (o estén vacíos = todos los días).
 			/// </summary>
 			private async Task<(List<(string Nombre, int Cantidad, decimal Precio)> Lineas, decimal Total)>
-				AplicarPlusesAsync(List<(string Nombre, int Cantidad, decimal Precio)> lineas, decimal subtotal)
+				AplicarPlusesAsync(List<(string Nombre, int Cantidad, decimal Precio)> lineas, decimal subtotal, int zonaId)
 			{
 				var hoy = (int)DateTime.Now.DayOfWeek;
-				var pluses = await _db.Pluses.Where(p => p.Activo).ToListAsync();
+				var pluses = await _db.Pluses.Where(p => p.Activo && p.ZonaId == zonaId).ToListAsync();
 				var result = new List<(string, int, decimal)>(lineas);
 				decimal total = subtotal;
 

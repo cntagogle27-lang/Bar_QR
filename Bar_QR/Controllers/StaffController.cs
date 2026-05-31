@@ -77,7 +77,7 @@ public class StaffController : Controller
 		var ahora   = DateTime.Now;
 		var hoyDow  = (int)ahora.DayOfWeek;
 		var ahoraTs = ahora.TimeOfDay;
-		var reglas  = _db.ReglasCierre.Where(r => r.Activa).ToList();
+		var reglas  = _db.ReglasCierre.Where(r => r.Activa && r.ZonaId == mesa.ZonaId).ToList();
 		foreach (var regla in reglas)
 		{
 			List<int> dias;

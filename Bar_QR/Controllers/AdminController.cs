@@ -497,12 +497,12 @@ public class AdminController : Controller
     // ─── PLUSES ─────────────────────────────────────────────────────────────────
 
     [HttpPost]
-    public IActionResult GuardarPlus(int id, string nombre, decimal porcentaje, string? diasJson, bool activo = true)
+    public IActionResult GuardarPlus(int id, int zonaId, string nombre, decimal porcentaje, string? diasJson, bool activo = true)
     {
         diasJson ??= "[]";
         if (id == 0)
         {
-            _db.Pluses.Add(new Plus { Nombre = nombre.Trim(), Porcentaje = porcentaje, DiasJson = diasJson, Activo = activo });
+            _db.Pluses.Add(new Plus { ZonaId = zonaId, Nombre = nombre.Trim(), Porcentaje = porcentaje, DiasJson = diasJson, Activo = activo });
         }
         else
         {
@@ -527,12 +527,12 @@ public class AdminController : Controller
     // ─── REGLAS DE CIERRE ───────────────────────────────────────────────────────
 
     [HttpPost]
-    public IActionResult GuardarReglaCierre(int id, string nombre, string? diasJson, string horaInicio, string horaFin, bool activa = true)
+    public IActionResult GuardarReglaCierre(int id, int zonaId, string nombre, string? diasJson, string horaInicio, string horaFin, bool activa = true)
     {
         diasJson ??= "[]";
         if (id == 0)
         {
-            _db.ReglasCierre.Add(new ReglasCierre { Nombre = nombre.Trim(), DiasJson = diasJson, HoraInicio = horaInicio, HoraFin = horaFin, Activa = activa });
+            _db.ReglasCierre.Add(new ReglasCierre { ZonaId = zonaId, Nombre = nombre.Trim(), DiasJson = diasJson, HoraInicio = horaInicio, HoraFin = horaFin, Activa = activa });
         }
         else
         {

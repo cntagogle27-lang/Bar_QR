@@ -106,12 +106,20 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
             b.HasKey(p => p.Id);
             b.Property(p => p.Nombre).IsRequired();
             b.Property(p => p.Porcentaje).HasConversion<double>();
+            b.HasOne(p => p.Zona)
+             .WithMany()
+             .HasForeignKey(p => p.ZonaId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ReglasCierre>(b =>
         {
             b.HasKey(r => r.Id);
             b.Property(r => r.Nombre).IsRequired();
+            b.HasOne(r => r.Zona)
+             .WithMany()
+             .HasForeignKey(r => r.ZonaId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         base.OnModelCreating(modelBuilder);

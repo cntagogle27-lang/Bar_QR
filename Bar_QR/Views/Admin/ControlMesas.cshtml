@@ -89,29 +89,288 @@
 						<span class="text-secondary small">@zona.Mesas.Count mesas</span>
 					</div>
 
-					<div class="d-flex gap-2 mt-3">
-						<a asp-action="ControlMapaZona" asp-route-zonaId="@zona.Id"
-						   class="btn btn-sm btn-ver-mapa flex-grow-1">
-							🗺️ Ver mesas
-						</a>
-						<form asp-action="ToggleHabilitarZona" method="post" class="m-0">
-							<input type="hidden" name="id" value="@zona.Id" />
-							<button type="submit"
-									class="btn btn-sm @(zona.Habilitada ? "btn-toggle-on" : "btn-toggle-off")">
-								@(zona.Habilitada ? "🔒 Deshabilitar" : "✅ Habilitar")
+					<div class="d-flex gap-2 mt-3 flex-wrap">
+							<a asp-action="ControlMapaZona" asp-route-zonaId="@zona.Id"
+							   class="btn btn-sm btn-ver-mapa flex-grow-1">
+								🗺️ Ver mesas
+							</a>
+							<button class="btn btn-sm btn-outline-warning"
+									data-bs-toggle="offcanvas"
+									data-bs-target="#ocPlus@(zona.Id)">
+								💰 Pluses
 							</button>
-						</form>
-					</div>
+							<button class="btn btn-sm btn-outline-info"
+									data-bs-toggle="offcanvas"
+									data-bs-target="#ocCierre@(zona.Id)">
+								🔒 Cierres
+							</button>
+							<form asp-action="ToggleHabilitarZona" method="post" class="m-0">
+								<input type="hidden" name="id" value="@zona.Id" />
+								<button type="submit"
+										class="btn btn-sm @(zona.Habilitada ? "btn-toggle-on" : "btn-toggle-off")">
+									@(zona.Habilitada ? "🔒 Deshabilitar" : "✅ Habilitar")
+								</button>
+							</form>
+						</div>
 				</div>
 			</div>
 		}
 	</div>
 </div>
 
+@* ══ OFFCANVAS de Pluses y Reglas por zona ══════════════════════════════════ *@
+@foreach (var zona in Model)
+{
+	var zPluses  = pluses.Where(p => p.ZonaId == zona.Id).ToList();
+	var zReglas  = reglasCierre.Where(r => r.ZonaId == zona.Id).ToList();
+	string ocPlusId   = $"ocPlus{zona.Id}";
+	string ocCierreId = $"ocCierre{zona.Id}";
 
+	@* ── Offcanvas PLUSES ── *@
+	<div class="offcanvas offcanvas-end" tabindex="-1" id="@ocPlusId"
+		 style="background:#13132a;color:#e0e0e0;border-left:1.5px solid #2a2a4a;width:420px">
+		<div class="offcanvas-header" style="border-bottom:1px solid #2a2a4a">
+			<h5 class="offcanvas-title">💰 Pluses — @zona.Nombre</h5>
+			<button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+		</div>
+		<div class="offcanvas-body">
+			<p class="text-secondary small">Recargos que se suman al total del ticket. Si no se marcan días, aplica siempre.</p>
+			<button class="btn btn-sm btn-outline-success mb-3 w-100"
+					onclick="abrirModalPlus(0,'Plus','[]',true,0,@zona.Id)">➕ Nuevo plus en @zona.Nombre</button>
 
+			@if (!zPluses.Any())
+			{
+				<div class="text-secondary small">Sin pluses configurados.</div>
+			}
+			@foreach (var p in zPluses)
+			{
+				var dias = ParseDias(p.DiasJson);
+				<div class="zona-card p-3 mb-2 @(!p.Activo ? "deshabilitada" : "")">
+					<div class="d-flex justify-content-between align-items-center">
+						<div>
+							<span class="fw-bold">@p.Nombre</span>
+							<span class="stat-pill @(p.Activo ? "badge-hab" : "badge-desh") ms-2" style="font-size:.68rem">
+								@(p.Activo ? "Activo" : "Inactivo")
+							</span>
+						</div>
+						<span class="fw-bold" style="color:#6ea8fe">@p.Porcentaje.ToString("0.##")%</span>
+					</div>
+					<div class="mt-1" style="font-size:.76rem;color:#aaa">
+						@(dias.Any() ? string.Join(", ", dias.Select(d => diasNombres[d])) : "Todos los días")
+					</div>
+					<div class="d-flex gap-2 mt-2">
+						<button class="btn btn-sm btn-outline-primary flex-grow-1"
+								onclick="abrirModalPlus(@p.Id,'@Html.Raw(p.Nombre.Replace("\\","\\\\").Replace("'","\\'"))','@Html.Raw(p.DiasJson)',@p.Activo.ToString().ToLower(),@p.Porcentaje.ToString(System.Globalization.CultureInfo.InvariantCulture),@p.ZonaId)">
+							✏️ Editar
+						</button>
+						<form asp-action="EliminarPlus" method="post" class="m-0"
+							  onsubmit="return confirm('¿Eliminar «@p.Nombre»?')">
+							<input type="hidden" name="id" value="@p.Id" />
+							<button type="submit" class="btn btn-sm btn-outline-danger">🗑</button>
+						</form>
+					</div>
+				</div>
+			}
+		</div>
+	</div>
 
-<div class="container mt-5 mb-4">
+	@* ── Offcanvas CIERRE ── *@
+	<div class="offcanvas offcanvas-end" tabindex="-1" id="@ocCierreId"
+		 style="background:#13132a;color:#e0e0e0;border-left:1.5px solid #2a2a4a;width:420px">
+		<div class="offcanvas-header" style="border-bottom:1px solid #2a2a4a">
+			<h5 class="offcanvas-title">🔒 Cierres automáticos — @zona.Nombre</h5>
+			<button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+		</div>
+		<div class="offcanvas-body">
+			<p class="text-secondary small">Franjas en las que las mesas de esta zona se bloquean automáticamente.</p>
+			<button class="btn btn-sm btn-outline-success mb-3 w-100"
+					onclick="abrirModalCierre(0,'Cierre','[]','00:00','23:00',true,@zona.Id)">➕ Nueva regla en @zona.Nombre</button>
+
+			@if (!zReglas.Any())
+			{
+				<div class="text-secondary small">Sin reglas de cierre configuradas.</div>
+			}
+			@foreach (var r in zReglas)
+			{
+				var dias = ParseDias(r.DiasJson);
+				<div class="zona-card p-3 mb-2 @(!r.Activa ? "deshabilitada" : "")">
+					<div class="d-flex justify-content-between align-items-center">
+						<div>
+							<span class="fw-bold">@r.Nombre</span>
+							<span class="stat-pill @(r.Activa ? "badge-hab" : "badge-desh") ms-2" style="font-size:.68rem">
+								@(r.Activa ? "Activa" : "Inactiva")
+							</span>
+						</div>
+						<span class="fw-bold" style="color:#ffc107">@r.HoraInicio–@r.HoraFin</span>
+					</div>
+					<div class="mt-1" style="font-size:.76rem;color:#aaa">
+						@(dias.Any() ? string.Join(", ", dias.Select(d => diasNombres[d])) : "Todos los días")
+					</div>
+					<div class="d-flex gap-2 mt-2">
+						<button class="btn btn-sm btn-outline-primary flex-grow-1"
+								onclick="abrirModalCierre(@r.Id,'@Html.Raw(r.Nombre.Replace("\\","\\\\").Replace("'","\\'"))','@Html.Raw(r.DiasJson)','@r.HoraInicio','@r.HoraFin',@r.Activa.ToString().ToLower(),@r.ZonaId)">
+							✏️ Editar
+						</button>
+						<form asp-action="EliminarReglaCierre" method="post" class="m-0"
+							  onsubmit="return confirm('¿Eliminar «@r.Nombre»?')">
+							<input type="hidden" name="id" value="@r.Id" />
+							<button type="submit" class="btn btn-sm btn-outline-danger">🗑</button>
+						</form>
+					</div>
+				</div>
+			}
+		</div>
+	</div>
+}
+
+@* ══ MODAL PLUS (compartido) ═══════════════════════════════════════════════ *@
+<div class="modal fade" id="modalPlus" tabindex="-1">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content" style="background:#1a1a2e;color:#e0e0e0;border:1px solid #2a2a4a">
+			<div class="modal-header" style="border-color:#2a2a4a">
+				<h5 class="modal-title" id="tituloPlus">Plus</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+			</div>
+			<form asp-action="GuardarPlus" method="post">
+				<div class="modal-body">
+					<input type="hidden" name="id"     id="plusId" />
+					<input type="hidden" name="zonaId" id="plusZonaId" />
+					<div class="mb-3">
+						<label class="form-label">Nombre</label>
+						<input type="text" class="form-control bg-dark text-light border-secondary" name="nombre" id="plusNombre" required />
+					</div>
+					<div class="mb-3">
+						<label class="form-label">Porcentaje (%)</label>
+						<input type="number" step="0.01" min="0" max="999" class="form-control bg-dark text-light border-secondary" name="porcentaje" id="plusPorcentaje" required />
+					</div>
+					<div class="mb-3">
+						<label class="form-label d-block">Días de la semana <small class="text-secondary">(ninguno = todos)</small></label>
+						<div class="d-flex flex-wrap gap-2">
+							@for (int d = 0; d < 7; d++)
+							{
+								<div class="form-check form-check-inline">
+									<input class="form-check-input plus-dia" type="checkbox" value="@d" id="plusDia@d" />
+									<label class="form-check-label" for="plusDia@d">@diasNombres[d]</label>
+								</div>
+							}
+						</div>
+						<input type="hidden" name="diasJson" id="plusDiasJson" value="[]" />
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" name="activo" id="plusActivo" value="true" checked />
+						<label class="form-check-label" for="plusActivo">Activo</label>
+					</div>
+				</div>
+				<div class="modal-footer" style="border-color:#2a2a4a">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+					<button type="submit" class="btn btn-primary">💾 Guardar</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+@* ══ MODAL CIERRE (compartido) ════════════════════════════════════════════ *@
+<div class="modal fade" id="modalCierre" tabindex="-1">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content" style="background:#1a1a2e;color:#e0e0e0;border:1px solid #2a2a4a">
+			<div class="modal-header" style="border-color:#2a2a4a">
+				<h5 class="modal-title" id="tituloCierre">Regla de cierre</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+			</div>
+			<form asp-action="GuardarReglaCierre" method="post">
+				<div class="modal-body">
+					<input type="hidden" name="id"     id="cierreId" />
+					<input type="hidden" name="zonaId" id="cierreZonaId" />
+					<div class="mb-3">
+						<label class="form-label">Nombre</label>
+						<input type="text" class="form-control bg-dark text-light border-secondary" name="nombre" id="cierreNombre" required />
+					</div>
+					<div class="row g-2 mb-3">
+						<div class="col">
+							<label class="form-label">Desde</label>
+							<input type="time" class="form-control bg-dark text-light border-secondary" name="horaInicio" id="cierreInicio" />
+						</div>
+						<div class="col">
+							<label class="form-label">Hasta</label>
+							<input type="time" class="form-control bg-dark text-light border-secondary" name="horaFin" id="cierreFin" />
+						</div>
+					</div>
+					<div class="mb-3">
+						<label class="form-label d-block">Días de la semana <small class="text-secondary">(ninguno = todos)</small></label>
+						<div class="d-flex flex-wrap gap-2">
+							@for (int d = 0; d < 7; d++)
+							{
+								<div class="form-check form-check-inline">
+									<input class="form-check-input cierre-dia" type="checkbox" value="@d" id="cierreDia@d" />
+									<label class="form-check-label" for="cierreDia@d">@diasNombres[d]</label>
+								</div>
+							}
+						</div>
+						<input type="hidden" name="diasJson" id="cierreDiasJson" value="[]" />
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" name="activa" id="cierreActiva" value="true" checked />
+						<label class="form-check-label" for="cierreActiva">Activa</label>
+					</div>
+				</div>
+				<div class="modal-footer" style="border-color:#2a2a4a">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+					<button type="submit" class="btn btn-primary">💾 Guardar</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function abrirModalPlus(id, nombre, diasJson, activo, porcentaje, zonaId) {
+	document.getElementById('plusId').value         = id;
+	document.getElementById('plusZonaId').value     = zonaId;
+	document.getElementById('plusNombre').value     = nombre;
+	document.getElementById('plusPorcentaje').value = porcentaje || 0;
+	document.getElementById('plusActivo').checked   = activo;
+	var dias = [];
+	try { dias = JSON.parse(diasJson); } catch {}
+	document.querySelectorAll('.plus-dia').forEach(cb => {
+		cb.checked = dias.includes(parseInt(cb.value));
+	});
+	sincDiasPlusJson();
+	document.getElementById('tituloPlus').textContent = id ? '✏️ Editar plus' : '➕ Nuevo plus';
+	new bootstrap.Modal(document.getElementById('modalPlus')).show();
+}
+document.querySelectorAll('.plus-dia').forEach(cb => cb.addEventListener('change', sincDiasPlusJson));
+function sincDiasPlusJson() {
+	document.getElementById('plusDiasJson').value =
+		JSON.stringify([...document.querySelectorAll('.plus-dia:checked')].map(c => parseInt(c.value)));
+}
+
+function abrirModalCierre(id, nombre, diasJson, inicio, fin, activa, zonaId) {
+	document.getElementById('cierreId').value       = id;
+	document.getElementById('cierreZonaId').value   = zonaId;
+	document.getElementById('cierreNombre').value   = nombre;
+	document.getElementById('cierreInicio').value   = inicio;
+	document.getElementById('cierreFin').value      = fin;
+	document.getElementById('cierreActiva').checked = activa;
+	var dias = [];
+	try { dias = JSON.parse(diasJson); } catch {}
+	document.querySelectorAll('.cierre-dia').forEach(cb => {
+		cb.checked = dias.includes(parseInt(cb.value));
+	});
+	sincDiasCierreJson();
+	document.getElementById('tituloCierre').textContent = id ? '✏️ Editar regla' : '➕ Nueva regla';
+	new bootstrap.Modal(document.getElementById('modalCierre')).show();
+}
+document.querySelectorAll('.cierre-dia').forEach(cb => cb.addEventListener('change', sincDiasCierreJson));
+function sincDiasCierreJson() {
+	document.getElementById('cierreDiasJson').value =
+		JSON.stringify([...document.querySelectorAll('.cierre-dia:checked')].map(c => parseInt(c.value)));
+}
+</script>
+}
+
 	<div class="d-flex align-items-center gap-3 mb-3">
 		<h4 class="mb-0 fw-bold" style="color:#e0e0e0;">💰 Pluses (recargos en ticket)</h4>
 		<button class="btn btn-sm btn-outline-success" onclick="abrirModalPlus(0,'Plus','',true)">➕ Nuevo plus</button>

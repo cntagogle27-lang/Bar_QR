@@ -197,21 +197,25 @@ public static class DbInitializer
 			context.Database.ExecuteSqlRaw(@"
 				CREATE TABLE IF NOT EXISTS Pluses (
 					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+					ZonaId INTEGER NOT NULL DEFAULT 0,
 					Nombre TEXT NOT NULL DEFAULT 'Plus',
 					Porcentaje REAL NOT NULL DEFAULT 0,
 					DiasJson TEXT NOT NULL DEFAULT '[]',
 					Activo INTEGER NOT NULL DEFAULT 1
 				)");
+			try { context.Database.ExecuteSqlRaw("ALTER TABLE Pluses ADD COLUMN ZonaId INTEGER NOT NULL DEFAULT 0"); } catch { }
 
 			context.Database.ExecuteSqlRaw(@"
 				CREATE TABLE IF NOT EXISTS ReglasCierre (
 					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+					ZonaId INTEGER NOT NULL DEFAULT 0,
 					Nombre TEXT NOT NULL DEFAULT 'Cierre',
 					DiasJson TEXT NOT NULL DEFAULT '[]',
 					HoraInicio TEXT NOT NULL DEFAULT '00:00',
 					HoraFin TEXT NOT NULL DEFAULT '08:00',
 					Activa INTEGER NOT NULL DEFAULT 1
 				)");
+			try { context.Database.ExecuteSqlRaw("ALTER TABLE ReglasCierre ADD COLUMN ZonaId INTEGER NOT NULL DEFAULT 0"); } catch { }
 
 			// Registrar todas las migraciones como aplicadas
 			foreach (var m in new[] {
