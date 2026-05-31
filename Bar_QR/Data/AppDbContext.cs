@@ -109,7 +109,8 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
             b.HasOne(p => p.Zona)
              .WithMany()
              .HasForeignKey(p => p.ZonaId)
-             .OnDelete(DeleteBehavior.Cascade);
+             .OnDelete(DeleteBehavior.Cascade)
+             .IsRequired(false);
         });
 
         modelBuilder.Entity<ReglasCierre>(b =>
@@ -119,7 +120,8 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
             b.HasOne(r => r.Zona)
              .WithMany()
              .HasForeignKey(r => r.ZonaId)
-             .OnDelete(DeleteBehavior.Cascade);
+             .OnDelete(DeleteBehavior.Cascade)
+             .IsRequired(false);
         });
 
         base.OnModelCreating(modelBuilder);
