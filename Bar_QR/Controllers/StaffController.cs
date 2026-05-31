@@ -39,9 +39,9 @@ public class StaffController : Controller
 		var mesa = _db.Mesas.Find(mesaId);
 		if (mesa == null) return RedirectToAction("MapaMesas", new { zonaId });
 
-		// Buscar id del pedido abierto (Estado=0) con SQL directo para evitar problemas de conversión de enum
+		// Buscar primero un pedido Abierto (Estado=0); si no, el último Enviado (Estado=1)
 		var idPedido = _db.Database
-			.SqlQueryRaw<int>("SELECT Id FROM PedidosMesa WHERE MesaId = {0} AND Estado = 0 ORDER BY CreadoEn DESC LIMIT 1", mesaId)
+			.SqlQueryRaw<int>("SELECT Id FROM PedidosMesa WHERE MesaId = {0} ORDER BY Estado ASC, CreadoEn DESC LIMIT 1", mesaId)
 			.AsEnumerable()
 			.FirstOrDefault();
 
@@ -56,6 +56,7 @@ public class StaffController : Controller
 
 		if (pedido == null)
 		{
+			// Solo crear pedido nuevo si la mesa no tiene ninguno (primera vez)
 			pedido = new PedidoMesa
 			{
 				MesaId   = mesaId,
@@ -71,6 +72,10 @@ public class StaffController : Controller
 				.First(p => p.Id == pedido.Id);
 		}
 
+		// Si el pedido está enviado, solo el encargado puede añadir; lo reflejamos en la vista
+		var pedidoEnviadoYSinPermiso = pedido.Estado == EstadoPedidoMesa.Enviado
+									   && !User.IsInRole("Encargado") && !User.IsInRole("Admin");
+
 		var productos = _db.Productos
 			.OrderBy(p => (int)p.Grupo)
 			.ThenBy(p => p.Nombre)
@@ -81,6 +86,7 @@ public class StaffController : Controller
 		ViewData["MesaId"]      = mesaId;
 		ViewData["PedidoId"]    = pedido.Id;
 		ViewData["EsEncargado"] = User.IsInRole("Encargado") || User.IsInRole("Admin");
+		_ = pedidoEnviadoYSinPermiso; // usado en la vista vía Model.Pedido.Estado
 		return View((pedido, productos));
 	}
 
