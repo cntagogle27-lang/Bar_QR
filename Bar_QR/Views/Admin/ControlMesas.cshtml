@@ -104,7 +104,7 @@
 									data-bs-target="#ocCierre@(zona.Id)">
 								🔒 Cierres
 							</button>
-							<form asp-action="ToggleHabilitarZona" method="post" class="m-0">
+							<form asp-controller="Admin" asp-action="ToggleHabilitarZona" method="post" class="m-0">
 								<input type="hidden" name="id" value="@zona.Id" />
 								<button type="submit"
 										class="btn btn-sm @(zona.Habilitada ? "btn-toggle-on" : "btn-toggle-off")">

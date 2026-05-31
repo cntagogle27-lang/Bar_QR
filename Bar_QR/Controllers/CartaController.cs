@@ -184,6 +184,13 @@ public class CartaController : Controller
 		var mesa = _db.Mesas.Include(m => m.Zona).FirstOrDefault(m => m.Slug == slug);
 		if (mesa == null) return NotFound("Mesa no encontrada.");
 
+		// 2. Validar que la zona está habilitada
+		if (mesa.Zona != null && !mesa.Zona.Habilitada)
+			return View("AccesoDenegado", new AccesoDenegadoViewModel
+			{
+				Motivo = "Esta zona está cerrada en este momento."
+			});
+
 		// 2. Validar que la mesa está habilitada
 		if (!mesa.Habilitada)
 			return View("AccesoDenegado", new AccesoDenegadoViewModel

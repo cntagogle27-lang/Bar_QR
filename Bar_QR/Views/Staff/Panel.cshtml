@@ -179,12 +179,12 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 				// Agrupar todas las líneas de todos los pedidos por productoId
 				var lineasAgrupadas = todosPedidos
 					.SelectMany(p => p.Lineas.Select(l => new { Linea = l, Pedido = p }))
-					.GroupBy(x => x.Linea.ProductoId)
+					.GroupBy(x => new { x.Linea.ProductoId, x.Linea.PrecioOverride })
 					.Select(g => new {
-						ProductoId   = g.Key,
+						ProductoId   = g.Key.ProductoId,
 						Nombre       = g.First().Linea.Producto?.Nombre ?? "",
 						CantidadTotal = g.Sum(x => x.Linea.Cantidad),
-						PrecioUnit   = g.First().Linea.PrecioOverride ?? g.First().Linea.Producto?.Precio ?? 0m,
+						PrecioUnit   = g.Key.PrecioOverride ?? g.First().Linea.Producto?.Precio ?? 0m,
 						// Para borrar: usamos la linea del pedido abierto si existe, sino la última
 						LineaRef     = g.FirstOrDefault(x => x.Pedido.Estado == EstadoPedidoMesa.Abierto)
 									   ?? g.Last(),
