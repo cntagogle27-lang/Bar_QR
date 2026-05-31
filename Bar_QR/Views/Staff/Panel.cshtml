@@ -208,26 +208,28 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 					<span class="l-nombre">@ag.Nombre</span>
 					<span class="l-precio">@precioTotal.ToString("0.00") €</span>
 					@if (puedeBorrar)
-					{
-						if (esEnviada || (ag.TieneEnviado && esEncargado))
 						{
-							<button type="button" class="btn-quitar"
-									onclick="event.stopPropagation();abrirModalBorrar(@lineaId,'@(ag.Nombre.Replace("'","\\'")))' ">−</button>
-						}
-						else
-						{
-							<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0"
-								  onclick="event.stopPropagation()">
-								<input type="hidden" name="lineaId"  value="@lineaId"/>
-								<input type="hidden" name="pedidoId" value="@pedidoDeLinea"/>
-								<input type="hidden" name="zonaId"   value="@zonaId"/>
-								<input type="hidden" name="mesaId"   value="@mesaId"/>
-								<button type="submit" class="btn-quitar">−</button>
-							</form>
-						}
-					}
-				</div>
-			}
+							@if (!esEncargado && !esEnviada)
+							{
+								@* Camarero + pedido abierto: borrar directo sin modal *@
+								<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0"
+									  onclick="event.stopPropagation()">
+									<input type="hidden" name="lineaId"  value="@lineaId"/>
+									<input type="hidden" name="pedidoId" value="@pedidoDeLinea"/>
+									<input type="hidden" name="zonaId"   value="@zonaId"/>
+									<input type="hidden" name="mesaId"   value="@mesaId"/>
+									<button type="submit" class="btn-quitar">−</button>
+								</form>
+							}
+							else
+							{
+								@* Encargado (cualquier estado) o línea enviada: modal con motivo *@
+								<button type="button" class="btn-quitar"
+										onclick="event.stopPropagation();abrirModalBorrar(@lineaId,'@(ag.Nombre.Replace("'","\\'")),@pedidoDeLinea')">−</button>
+										}
+									}
+								</div>
+							}
 		</div>
 		<div id="total-row">
 			Total: @totalGlobal.ToString("0.00") €
@@ -399,12 +401,12 @@ function accionCan() {
 }
 
 // ── Modal borrar con motivo ───────────────────────────────────────────────────
-function abrirModalBorrar(lineaId, nombre) {
+function abrirModalBorrar(lineaId, nombre, pedidoId) {
 	document.getElementById('tituloModalBorrar').textContent = 'Eliminar: ' + nombre;
-	// Poner el lineaId en todos los botones de motivo
 	document.querySelectorAll('[data-motivo-form]').forEach(btn => {
 		const form = btn.closest('form');
-		form.querySelector('[name="lineaId"]').value = lineaId;
+		form.querySelector('[name="lineaId"]').value  = lineaId;
+		if (pedidoId) form.querySelector('[name="pedidoId"]').value = pedidoId;
 	});
 	new bootstrap.Modal(document.getElementById('modalBorrar')).show();
 }
