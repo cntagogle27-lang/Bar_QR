@@ -213,8 +213,8 @@
     {
     <script>
         const PRODUCTOS = @Html.Raw(productosJs);
-        let carrito = [];   // [{ productoId, nombre, precio, cantidad }]
-        let pedidoEnviado = false;
+        let carrito   = [];   // items pendientes de enviar: [{ productoId, nombre, precio, cantidad }]
+        let historial = [];   // items ya enviados (acumulado)
 
         // ── Añadir al carrito
         document.addEventListener('click', (e) => {
@@ -234,12 +234,21 @@
         document.getElementById('lista-carrito').addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-quitar');
             if (!btn) return;
-            const id = parseInt(btn.dataset.id);
+            const id  = parseInt(btn.dataset.id);
             const idx = carrito.findIndex(i => i.productoId === id);
-            if (idx === -1) return;
-            carrito[idx].cantidad--;
-            if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
-            actualizarInterfaz();
+            if (idx !== -1) {
+                carrito[idx].cantidad--;
+                if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
+                actualizarInterfaz();
+                return;
+            }
+            // quitar del historial
+            const hidx = historial.findIndex(i => i.productoId === id);
+            if (hidx !== -1) {
+                historial[hidx].cantidad--;
+                if (historial[hidx].cantidad <= 0) historial.splice(hidx, 1);
+                actualizarInterfaz();
+            }
         });
 
         // ── Enviar pedido
@@ -257,7 +266,12 @@
                 const data = await res.json();
                 mostrarMsg(data.message);
                 if (data.success) {
-                    pedidoEnviado = true;
+                    // Mover carrito al historial
+                    carrito.forEach(c => {
+                        const h = historial.find(i => i.productoId === c.productoId);
+                        if (h) h.cantidad += c.cantidad;
+                        else   historial.push({ ...c });
+                    });
                     carrito = [];
                     actualizarInterfaz();
                     document.getElementById('btn-pedir-cuenta').classList.remove('d-none');
@@ -268,11 +282,28 @@
 
         // ── Abrir modal cuenta
         document.getElementById('btn-pedir-cuenta').addEventListener('click', () => {
-            // Cargar resumen de lo ya pedido (del DOM del carrito histórico, o texto genérico)
             const resumen = document.getElementById('resumen-cuenta');
-            resumen.innerHTML = '<p class="mb-1" style="color:#ffc107">Se solicitará la cuenta al camarero para tu mesa.</p><p class="text-secondary mb-0 small">Asegúrate de que has pedido todo lo que deseas.</p>';
+            const todos = fusionarListas(historial, carrito);
+            if (todos.length > 0) {
+                const filas = todos.map(i =>
+                    `<div class="d-flex justify-content-between"><span>${i.nombre} ×${i.cantidad}</span><span style="color:#4ecca3">${(i.precio*i.cantidad).toFixed(2)} €</span></div>`
+                ).join('');
+                const tot = todos.reduce((s,i) => s + i.precio*i.cantidad, 0);
+                resumen.innerHTML = filas + `<hr style="border-color:#333"><div class="d-flex justify-content-between fw-bold"><span>Total</span><span style="color:#ffc107">${tot.toFixed(2)} €</span></div>`;
+            } else {
+                resumen.innerHTML = '<p class="text-secondary mb-0">No hay productos en el pedido.</p>';
+            }
             new bootstrap.Modal(document.getElementById('modalCuenta')).show();
         });
+
+        function fusionarListas(a, b) {
+            const map = {};
+            [...a, ...b].forEach(i => {
+                if (map[i.productoId]) map[i.productoId].cantidad += i.cantidad;
+                else map[i.productoId] = { ...i };
+            });
+            return Object.values(map);
+        }
 
         // ── Confirmar cuenta
         document.getElementById('btn-confirmar-cuenta').addEventListener('click', async () => {
@@ -302,25 +333,47 @@
         function actualizarInterfaz() {
             const lista    = document.getElementById('lista-carrito');
             const totalTxt = document.getElementById('total-precio');
-            const total    = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
-            if (carrito.length === 0) {
+
+            // Construir lista unificada: historial (ya enviado) + carrito (pendiente)
+            let filas = '';
+
+            if (historial.length > 0) {
+                filas += `<li class="list-group-item px-3 py-1" style="background:#0d6efd22;color:#89b4fa;font-size:.75rem;letter-spacing:.05em;font-weight:600;border-color:#2a2a4a">✅ YA PEDIDO</li>`;
+                filas += historial.map(i => renderFila(i, false)).join('');
+            }
+
+            if (carrito.length > 0) {
+                filas += `<li class="list-group-item px-3 py-1" style="background:#ffc10722;color:#ffc107;font-size:.75rem;letter-spacing:.05em;font-weight:600;border-color:#2a2a4a">🛒 POR ENVIAR</li>`;
+                filas += carrito.map(i => renderFila(i, true)).join('');
+            }
+
+            if (filas === '') {
                 lista.innerHTML = '<li class="list-group-item text-center py-4" style="background:#1a1a2e;color:#888;">Tu carrito está vacío</li>';
             } else {
-                lista.innerHTML = carrito.map(i => `
-                    <li class="list-group-item" style="background:#16213e;color:#e0e0e0;border-color:#2a2a4a">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-semibold">${i.nombre}</span>
-                            <span class="text-success fw-bold ms-2">${(i.precio * i.cantidad).toFixed(2)} €</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-2 mt-1">
-                            <button class="btn btn-sm btn-outline-danger rounded-circle btn-quitar" data-id="${i.productoId}" style="width:28px;height:28px;padding:0;line-height:1">−</button>
-                            <span class="badge" style="background:#0d6efd;font-size:.85rem">${i.cantidad}</span>
-                            <button class="btn btn-sm btn-outline-success rounded-circle btn-agregar" data-id="${i.productoId}" data-nombre="${i.nombre}" data-precio="${i.precio}" style="width:28px;height:28px;padding:0;line-height:1">+</button>
-                            <span class="text-secondary small ms-auto">${i.precio.toFixed(2)} €/ud</span>
-                        </div>
-                    </li>`).join('');
+                lista.innerHTML = filas;
             }
+
+            const total = [...historial, ...carrito].reduce((s, i) => s + i.precio * i.cantidad, 0);
             totalTxt.innerText = total.toFixed(2) + ' €';
+        }
+
+        function renderFila(i, editable) {
+            const addBtn = editable
+                ? `<button class="btn btn-sm btn-outline-success rounded-circle btn-agregar" data-id="${i.productoId}" data-nombre="${i.nombre}" data-precio="${i.precio}" style="width:28px;height:28px;padding:0;line-height:1">+</button>`
+                : `<span style="width:28px"></span>`;
+            return `
+                <li class="list-group-item" style="background:#16213e;color:#e0e0e0;border-color:#2a2a4a">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold">${i.nombre}</span>
+                        <span class="text-success fw-bold ms-2">${(i.precio * i.cantidad).toFixed(2)} €</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <button class="btn btn-sm btn-outline-danger rounded-circle btn-quitar" data-id="${i.productoId}" style="width:28px;height:28px;padding:0;line-height:1">−</button>
+                        <span class="badge" style="background:#0d6efd;font-size:.85rem">${i.cantidad}</span>
+                        ${addBtn}
+                        <span class="text-secondary small ms-auto">${i.precio.toFixed(2)} €/ud</span>
+                    </div>
+                </li>`;
         }
     </script>
     }
