@@ -305,13 +305,14 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 				<p style="font-size:.85rem;color:#aaa">Selecciona el motivo de eliminación:</p>
 				@foreach (var m in new[]{"Error Cliente","Error Cocina","Error Camarero"})
 				{
+					var mKey = m.Replace(" ","_");
 					<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0">
-						<input type="hidden" name="lineaId"  id="borrar-lineaId-@m.Replace(" ","_")" value="0"/>
-						<input type="hidden" name="pedidoId" value="@pedidoId"/>
+						<input type="hidden" name="lineaId"  id="borrar-lineaId-@mKey"  value="0"/>
+						<input type="hidden" name="pedidoId" id="borrar-pedidoId-@mKey" value="@pedidoId"/>
 						<input type="hidden" name="zonaId"   value="@zonaId"/>
 						<input type="hidden" name="mesaId"   value="@mesaId"/>
 						<input type="hidden" name="motivo"   value="@m"/>
-						<button type="submit" class="motivo-btn" data-motivo-form="@m.Replace(" ","_")">@m</button>
+						<button type="submit" class="motivo-btn" data-motivo-form="@mKey">@m</button>
 					</form>
 				}
 			</div>
@@ -401,12 +402,13 @@ function accionCan() {
 }
 
 // ── Modal borrar con motivo ───────────────────────────────────────────────────
-function abrirModalBorrar(lineaId, nombre, pedidoId) {
+function abrirModalBorrar(lineaId, nombre, pedidoIdLinea) {
 	document.getElementById('tituloModalBorrar').textContent = 'Eliminar: ' + nombre;
-	document.querySelectorAll('[data-motivo-form]').forEach(btn => {
-		const form = btn.closest('form');
-		form.querySelector('[name="lineaId"]').value  = lineaId;
-		if (pedidoId) form.querySelector('[name="pedidoId"]').value = pedidoId;
+	['Error_Cliente','Error_Cocina','Error_Camarero'].forEach(function(mKey) {
+		var elLinea  = document.getElementById('borrar-lineaId-'  + mKey);
+		var elPedido = document.getElementById('borrar-pedidoId-' + mKey);
+		if (elLinea)  elLinea.value  = lineaId;
+		if (elPedido && pedidoIdLinea) elPedido.value = pedidoIdLinea;
 	});
 	new bootstrap.Modal(document.getElementById('modalBorrar')).show();
 }
