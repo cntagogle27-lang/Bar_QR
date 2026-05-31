@@ -58,9 +58,12 @@ public class CartaController : Controller
 			.FirstOrDefaultAsync(s => s.Token == tokenCookie && s.Expira > ahora);
 
 		if (sesion == null)
-			return Json(new { success = false, message = "Sesión no válida." });
+			return Json(new { success = false, message = "Sesión no válida. Reescanea el QR." });
 
 		var mesa = sesion.Mesa!;
+
+		if (!mesa.Habilitada)
+			return Json(new { success = false, message = "Esta mesa está deshabilitada. Contacta con el personal." });
 
 		// Buscar o crear pedido abierto
 		var pedido = await _db.PedidosMesa
@@ -116,9 +119,13 @@ public class CartaController : Controller
 			.FirstOrDefaultAsync(s => s.Token == tokenCookie && s.Expira > ahora);
 
 		if (sesion == null)
-			return Json(new { success = false, message = "Sesión no válida." });
+			return Json(new { success = false, message = "Sesión no válida. Reescanea el QR." });
 
 		var mesa = sesion.Mesa!;
+
+		if (!mesa.Habilitada)
+			return Json(new { success = false, message = "Esta mesa está deshabilitada. Contacta con el personal." });
+
 		var zonaNombre = mesa.Zona?.Nombre ?? "";
 		await _print.EnolarCuentaAsync(mesa.Id, mesa.Nombre, mesa.NumeroMesa, zonaNombre);
 
