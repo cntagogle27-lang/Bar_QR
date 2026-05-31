@@ -193,15 +193,40 @@ document.addEventListener('DOMContentLoaded', function() {
 				 data-base-x="@mesa.PosX"
 				 data-base-y="@mesa.PosY"
 				 style="left:@(mesa.PosX)px;top:@(mesa.PosY)px;width:@(mesa.Ancho)px;height:@(mesa.Alto)px;">
-				<form asp-action="EliminarMesaZona" method="post" class="m-0">
-					<input type="hidden" name="id" value="@mesa.Id" />
-					<input type="hidden" name="zonaId" value="@Model.Id" />
-					<button type="submit" class="btn btn-sm btn-outline-danger btn-del-mesa"
-							onclick="return confirm('¿Eliminar @mesa.Nombre?')">✕</button>
-				</form>
+				<button type="button" class="btn btn-sm btn-outline-danger btn-del-mesa"
+						onclick="confirmarEliminarMesa(@mesa.Id,'@Html.Raw(mesa.Nombre.Replace("'", "\\'"))',@Model.Id)">✕</button>
 				<span class="mesa-nombre">@mesa.Nombre</span>
 				<div class="resize-handle"></div>
 			</div>
 		}
 	</div>
 </div>
+
+@* Modal confirmar eliminar mesa *@
+<div class="modal fade" id="modalEliminarMesa" tabindex="-1">
+	<div class="modal-dialog modal-dialog-centered modal-sm">
+		<div class="modal-content" style="background:#1a1a2e;color:#e0e0e0;border:1.5px solid #dc3545;border-radius:14px">
+			<div class="modal-body text-center py-4 px-4">
+				<div style="font-size:3rem;line-height:1">🗑️</div>
+				<h5 class="fw-bold mt-3 mb-1">¿Eliminar mesa?</h5>
+				<p id="elimMesaNombre" class="text-secondary small mb-4"></p>
+				<div class="d-flex gap-2">
+					<button class="btn btn-secondary flex-grow-1" data-bs-dismiss="modal">Cancelar</button>
+					<form id="formElimMesa" asp-action="EliminarMesaZona" method="post" class="flex-grow-1">
+						<input type="hidden" name="id"     id="elimMesaId" value="0"/>
+						<input type="hidden" name="zonaId" id="elimMesaZona" value="0"/>
+						<button type="submit" class="btn btn-danger w-100">Eliminar</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+function confirmarEliminarMesa(id, nombre, zonaId) {
+	document.getElementById('elimMesaId').value   = id;
+	document.getElementById('elimMesaZona').value = zonaId;
+	document.getElementById('elimMesaNombre').textContent = 'Se eliminará "' + nombre + '" de forma permanente.';
+	new bootstrap.Modal(document.getElementById('modalEliminarMesa')).show();
+}
+</script>

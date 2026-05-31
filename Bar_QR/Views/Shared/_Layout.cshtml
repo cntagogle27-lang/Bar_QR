@@ -17,9 +17,12 @@
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
+                        @if (!User.IsInRole("Camarero") && !User.IsInRole("Encargado"))
+                        {
                         <li class="nav-item">
                             <a class="nav-link text-dark fw-bold" asp-controller="Carta" asp-action="Index">🍴 Ver Carta</a>
                         </li>
+                        }
 
                         @if (User.Identity.IsAuthenticated)
                         {

@@ -248,6 +248,13 @@ public class CartaController : Controller
 		}
 		else
 		{
+			// 6a. Si la mesa está ocupada y no hay sesión activa, está cerrada para nuevos accesos
+			if (mesa.Estado == EstadoMesa.Ocupada)
+				return View("AccesoDenegado", new AccesoDenegadoViewModel
+				{
+					Motivo = "Esta mesa está ocupada. Espera a que quede libre para escanear el QR."
+				});
+
 			// 6. No hay sesión activa: crear una nueva con token dinámico (válida 4h)
 			var nuevoToken = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
 			var sesion = new SesionMesa

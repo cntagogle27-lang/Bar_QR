@@ -154,7 +154,7 @@ public class StaffController : Controller
 
 		if (cantidad < 1) cantidad = 1;
 
-		var linea = pedido.Lineas.FirstOrDefault(l => l.ProductoId == productoId);
+		var linea = pedido.Lineas.FirstOrDefault(l => l.ProductoId == productoId && l.PrecioOverride == null);
 		if (linea != null)
 			linea.Cantidad += cantidad;
 		else
@@ -284,7 +284,7 @@ public class StaffController : Controller
 			await _db.SaveChangesAsync();
 		}
 
-		return RedirectToAction("Panel", new { mesaId, zonaId });
+		return RedirectToAction("MapaMesas", new { zonaId });
 	}
 
 	/// <summary>Genera la Factura Simple, la encola e imprime, cierra la mesa y elimina sesiones de cliente.</summary>
