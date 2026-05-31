@@ -101,6 +101,13 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
             b.Property(t => t.ContenidoBase64).IsRequired();
         });
 
+        modelBuilder.Entity<Zona>(b =>
+        {
+            b.HasKey(z => z.Id);
+            b.Property(z => z.Nombre).IsRequired();
+            b.Property(z => z.Habilitada).HasDefaultValue(true);
+        });
+
         modelBuilder.Entity<Plus>(b =>
         {
             b.HasKey(p => p.Id);
