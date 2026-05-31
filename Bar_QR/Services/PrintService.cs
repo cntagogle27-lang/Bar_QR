@@ -83,8 +83,7 @@ public class PrintService
 		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
 		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal, zonaId);
 		var bytes = EscPosService.GenerarProforma(_cabecera, mesaId, lineasConPluses, total);
-		await GuardarTrabajoAsync(TipoTrabajoPrint.Proforma, RolImpresora.Todas, bytes,
-			$"Mesa {mesaId} – Proforma");
+		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.Proforma, bytes, $"Mesa {mesaId} – Proforma");
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -101,8 +100,7 @@ public class PrintService
 		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
 		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal, zonaId);
 		var bytes = EscPosService.GenerarFacturaSimple(_cabecera, mesaId, lineasConPluses, total, metodoPago);
-		await GuardarTrabajoAsync(TipoTrabajoPrint.FacturaSimple, RolImpresora.Todas, bytes,
-			$"Mesa {mesaId} – Factura Simple");
+		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.FacturaSimple, bytes, $"Mesa {mesaId} – Factura Simple");
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -156,31 +154,64 @@ public class PrintService
 				return (result, total);
 			}
 
-			private async Task GuardarTrabajoAsync(
-		TipoTrabajoPrint tipo,
-		RolImpresora rolDestino,
-		byte[] bytes,
-		string referencia)
-	{
-		// Si sólo existe una impresora con rol "Todas", redirigir ambos destinos a ella
-		bool hayEspecifica = await _db.Impresoras
-			.AnyAsync(i => i.Activa && (int)i.Rol == (int)rolDestino);
+				private async Task GuardarTrabajoAsync(
+					TipoTrabajoPrint tipo,
+					RolImpresora rolDestino,
+					byte[] bytes,
+					string referencia)
+				{
+					// Si sólo existe una impresora con rol "Todas", redirigir ambos destinos a ella
+					bool hayEspecifica = await _db.Impresoras
+						.AnyAsync(i => i.Activa && (int)i.Rol == (int)rolDestino);
 
-		bool hayTodas = await _db.Impresoras
-			.AnyAsync(i => i.Activa && i.Rol == RolImpresora.Todas);
+					bool hayTodas = await _db.Impresoras
+						.AnyAsync(i => i.Activa && i.Rol == RolImpresora.Todas);
 
-		if (!hayEspecifica && hayTodas)
-			rolDestino = RolImpresora.Todas;
+					if (!hayEspecifica && hayTodas)
+						rolDestino = RolImpresora.Todas;
 
-		_db.TrabajosPrint.Add(new TrabajoPrint
-		{
-			Tipo             = tipo,
-			Estado           = EstadoTrabajoPrint.Pendiente,
-			DestinoRol       = rolDestino,
-			CreadoEn         = DateTime.UtcNow,
-			ContenidoBase64  = Convert.ToBase64String(bytes),
-			Referencia       = referencia
-		});
-		await _db.SaveChangesAsync();
-	}
-}
+					_db.TrabajosPrint.Add(new TrabajoPrint
+					{
+						Tipo             = tipo,
+						Estado           = EstadoTrabajoPrint.Pendiente,
+						DestinoRol       = rolDestino,
+						CreadoEn         = DateTime.UtcNow,
+						ContenidoBase64  = Convert.ToBase64String(bytes),
+						Referencia       = referencia
+					});
+					await _db.SaveChangesAsync();
+				}
+
+				/// <summary>
+				/// Encola un trabajo de factura (Proforma o FacturaSimple) para todas las impresoras
+				/// que tengan ImprimeFacturas=true. Si no hay ninguna, usa cualquier impresora activa con rol Todas.
+				/// </summary>
+				private async Task GuardarTrabajoFacturaAsync(TipoTrabajoPrint tipo, byte[] bytes, string referencia)
+				{
+					var impresoras = await _db.Impresoras
+						.Where(i => i.Activa && i.ImprimeFacturas)
+						.ToListAsync();
+
+					// Fallback: si no hay ninguna con ImprimeFacturas, enrutar a rol Todas (comportamiento anterior)
+					if (!impresoras.Any())
+					{
+						await GuardarTrabajoAsync(tipo, RolImpresora.Todas, bytes, referencia);
+						return;
+					}
+
+					// Crear un trabajo por cada impresora configurada para facturas
+					foreach (var imp in impresoras)
+					{
+						_db.TrabajosPrint.Add(new TrabajoPrint
+						{
+							Tipo            = tipo,
+							Estado          = EstadoTrabajoPrint.Pendiente,
+							DestinoRol      = imp.Rol,
+							CreadoEn        = DateTime.UtcNow,
+							ContenidoBase64 = Convert.ToBase64String(bytes),
+							Referencia      = referencia
+						});
+					}
+					await _db.SaveChangesAsync();
+				}
+			}

@@ -91,6 +91,23 @@ document.addEventListener('DOMContentLoaded', function() {
 			bootstrap.Modal.getInstance(document.getElementById('modalRenombrar')).hide();
 		}
 	});
+
+	document.getElementById('btnGuardarTodo').addEventListener('click', async function() {
+		const btn = this;
+		btn.disabled = true;
+		btn.textContent = '⏳ Guardando...';
+		const cards = document.querySelectorAll('.mesa-card');
+		const promesas = [...cards].map(el => {
+			const posX = parseInt(el.dataset.baseX) || 0;
+			const posY = parseInt(el.dataset.baseY) || 0;
+			const nombre = el.querySelector('.mesa-nombre')?.textContent.trim();
+			return guardarMesa(el.dataset.id, posX, posY, el.offsetWidth, el.offsetHeight, nombre);
+		});
+		await Promise.all(promesas);
+		btn.disabled = false;
+		btn.textContent = '✅ Guardado';
+		setTimeout(() => { btn.textContent = '💾 Guardar cambios'; }, 2000);
+	});
 });
 </script>
 <style>
@@ -184,6 +201,8 @@ document.addEventListener('DOMContentLoaded', function() {
 	</div>
 
 	<p class="text-muted small">💡 Arrastra para mover · Arrastra la esquina inferior derecha para redimensionar · Doble clic en el nombre para renombrarlo</p>
+
+	<button id="btnGuardarTodo" class="btn btn-success btn-sm mb-3">💾 Guardar cambios</button>
 
 	<div id="mapa-container">
 		@foreach (var mesa in Model.Mesas)

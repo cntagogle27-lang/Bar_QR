@@ -172,12 +172,14 @@ public static class DbInitializer
 
 			context.Database.ExecuteSqlRaw(@"
 				CREATE TABLE IF NOT EXISTS Impresoras (
-					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-					Nombre TEXT NOT NULL DEFAULT '',
-					Direccion TEXT NOT NULL DEFAULT '',
-					Rol INTEGER NOT NULL DEFAULT 2,
-					Activa INTEGER NOT NULL DEFAULT 1
-				)");
+						Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+							Nombre TEXT NOT NULL DEFAULT '',
+							Direccion TEXT NOT NULL DEFAULT '',
+							Rol INTEGER NOT NULL DEFAULT 2,
+							Activa INTEGER NOT NULL DEFAULT 1,
+							ImprimeFacturas INTEGER NOT NULL DEFAULT 0
+						)");
+					try { context.Database.ExecuteSqlRaw("ALTER TABLE Impresoras ADD COLUMN ImprimeFacturas INTEGER NOT NULL DEFAULT 0"); } catch { }
 
 			context.Database.ExecuteSqlRaw(@"
 				CREATE TABLE IF NOT EXISTS TrabajosPrint (

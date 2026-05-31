@@ -497,7 +497,7 @@ public class AdminController : Controller
     // ─── PLUSES ─────────────────────────────────────────────────────────────────
 
     [HttpPost]
-    public IActionResult GuardarPlus(int id, int zonaId, string nombre, decimal porcentaje, string? diasJson, bool activo = true)
+    public IActionResult GuardarPlus(int id, int zonaId, string nombre, decimal porcentaje, string? diasJson, bool activo = false)
     {
         diasJson ??= "[]";
         if (id == 0)
@@ -527,7 +527,7 @@ public class AdminController : Controller
     // ─── REGLAS DE CIERRE ───────────────────────────────────────────────────────
 
     [HttpPost]
-    public IActionResult GuardarReglaCierre(int id, int zonaId, string nombre, string? diasJson, string horaInicio, string horaFin, bool activa = true)
+    public IActionResult GuardarReglaCierre(int id, int zonaId, string nombre, string? diasJson, string horaInicio, string horaFin, bool activa = false)
     {
         diasJson ??= "[]";
         if (id == 0)
@@ -720,17 +720,17 @@ public class AdminController : Controller
         View(_db.Impresoras.OrderBy(i => i.Id).ToList());
 
     [HttpPost]
-    public IActionResult CrearImpresora(string nombre, string direccion, RolImpresora rol)
+    public IActionResult CrearImpresora(string nombre, string direccion, RolImpresora rol, bool imprimeFacturas = false)
     {
         if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(direccion))
             return RedirectToAction("Impresoras");
-        _db.Impresoras.Add(new Impresora { Nombre = nombre.Trim(), Direccion = direccion.Trim(), Rol = rol });
+        _db.Impresoras.Add(new Impresora { Nombre = nombre.Trim(), Direccion = direccion.Trim(), Rol = rol, ImprimeFacturas = imprimeFacturas });
         _db.SaveChanges();
         return RedirectToAction("Impresoras");
     }
 
     [HttpPost]
-    public IActionResult EditarImpresora(int id, string nombre, string direccion, RolImpresora rol, bool activa)
+    public IActionResult EditarImpresora(int id, string nombre, string direccion, RolImpresora rol, bool activa, bool imprimeFacturas = false)
     {
         var imp = _db.Impresoras.Find(id);
         if (imp is null) return NotFound();
@@ -738,6 +738,7 @@ public class AdminController : Controller
         imp.Direccion = direccion.Trim();
         imp.Rol       = rol;
         imp.Activa    = activa;
+        imp.ImprimeFacturas = imprimeFacturas;
         _db.SaveChanges();
         return RedirectToAction("Impresoras");
     }

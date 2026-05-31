@@ -20,6 +20,7 @@
 					<th>Nombre</th>
 					<th>Dirección (USB/COM/IP)</th>
 					<th>Rol</th>
+					<th>Facturas</th>
 					<th>Activa</th>
 					<th></th>
 				</tr>
@@ -35,13 +36,15 @@
 								@imp.Rol
 							</span>
 						</td>
+						<td>@(imp.ImprimeFacturas ? "✅" : "❌")</td>
 						<td>@(imp.Activa ? "✅" : "❌")</td>
 						<td class="text-end">
 							<button class="btn btn-sm btn-outline-light me-1"
 									data-bs-toggle="modal" data-bs-target="#modalEditar"
 									data-id="@imp.Id" data-nombre="@imp.Nombre"
 									data-dir="@imp.Direccion" data-rol="@((int)imp.Rol)"
-									data-activa="@imp.Activa.ToString().ToLower()">
+									data-activa="@imp.Activa.ToString().ToLower()"
+									data-facturas="@imp.ImprimeFacturas.ToString().ToLower()">
 								Editar
 							</button>
 							<form asp-action="EliminarImpresora" method="post" class="d-inline"
@@ -84,6 +87,10 @@
 						<option value="2" selected>Todas</option>
 					</select>
 				</div>
+				<div class="form-check mb-2">
+					<input type="checkbox" class="form-check-input" name="imprimeFacturas" id="crearFacturas" value="true" />
+					<label class="form-check-label" for="crearFacturas">Imprime Facturas (Proforma / Factura Simple)</label>
+				</div>
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -120,6 +127,10 @@
 					<input type="checkbox" class="form-check-input" name="activa" id="editActiva" value="true" />
 					<label class="form-check-label" for="editActiva">Activa</label>
 				</div>
+				<div class="form-check mt-2">
+					<input type="checkbox" class="form-check-input" name="imprimeFacturas" id="editFacturas" value="true" />
+					<label class="form-check-label" for="editFacturas">Imprime Facturas (Proforma / Factura Simple)</label>
+				</div>
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -137,7 +148,8 @@ document.getElementById('modalEditar').addEventListener('show.bs.modal', functio
 	document.getElementById('editNombre').value = btn.dataset.nombre;
 	document.getElementById('editDir').value    = btn.dataset.dir;
 	document.getElementById('editRol').value    = btn.dataset.rol;
-	document.getElementById('editActiva').checked = btn.dataset.activa === 'true';
+	document.getElementById('editActiva').checked   = btn.dataset.activa === 'true';
+	document.getElementById('editFacturas').checked = btn.dataset.facturas === 'true';
 });
 </script>
 }

@@ -10,4 +10,6 @@ public class Impresora
 	public string Direccion { get; set; } = string.Empty;
 	public RolImpresora Rol { get; set; } = RolImpresora.Todas;
 	public bool Activa { get; set; } = true;
+	/// <summary>Si true, esta impresora también recibe Facturas Proforma y Simples (además de las comandas de su rol).</summary>
+	public bool ImprimeFacturas { get; set; } = false;
 }
