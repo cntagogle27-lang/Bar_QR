@@ -468,6 +468,8 @@ public class AdminController : Controller
     public IActionResult ControlMesas()
     {
         var zonas = _db.Zonas.Include(z => z.Mesas).OrderBy(z => z.Nombre).ToList();
+        ViewData["Pluses"]       = _db.Pluses.OrderBy(p => p.Id).ToList();
+        ViewData["ReglasCierre"] = _db.ReglasCierre.OrderBy(r => r.Id).ToList();
         return View(zonas);
     }
 
@@ -489,6 +491,66 @@ public class AdminController : Controller
             _db.SaveChanges();
             TempData["ControlOk"] = zona.Habilitada ? $"Zona «{zona.Nombre}» habilitada." : $"Zona «{zona.Nombre}» deshabilitada.";
         }
+        return RedirectToAction("ControlMesas");
+    }
+
+    // ─── PLUSES ─────────────────────────────────────────────────────────────────
+
+    [HttpPost]
+    public IActionResult GuardarPlus(int id, string nombre, decimal porcentaje, string? diasJson, bool activo = true)
+    {
+        diasJson ??= "[]";
+        if (id == 0)
+        {
+            _db.Pluses.Add(new Plus { Nombre = nombre.Trim(), Porcentaje = porcentaje, DiasJson = diasJson, Activo = activo });
+        }
+        else
+        {
+            var p = _db.Pluses.Find(id);
+            if (p != null) { p.Nombre = nombre.Trim(); p.Porcentaje = porcentaje; p.DiasJson = diasJson; p.Activo = activo; }
+        }
+        _db.SaveChanges();
+        TempData["ControlOk"] = "Plus guardado.";
+        return RedirectToAction("ControlMesas");
+    }
+
+    [HttpPost]
+    public IActionResult EliminarPlus(int id)
+    {
+        var p = _db.Pluses.Find(id);
+        if (p != null) _db.Pluses.Remove(p);
+        _db.SaveChanges();
+        TempData["ControlOk"] = "Plus eliminado.";
+        return RedirectToAction("ControlMesas");
+    }
+
+    // ─── REGLAS DE CIERRE ───────────────────────────────────────────────────────
+
+    [HttpPost]
+    public IActionResult GuardarReglaCierre(int id, string nombre, string? diasJson, string horaInicio, string horaFin, bool activa = true)
+    {
+        diasJson ??= "[]";
+        if (id == 0)
+        {
+            _db.ReglasCierre.Add(new ReglasCierre { Nombre = nombre.Trim(), DiasJson = diasJson, HoraInicio = horaInicio, HoraFin = horaFin, Activa = activa });
+        }
+        else
+        {
+            var r = _db.ReglasCierre.Find(id);
+            if (r != null) { r.Nombre = nombre.Trim(); r.DiasJson = diasJson; r.HoraInicio = horaInicio; r.HoraFin = horaFin; r.Activa = activa; }
+        }
+        _db.SaveChanges();
+        TempData["ControlOk"] = "Regla de cierre guardada.";
+        return RedirectToAction("ControlMesas");
+    }
+
+    [HttpPost]
+    public IActionResult EliminarReglaCierre(int id)
+    {
+        var r = _db.ReglasCierre.Find(id);
+        if (r != null) _db.ReglasCierre.Remove(r);
+        _db.SaveChanges();
+        TempData["ControlOk"] = "Regla de cierre eliminada.";
         return RedirectToAction("ControlMesas");
     }
 

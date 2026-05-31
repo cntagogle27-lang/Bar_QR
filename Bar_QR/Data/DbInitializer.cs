@@ -194,6 +194,25 @@ public static class DbInitializer
 			// Columna DestinoImpresion en Productos (0=Barra, 1=Cocina)
 			try { context.Database.ExecuteSqlRaw("ALTER TABLE Productos ADD COLUMN DestinoImpresion INTEGER NOT NULL DEFAULT 0"); } catch { }
 
+			context.Database.ExecuteSqlRaw(@"
+				CREATE TABLE IF NOT EXISTS Pluses (
+					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+					Nombre TEXT NOT NULL DEFAULT 'Plus',
+					Porcentaje REAL NOT NULL DEFAULT 0,
+					DiasJson TEXT NOT NULL DEFAULT '[]',
+					Activo INTEGER NOT NULL DEFAULT 1
+				)");
+
+			context.Database.ExecuteSqlRaw(@"
+				CREATE TABLE IF NOT EXISTS ReglasCierre (
+					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+					Nombre TEXT NOT NULL DEFAULT 'Cierre',
+					DiasJson TEXT NOT NULL DEFAULT '[]',
+					HoraInicio TEXT NOT NULL DEFAULT '00:00',
+					HoraFin TEXT NOT NULL DEFAULT '08:00',
+					Activa INTEGER NOT NULL DEFAULT 1
+				)");
+
 			// Registrar todas las migraciones como aplicadas
 			foreach (var m in new[] {
 				"20260516105820_InitialCreate",

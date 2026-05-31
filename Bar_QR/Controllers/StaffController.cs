@@ -73,6 +73,34 @@ public class StaffController : Controller
 		var mesa = _db.Mesas.Find(mesaId);
 		if (mesa == null) return RedirectToAction("MapaMesas", new { zonaId });
 
+		// ── Verificar reglas de cierre automático ────────────────────────────
+		var ahora   = DateTime.Now;
+		var hoyDow  = (int)ahora.DayOfWeek;
+		var ahoraTs = ahora.TimeOfDay;
+		var reglas  = _db.ReglasCierre.Where(r => r.Activa).ToList();
+		foreach (var regla in reglas)
+		{
+			List<int> dias;
+			try { dias = System.Text.Json.JsonSerializer.Deserialize<List<int>>(regla.DiasJson) ?? new(); }
+			catch { dias = new(); }
+
+			if (dias.Any() && !dias.Contains(hoyDow)) continue;
+
+			if (TimeSpan.TryParse(regla.HoraInicio, out var ini) && TimeSpan.TryParse(regla.HoraFin, out var fin))
+			{
+				bool enRango = ini <= fin
+					? ahoraTs >= ini && ahoraTs < fin
+					: ahoraTs >= ini || ahoraTs < fin;   // Rango que cruza medianoche
+
+				if (enRango)
+				{
+					TempData["PanelError"] = $"Las mesas están cerradas automáticamente por la regla «{regla.Nombre}» ({regla.HoraInicio}–{regla.HoraFin}).";
+					return RedirectToAction("MapaMesas", new { zonaId });
+				}
+			}
+		}
+		// ────────────────────────────────────────────────────────────────────
+
 		// Cargar TODOS los pedidos de esta mesa para mostrarlos juntos
 		var todosPedidos = _db.PedidosMesa
 			.Include(p => p.Lineas).ThenInclude(l => l.Producto)

@@ -23,6 +23,8 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<LineaPedido> LineasPedido { get; set; }
     public DbSet<Impresora> Impresoras { get; set; }
     public DbSet<TrabajoPrint> TrabajosPrint { get; set; }
+    public DbSet<Plus> Pluses { get; set; }
+    public DbSet<ReglasCierre> ReglasCierre { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -97,6 +99,19 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
             b.Property(t => t.Estado).HasConversion<int>();
             b.Property(t => t.DestinoRol).HasConversion<int>();
             b.Property(t => t.ContenidoBase64).IsRequired();
+        });
+
+        modelBuilder.Entity<Plus>(b =>
+        {
+            b.HasKey(p => p.Id);
+            b.Property(p => p.Nombre).IsRequired();
+            b.Property(p => p.Porcentaje).HasConversion<double>();
+        });
+
+        modelBuilder.Entity<ReglasCierre>(b =>
+        {
+            b.HasKey(r => r.Id);
+            b.Property(r => r.Nombre).IsRequired();
         });
 
         base.OnModelCreating(modelBuilder);

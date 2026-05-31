@@ -71,8 +71,9 @@ public class PrintService
 		var lineas = await ObtenerLineasAgrupadasAsync(mesaId);
 		if (!lineas.Any()) return;
 
-		var total = lineas.Sum(l => l.Cantidad * l.Precio);
-		var bytes = EscPosService.GenerarProforma(_cabecera, mesaId, lineas, total);
+		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
+		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal);
+		var bytes = EscPosService.GenerarProforma(_cabecera, mesaId, lineasConPluses, total);
 		await GuardarTrabajoAsync(TipoTrabajoPrint.Proforma, RolImpresora.Todas, bytes,
 			$"Mesa {mesaId} – Proforma");
 	}
@@ -86,8 +87,9 @@ public class PrintService
 		var lineas = await ObtenerLineasAgrupadasAsync(mesaId);
 		if (!lineas.Any()) return;
 
-		var total = lineas.Sum(l => l.Cantidad * l.Precio);
-		var bytes = EscPosService.GenerarFacturaSimple(_cabecera, mesaId, lineas, total, metodoPago);
+		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
+		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal);
+		var bytes = EscPosService.GenerarFacturaSimple(_cabecera, mesaId, lineasConPluses, total, metodoPago);
 		await GuardarTrabajoAsync(TipoTrabajoPrint.FacturaSimple, RolImpresora.Todas, bytes,
 			$"Mesa {mesaId} – Factura Simple");
 	}
@@ -111,10 +113,39 @@ public class PrintService
 				Cantidad: g.Sum(l => l.Cantidad),
 				Precio:   g.First().PrecioOverride ?? g.First().Producto!.Precio
 			))
-			.ToList();
-	}
+				.ToList();
+			}
 
-	private async Task GuardarTrabajoAsync(
+			/// <summary>
+			/// Añade líneas de plus al listado y devuelve el total final con pluses aplicados.
+			/// Solo aplica pluses activos cuyo DiasJson incluya el día actual (o estén vacíos = todos los días).
+			/// </summary>
+			private async Task<(List<(string Nombre, int Cantidad, decimal Precio)> Lineas, decimal Total)>
+				AplicarPlusesAsync(List<(string Nombre, int Cantidad, decimal Precio)> lineas, decimal subtotal)
+			{
+				var hoy = (int)DateTime.Now.DayOfWeek;
+				var pluses = await _db.Pluses.Where(p => p.Activo).ToListAsync();
+				var result = new List<(string, int, decimal)>(lineas);
+				decimal total = subtotal;
+
+				foreach (var plus in pluses)
+				{
+					List<int> dias;
+					try { dias = System.Text.Json.JsonSerializer.Deserialize<List<int>>(plus.DiasJson) ?? new(); }
+					catch { dias = new(); }
+
+					if (dias.Any() && !dias.Contains(hoy)) continue;
+
+					var importe = Math.Round(subtotal * plus.Porcentaje / 100m, 2);
+					if (importe == 0) continue;
+					result.Add(($"{plus.Nombre} (+{plus.Porcentaje:0.##}%)", 1, importe));
+					total += importe;
+				}
+
+				return (result, total);
+			}
+
+			private async Task GuardarTrabajoAsync(
 		TipoTrabajoPrint tipo,
 		RolImpresora rolDestino,
 		byte[] bytes,
