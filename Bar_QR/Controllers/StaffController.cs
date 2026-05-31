@@ -67,15 +67,33 @@ public class StaffController : Controller
 		var mesa = _db.Mesas.Find(mesaId);
 		if (mesa == null) return RedirectToAction("MapaMesas", new { zonaId });
 
-		var pedido   = ObtenerOCrearPedido(mesaId);
+		// Cargar TODOS los pedidos de esta mesa para mostrarlos juntos
+		var todosPedidos = _db.PedidosMesa
+			.Include(p => p.Lineas).ThenInclude(l => l.Producto)
+			.Where(p => p.MesaId == mesaId)
+			.OrderBy(p => p.CreadoEn)
+			.ToList();
+
+		// El pedido activo (Abierto) es el más reciente con Estado=0; si no existe se crea
+		var pedidoActivo = todosPedidos.FirstOrDefault(p => p.Estado == EstadoPedidoMesa.Abierto);
+		if (pedidoActivo == null)
+		{
+			pedidoActivo = new PedidoMesa { MesaId = mesaId, CreadoEn = DateTime.UtcNow, Estado = EstadoPedidoMesa.Abierto };
+			_db.PedidosMesa.Add(pedidoActivo);
+			_db.SaveChanges();
+			pedidoActivo = _db.PedidosMesa.Include(p => p.Lineas).ThenInclude(l => l.Producto).First(p => p.Id == pedidoActivo.Id);
+			todosPedidos.Add(pedidoActivo);
+		}
+
 		var productos = _db.Productos.OrderBy(p => (int)p.Grupo).ThenBy(p => p.Nombre).ToList();
 
 		ViewData["ZonaId"]      = zonaId;
 		ViewData["MesaNombre"]  = mesa.Nombre;
 		ViewData["MesaId"]      = mesaId;
-		ViewData["PedidoId"]    = pedido.Id;
+		ViewData["PedidoId"]    = pedidoActivo.Id;   // pedido donde se añaden nuevos productos
 		ViewData["EsEncargado"] = User.IsInRole("Encargado") || User.IsInRole("Admin");
-		return View((pedido, productos));
+		ViewData["TodosPedidos"] = todosPedidos;
+		return View((pedidoActivo, productos));
 	}
 
 	// ─── AGREGAR ────────────────────────────────────────────────────────────────

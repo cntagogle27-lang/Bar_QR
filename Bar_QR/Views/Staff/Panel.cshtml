@@ -8,7 +8,15 @@
 	var pedidoId     = (int)ViewData["PedidoId"]!;
 	var mesaNombre   = ViewData["MesaNombre"]?.ToString() ?? "Mesa";
 	var esEncargado  = (bool)(ViewData["EsEncargado"] ?? false);
-	var pedidoEnv    = Model.Pedido.Estado == EstadoPedidoMesa.Enviado;
+	var todosPedidos = (List<PedidoMesa>)(ViewData["TodosPedidos"] ?? new List<PedidoMesa>());
+
+	// Para la cabecera: si hay algún pedido enviado y el activo es abierto, mostramos "Abierto"
+	var pedidoEnv = Model.Pedido.Estado == EstadoPedidoMesa.Enviado;
+
+	// Total global: suma de todos los pedidos
+	decimal totalGlobal = todosPedidos
+		.SelectMany(p => p.Lineas)
+		.Sum(l => (l.PrecioOverride ?? l.Producto?.Precio ?? 0) * l.Cantidad);
 
 	var grupos = Model.Productos.GroupBy(p => p.Grupo).OrderBy(g => (int)g.Key).ToList();
 
@@ -67,6 +75,7 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 #lineas-list{flex:1;overflow-y:auto;padding:.4rem}
 .linea-item{display:flex;align-items:center;gap:6px;background:#1a1a2e;border:1px solid #2a2a4a;border-radius:8px;padding:5px 8px;margin-bottom:5px;font-size:.8rem;cursor:pointer;transition:border-color .15s}
 .linea-item.sel{border-color:#0d6efd;background:#0d6efd11}
+.linea-item.linea-env{opacity:.7;border-style:dashed}
 .l-cant{color:#6ea8fe;font-weight:700;min-width:22px;text-align:center}
 .l-nombre{flex:1}
 .l-precio{color:#aaa;font-size:.73rem;white-space:nowrap}
@@ -162,45 +171,57 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 	<div id="carrito">
 		<h3>🧾 Pedido</h3>
 		<div id="lineas-list">
-			@if (!Model.Pedido.Lineas.Any())
+			@{
+				var todasLineas = todosPedidos.SelectMany(p => p.Lineas).ToList();
+			}
+			@if (!todasLineas.Any())
 			{
 				<p style="color:#555577;text-align:center;padding:1.5rem;font-size:.82rem">Sin productos aún</p>
 			}
-			@foreach (var lin in Model.Pedido.Lineas)
+			@foreach (var pedido in todosPedidos.OrderBy(p => p.CreadoEn))
 			{
-				var precioPorUnidad = lin.PrecioOverride ?? lin.Producto?.Precio ?? 0;
-				var precioTotal     = precioPorUnidad * lin.Cantidad;
-				var puedeBorrar     = !pedidoEnv || esEncargado;
-				<div class="linea-item" data-linea-id="@lin.Id" onclick="selLinea(this,@lin.Id,'@(lin.Producto?.Nombre?.Replace("'","\\'")??"")') ">
-					<span class="l-cant">@lin.Cantidad×</span>
-					<span class="l-nombre">@lin.Producto?.Nombre</span>
-					<span class="l-precio">@precioTotal.ToString("0.00") €</span>
-					@if (puedeBorrar)
-					{
-						if (pedidoEnv)
+				var esteEnviado = pedido.Estado == EstadoPedidoMesa.Enviado;
+				@foreach (var lin in pedido.Lineas)
+				{
+					var precioPorUnidad = lin.PrecioOverride ?? lin.Producto?.Precio ?? 0;
+					var precioTotal     = precioPorUnidad * lin.Cantidad;
+					var puedeBorrar     = !esteEnviado || esEncargado;
+					<div class="linea-item @(esteEnviado?"linea-env":"")" data-linea-id="@lin.Id"
+						 onclick="selLinea(this,@lin.Id,'@(lin.Producto?.Nombre?.Replace("'","\\'")??"")') ">
+						<span class="l-cant">@lin.Cantidad×</span>
+						<span class="l-nombre">@lin.Producto?.Nombre</span>
+						<span class="l-precio">@precioTotal.ToString("0.00") €</span>
+						@if (puedeBorrar)
 						{
-							<!-- Encargado borrando producto ya enviado: pide motivo -->
-							<button type="button" class="btn-quitar"
-									onclick="event.stopPropagation();abrirModalBorrar(@lin.Id,'@(lin.Producto?.Nombre?.Replace("'","\\'")??"")') ">−</button>
+							if (esteEnviado)
+							{
+								<button type="button" class="btn-quitar"
+										onclick="event.stopPropagation();abrirModalBorrar(@lin.Id,'@(lin.Producto?.Nombre?.Replace("'","\\'")??"")') ">−</button>
+							}
+							else
+							{
+								<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0"
+									  onclick="event.stopPropagation()">
+									<input type="hidden" name="lineaId"  value="@lin.Id"/>
+									<input type="hidden" name="pedidoId" value="@pedido.Id"/>
+									<input type="hidden" name="zonaId"   value="@zonaId"/>
+									<input type="hidden" name="mesaId"   value="@mesaId"/>
+									<button type="submit" class="btn-quitar">−</button>
+								</form>
+							}
 						}
-						else
-						{
-							<!-- Pedido abierto: borrar directo -->
-							<form asp-controller="Staff" asp-action="QuitarLinea" method="post" style="margin:0"
-								  onclick="event.stopPropagation()">
-								<input type="hidden" name="lineaId"  value="@lin.Id"/>
-								<input type="hidden" name="pedidoId" value="@pedidoId"/>
-								<input type="hidden" name="zonaId"   value="@zonaId"/>
-								<input type="hidden" name="mesaId"   value="@mesaId"/>
-								<button type="submit" class="btn-quitar">−</button>
-							</form>
-						}
-					}
-				</div>
+					</div>
+				}
+				@if (esteEnviado && pedido.Lineas.Any())
+				{
+					<div style="border-top:1px dashed #2a2a4a;margin:4px 0 6px;font-size:.7rem;color:#555577;text-align:center">
+						— enviado —
+					</div>
+				}
 			}
 		</div>
 		<div id="total-row">
-			Total: @Model.Pedido.Lineas.Sum(l => (l.PrecioOverride ?? l.Producto?.Precio ?? 0) * l.Cantidad).ToString("0.00") €
+			Total: @totalGlobal.ToString("0.00") €
 		</div>
 	</div>
 </div>
