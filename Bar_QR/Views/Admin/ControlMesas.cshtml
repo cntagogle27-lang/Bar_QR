@@ -27,6 +27,7 @@
 	.zona-card.deshabilitada { opacity: .55; border-color: #ff6b6b44; }
 	.badge-hab  { background: #1db954; color: #fff; }
 	.badge-desh { background: #ff6b6b; color: #fff; }
+	.badge-cierre { background: #6c757d; color: #fff; }
 	.btn-toggle-on  { background: transparent; border: 1px solid #ff6b6b; color: #ff6b6b; }
 	.btn-toggle-on:hover  { background: #ff6b6b22; color: #ff6b6b; }
 	.btn-toggle-off { background: transparent; border: 1px solid #1db954; color: #1db954; }
@@ -69,14 +70,36 @@
 			var ocupadas = zona.Mesas.Count(m => m.Estado != Bar_QR.Models.EstadoMesa.Libre && m.Habilitada);
 			var deshabMesas = zona.Mesas.Count(m => !m.Habilitada);
 
+			// Comprobar si hay una regla de cierre activa ahora mismo para esta zona
+			var ahoraLocal  = DateTime.Now;
+			var hoyDow      = (int)ahoraLocal.DayOfWeek;
+			var ahoraTs     = ahoraLocal.TimeOfDay;
+			bool enCierre   = false;
+			foreach (var regla in reglasCierre.Where(r => r.Activa && r.ZonaId == zona.Id))
+			{
+				var diasRegla = ParseDias(regla.DiasJson);
+				if (diasRegla.Any() && !diasRegla.Contains(hoyDow)) continue;
+				if (TimeSpan.TryParse(regla.HoraInicio, out var ini) && TimeSpan.TryParse(regla.HoraFin, out var fin))
+				{
+					bool enRango = ini <= fin
+						? ahoraTs >= ini && ahoraTs < fin
+						: ahoraTs >= ini || ahoraTs < fin;
+					if (enRango) { enCierre = true; break; }
+				}
+			}
+
+			string badgeClass  = !zona.Habilitada ? "badge-desh" : (enCierre ? "badge-cierre" : "badge-hab");
+			string badgeTexto  = !zona.Habilitada ? "Deshabilitada" : (enCierre ? "Cierre programado" : "Habilitada");
+			string cardClass   = (!zona.Habilitada || enCierre) ? "deshabilitada" : "";
+
 			<div class="col">
-				<div class="zona-card p-4 @(!zona.Habilitada ? "deshabilitada" : "")">
+				<div class="zona-card p-4 @cardClass">
 					<div class="d-flex justify-content-between align-items-start mb-3">
 						<div>
 							<h5 class="fw-bold mb-1">🏠 @zona.Nombre</h5>
 							<div class="d-flex gap-2 flex-wrap">
-								<span class="badge @(zona.Habilitada ? "badge-hab" : "badge-desh") stat-pill">
-									@(zona.Habilitada ? "Habilitada" : "Deshabilitada")
+								<span class="badge @badgeClass stat-pill">
+									@badgeTexto
 								</span>
 								<span class="stat-pill stat-libre">@libres libres</span>
 								<span class="stat-pill stat-ocupada">@ocupadas ocupadas</span>
