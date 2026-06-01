@@ -9,6 +9,8 @@
 <script>
 // Cambios pendientes: mapa de id → {posX, posY, ancho, alto, nombre}
 const _cambiosPendientes = {};
+// Mesas pendientes de eliminar al guardar: mapa de id → true
+const _elimPendientes = {};
 
 // Guardar posición/tamaño de una mesa al servidor
 async function guardarMesa(id, posX, posY, ancho, alto, nombre) {
@@ -123,16 +125,21 @@ document.addEventListener('DOMContentLoaded', function() {
 		const btn = this;
 		btn.disabled = true;
 		btn.textContent = '⏳ Guardando...';
-		// Solo guardar los que tienen cambios pendientes; si no hay ninguno, guardar todos
-		const cambios = Object.values(_cambiosPendientes);
-		const aGuardar = cambios.length > 0 ? cambios : [...document.querySelectorAll('.mesa-card')].map(el => ({
-			id: el.dataset.id,
-			posX: parseInt(el.dataset.baseX) || 0,
-			posY: parseInt(el.dataset.baseY) || 0,
-			ancho: el.offsetWidth,
-			alto: el.offsetHeight,
-			nombre: el.querySelector('.mesa-nombre')?.textContent.trim()
+		// Eliminar mesas pendientes de borrado
+		const idsEliminar = Object.keys(_elimPendientes).map(Number);
+		const zonaId = @Model.Id;
+		await Promise.all(idsEliminar.map(id => {
+			const form = new FormData();
+			form.append('id', id);
+			form.append('zonaId', zonaId);
+			return fetch('/Admin/EliminarMesaZona', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
 		}));
+		// Eliminar visualmente las cards marcadas
+		document.querySelectorAll('.mesa-card[data-pendiente-eliminar="true"]').forEach(el => el.remove());
+		Object.keys(_elimPendientes).forEach(k => delete _elimPendientes[k]);
+		// Guardar los que tienen cambios pendientes de posición/nombre
+		const cambios = Object.values(_cambiosPendientes);
+		const aGuardar = cambios.length > 0 ? cambios : [];
 		await Promise.all(aGuardar.map(c => guardarMesa(c.id, c.posX, c.posY, c.ancho, c.alto, c.nombre)));
 		// Limpiar cambios pendientes
 		Object.keys(_cambiosPendientes).forEach(k => delete _cambiosPendientes[k]);
@@ -274,21 +281,35 @@ function marcarCambiosPendientes() {
 				<p id="elimMesaNombre" class="text-secondary small mb-4"></p>
 				<div class="d-flex gap-2">
 					<button class="btn btn-secondary flex-grow-1" data-bs-dismiss="modal">Cancelar</button>
-					<form id="formElimMesa" asp-action="EliminarMesaZona" method="post" class="flex-grow-1">
-						<input type="hidden" name="id"     id="elimMesaId" value="0"/>
-						<input type="hidden" name="zonaId" id="elimMesaZona" value="0"/>
-						<button type="submit" class="btn btn-danger w-100">Eliminar</button>
-					</form>
+					<button type="button" id="btnConfirmarEliminar" class="btn btn-danger flex-grow-1">Eliminar</button>
 				</div>
 			</div>
 		</div>
 	</div>
 </div>
 <script>
+let _mesaCardAEliminar = null;
+let _elimMesaIdPendiente = 0;
+let _elimZonaId = 0;
+
 function confirmarEliminarMesa(id, nombre, zonaId) {
-	document.getElementById('elimMesaId').value   = id;
-	document.getElementById('elimMesaZona').value = zonaId;
-	document.getElementById('elimMesaNombre').textContent = 'Se eliminará "' + nombre + '" de forma permanente.';
+	_elimMesaIdPendiente = id;
+	_elimZonaId = zonaId;
+	_mesaCardAEliminar = document.querySelector(`.mesa-card[data-id="${id}"]`);
+	document.getElementById('elimMesaNombre').textContent = 'Se eliminará "' + nombre + '" de forma permanente al guardar.';
 	new bootstrap.Modal(document.getElementById('modalEliminarMesa')).show();
 }
+
+document.getElementById('btnConfirmarEliminar').addEventListener('click', function() {
+	if (_mesaCardAEliminar) {
+		_mesaCardAEliminar.style.opacity = '0.3';
+		_mesaCardAEliminar.style.pointerEvents = 'none';
+		_mesaCardAEliminar.dataset.pendienteEliminar = 'true';
+	}
+	_elimPendientes[_elimMesaIdPendiente] = true;
+	// Quitar de cambios pendientes de posición si existía
+	delete _cambiosPendientes[_elimMesaIdPendiente];
+	marcarCambiosPendientes();
+	bootstrap.Modal.getInstance(document.getElementById('modalEliminarMesa')).hide();
+});
 </script>

@@ -482,7 +482,6 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public IActionResult ToggleHabilitarZona(int id)
     {
         Console.WriteLine($"[ToggleZona] id={id}");
@@ -715,6 +714,8 @@ public class AdminController : Controller
     {
         var mesa = _db.Mesas.Find(id);
         if (mesa != null) { _db.Mesas.Remove(mesa); _db.SaveChanges(); }
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            return Json(new { ok = true });
         return RedirectToAction("MapaZona", new { id = zonaId });
     }
 

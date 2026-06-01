@@ -200,7 +200,7 @@
 								@(r.Activa ? "Activa" : "Inactiva")
 							</span>
 						</div>
-						<span class="fw-bold" style="color:#ffc107">@r.HoraFin–@r.HoraInicio</span>
+						<span class="fw-bold" style="color:#ffc107">@r.HoraInicio–@r.HoraFin</span>
 					</div>
 					<div class="mt-1" style="font-size:.76rem;color:#aaa">
 						@(dias.Any() ? string.Join(", ", dias.Select(d => diasNombres[d])) : "Todos los días")
@@ -288,11 +288,11 @@
 					<div class="row g-2 mb-3">
 						<div class="col">
 							<label class="form-label">Desde</label>
-							<input type="time" class="form-control bg-dark text-light border-secondary" name="horaFin" id="cierreFin" />
+							<input type="time" class="form-control bg-dark text-light border-secondary" name="horaInicio" id="cierreInicio" />
 						</div>
 						<div class="col">
 							<label class="form-label">Hasta</label>
-							<input type="time" class="form-control bg-dark text-light border-secondary" name="horaInicio" id="cierreInicio" />
+							<input type="time" class="form-control bg-dark text-light border-secondary" name="horaFin" id="cierreFin" />
 						</div>
 					</div>
 					<div class="mb-3">
@@ -368,8 +368,8 @@ function abrirModalCierre(id, nombre, diasJson, inicio, fin, activa, zonaId) {
 	document.getElementById('cierreId').value       = id;
 	document.getElementById('cierreZonaId').value   = zonaId;
 	document.getElementById('cierreNombre').value   = nombre;
-	document.getElementById('cierreFin').value      = inicio;   // Desde (visual) ← HoraInicio (BD)
-	document.getElementById('cierreInicio').value   = fin;      // Hasta (visual) ← HoraFin (BD)
+	document.getElementById('cierreInicio').value   = inicio;   // Desde = HoraInicio
+	document.getElementById('cierreFin').value      = fin;      // Hasta = HoraFin
 	document.getElementById('cierreActiva').checked = activa;
 	var dias = [];
 	try { dias = JSON.parse(diasJson); } catch {}

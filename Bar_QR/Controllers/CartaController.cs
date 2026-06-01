@@ -225,9 +225,9 @@ public class CartaController : Controller
 					: ahoraTs >= ini || ahoraTs < fin;
 				if (enRango)
 					return View("AccesoDenegado", new AccesoDenegadoViewModel
-						{
-							Motivo = $"Este área está cerrada en este horario ({regla.HoraFin}–{regla.HoraInicio})."
-						});
+					{
+						Motivo = $"Este área está cerrada en este horario ({regla.HoraInicio}–{regla.HoraFin})."
+					});
 			}
 		}
 
