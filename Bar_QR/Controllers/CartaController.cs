@@ -223,11 +223,11 @@ public class CartaController : Controller
 				bool enRango = ini <= fin
 					? ahoraTs >= ini && ahoraTs < fin
 					: ahoraTs >= ini || ahoraTs < fin;
-				if (!enRango)
+				if (enRango)
 					return View("AccesoDenegado", new AccesoDenegadoViewModel
-					{
-						Motivo = $"Este área está cerrada en este horario ({regla.HoraInicio}–{regla.HoraFin})."
-					});
+						{
+							Motivo = $"Este área está cerrada en este horario ({regla.HoraFin}–{regla.HoraInicio})."
+						});
 			}
 		}
 

@@ -104,11 +104,12 @@
 									data-bs-target="#ocCierre@(zona.Id)">
 								🔒 Cierres
 							</button>
-							<a href="/Admin/ToggleHabilitarZona?id=@zona.Id"
-							   onclick="cerrarOffcanvas(event, this)"
-							   class="btn btn-sm @(zona.Habilitada ? "btn-toggle-on" : "btn-toggle-off")">
-								@(zona.Habilitada ? "🔒 Deshabilitar" : "✅ Habilitar")
-							</a>
+							<form asp-action="ToggleHabilitarZona" method="post" class="m-0">
+								<input type="hidden" name="id" value="@zona.Id" />
+								<button type="submit" class="btn btn-sm @(zona.Habilitada ? "btn-toggle-on" : "btn-toggle-off")">
+									@(zona.Habilitada ? "🔒 Deshabilitar" : "✅ Habilitar")
+								</button>
+							</form>
 						</div>
 				</div>
 			</div>
@@ -199,7 +200,7 @@
 								@(r.Activa ? "Activa" : "Inactiva")
 							</span>
 						</div>
-						<span class="fw-bold" style="color:#ffc107">@r.HoraInicio–@r.HoraFin</span>
+						<span class="fw-bold" style="color:#ffc107">@r.HoraFin–@r.HoraInicio</span>
 					</div>
 					<div class="mt-1" style="font-size:.76rem;color:#aaa">
 						@(dias.Any() ? string.Join(", ", dias.Select(d => diasNombres[d])) : "Todos los días")
@@ -287,11 +288,11 @@
 					<div class="row g-2 mb-3">
 						<div class="col">
 							<label class="form-label">Desde</label>
-							<input type="time" class="form-control bg-dark text-light border-secondary" name="horaInicio" id="cierreInicio" />
+							<input type="time" class="form-control bg-dark text-light border-secondary" name="horaFin" id="cierreFin" />
 						</div>
 						<div class="col">
 							<label class="form-label">Hasta</label>
-							<input type="time" class="form-control bg-dark text-light border-secondary" name="horaFin" id="cierreFin" />
+							<input type="time" class="form-control bg-dark text-light border-secondary" name="horaInicio" id="cierreInicio" />
 						</div>
 					</div>
 					<div class="mb-3">
@@ -367,8 +368,8 @@ function abrirModalCierre(id, nombre, diasJson, inicio, fin, activa, zonaId) {
 	document.getElementById('cierreId').value       = id;
 	document.getElementById('cierreZonaId').value   = zonaId;
 	document.getElementById('cierreNombre').value   = nombre;
-	document.getElementById('cierreInicio').value   = inicio;
-	document.getElementById('cierreFin').value      = fin;
+	document.getElementById('cierreFin').value      = inicio;   // Desde (visual) ← HoraInicio (BD)
+	document.getElementById('cierreInicio').value   = fin;      // Hasta (visual) ← HoraFin (BD)
 	document.getElementById('cierreActiva').checked = activa;
 	var dias = [];
 	try { dias = JSON.parse(diasJson); } catch {}

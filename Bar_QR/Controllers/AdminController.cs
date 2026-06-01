@@ -481,9 +481,8 @@ public class AdminController : Controller
         return View(zona);
     }
 
-    [HttpGet]
     [HttpPost]
-    [IgnoreAntiforgeryToken]
+    [ValidateAntiForgeryToken]
     public IActionResult ToggleHabilitarZona(int id)
     {
         Console.WriteLine($"[ToggleZona] id={id}");
