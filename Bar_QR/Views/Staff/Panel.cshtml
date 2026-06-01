@@ -98,6 +98,28 @@ html,body{height:100%;margin:0;background:#0f0f1a;color:#e0e0e0;font-family:'Seg
 .tecla-ext:hover:not(:disabled){background:#2a2a4a}
 .tecla-ext:disabled{opacity:.35;cursor:not-allowed}
 .tecla-clr{color:#ff6b6b;border-color:#ff6b6b55}
+
+/* ── RESPONSIVE MÓVIL ─────────────────────────────────────────────────────── */
+@@media (max-width: 768px) {
+  html,body{overflow:auto}
+  #app{height:auto;min-height:100vh;overflow:auto}
+  /* centro: columna vertical */
+  #centro{flex-direction:column;overflow:visible;height:auto}
+  /* panel izquierdo ocupa todo el ancho */
+  #panel-izq{overflow:visible;height:auto}
+  #cats{flex-wrap:nowrap;overflow-x:auto;padding:.5rem .6rem .3rem;gap:4px}
+  .btn-cat{white-space:nowrap;font-size:.75rem;padding:4px 10px}
+  #productos-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;padding:.5rem;overflow-y:visible;max-height:none}
+  .prod-btn img{width:36px;height:36px}
+  .prod-btn{padding:7px 4px;font-size:.72rem}
+  /* carrito: ancho total, altura fija con scroll */
+  #carrito{width:100%;border-left:none;border-top:1.5px solid #2a2a4a;max-height:220px}
+  /* barra inferior: envuelve en varias filas */
+  #barra-inferior{flex-wrap:wrap;gap:6px;padding:.5rem .7rem}
+  /* teclado: más compacto */
+  #teclado{min-width:0;width:100%}
+  .tecla{padding:8px 0;font-size:.85rem}
+}
 .tecla-prec{color:#ffc107;border-color:#ffc10755}
 .tecla-can{color:#0d6efd;border-color:#0d6efd55}
 

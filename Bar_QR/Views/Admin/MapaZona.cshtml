@@ -7,6 +7,9 @@
 @section Scripts {
 <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
 <script>
+// Cambios pendientes: mapa de id → {posX, posY, ancho, alto, nombre}
+const _cambiosPendientes = {};
+
 // Guardar posición/tamaño de una mesa al servidor
 async function guardarMesa(id, posX, posY, ancho, alto, nombre) {
 	const form = new FormData();
@@ -47,7 +50,15 @@ document.addEventListener('DOMContentLoaded', function() {
 					el.style.transform = '';
 					el.setAttribute('data-x', 0);
 					el.setAttribute('data-y', 0);
-					guardarMesa(el.dataset.id, posX, posY, el.offsetWidth, el.offsetHeight);
+					// Acumular cambio en memoria (no guardar aún)
+					const id = el.dataset.id;
+					_cambiosPendientes[id] = Object.assign(_cambiosPendientes[id] || {}, {
+						id, posX, posY,
+						ancho: el.offsetWidth,
+						alto: el.offsetHeight,
+						nombre: el.querySelector('.mesa-nombre')?.textContent.trim()
+					});
+					marcarCambiosPendientes();
 				}
 			}
 		})
@@ -66,7 +77,15 @@ document.addEventListener('DOMContentLoaded', function() {
 					const el = event.target;
 					const posX = parseInt(el.dataset.baseX) || 0;
 					const posY = parseInt(el.dataset.baseY) || 0;
-					guardarMesa(el.dataset.id, posX, posY, Math.round(el.offsetWidth), Math.round(el.offsetHeight));
+					// Acumular cambio en memoria (no guardar aún)
+					const id = el.dataset.id;
+					_cambiosPendientes[id] = Object.assign(_cambiosPendientes[id] || {}, {
+						id, posX, posY,
+						ancho: Math.round(el.offsetWidth),
+						alto: Math.round(el.offsetHeight),
+						nombre: el.querySelector('.mesa-nombre')?.textContent.trim()
+					});
+					marcarCambiosPendientes();
 				}
 			}
 		});
@@ -87,7 +106,15 @@ document.addEventListener('DOMContentLoaded', function() {
 			_renombreCard.querySelector('.mesa-nombre').textContent = nuevoNombre;
 			const posX = parseInt(_renombreCard.dataset.baseX) || 0;
 			const posY = parseInt(_renombreCard.dataset.baseY) || 0;
-			guardarMesa(_renombreCard.dataset.id, posX, posY, _renombreCard.offsetWidth, _renombreCard.offsetHeight, nuevoNombre);
+			const id = _renombreCard.dataset.id;
+			// Acumular cambio de nombre en memoria
+			_cambiosPendientes[id] = Object.assign(_cambiosPendientes[id] || {}, {
+				id, posX, posY,
+				ancho: _renombreCard.offsetWidth,
+				alto: _renombreCard.offsetHeight,
+				nombre: nuevoNombre
+			});
+			marcarCambiosPendientes();
 			bootstrap.Modal.getInstance(document.getElementById('modalRenombrar')).hide();
 		}
 	});
@@ -96,19 +123,35 @@ document.addEventListener('DOMContentLoaded', function() {
 		const btn = this;
 		btn.disabled = true;
 		btn.textContent = '⏳ Guardando...';
-		const cards = document.querySelectorAll('.mesa-card');
-		const promesas = [...cards].map(el => {
-			const posX = parseInt(el.dataset.baseX) || 0;
-			const posY = parseInt(el.dataset.baseY) || 0;
-			const nombre = el.querySelector('.mesa-nombre')?.textContent.trim();
-			return guardarMesa(el.dataset.id, posX, posY, el.offsetWidth, el.offsetHeight, nombre);
-		});
-		await Promise.all(promesas);
+		// Solo guardar los que tienen cambios pendientes; si no hay ninguno, guardar todos
+		const cambios = Object.values(_cambiosPendientes);
+		const aGuardar = cambios.length > 0 ? cambios : [...document.querySelectorAll('.mesa-card')].map(el => ({
+			id: el.dataset.id,
+			posX: parseInt(el.dataset.baseX) || 0,
+			posY: parseInt(el.dataset.baseY) || 0,
+			ancho: el.offsetWidth,
+			alto: el.offsetHeight,
+			nombre: el.querySelector('.mesa-nombre')?.textContent.trim()
+		}));
+		await Promise.all(aGuardar.map(c => guardarMesa(c.id, c.posX, c.posY, c.ancho, c.alto, c.nombre)));
+		// Limpiar cambios pendientes
+		Object.keys(_cambiosPendientes).forEach(k => delete _cambiosPendientes[k]);
 		btn.disabled = false;
 		btn.textContent = '✅ Guardado';
+		btn.classList.remove('btn-warning');
+		btn.classList.add('btn-success');
 		setTimeout(() => { btn.textContent = '💾 Guardar cambios'; }, 2000);
 	});
 });
+
+function marcarCambiosPendientes() {
+	const btn = document.getElementById('btnGuardarTodo');
+	if (btn) {
+		btn.textContent = '💾 Guardar cambios *';
+		btn.classList.remove('btn-success');
+		btn.classList.add('btn-warning');
+	}
+}
 </script>
 <style>
 	#mapa-container {
