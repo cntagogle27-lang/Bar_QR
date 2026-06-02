@@ -11,15 +11,7 @@ namespace Bar_QR.Controllers;
 [Authorize(Roles = "Admin")] // <--- ESTE ES EL CANDADO
 public class AdminController : Controller
 {
-	// Esta lista simula nuestra base de datos de productos
-    public static List<Producto> ListaProductosAdmin = new List<Producto>(); // Lista de productos administrados
-    // Lista de correos permitidos para personal (gestión desde Ajustes)
-    public static List<string> ListaEmailsStaff = new List<string> { // Correos del personal
-        "paco@bar.local",
-        "luis@bar.local"
-    }; // Fin de la lista de correos
-
-    // Lista de IPs permitidas para detección automática (whitelist)
+	// Lista de IPs permitidas para detección automática (whitelist)
     public static List<string> ListaIPsStaff = new List<string> { // IPs permitidas
         "127.0.0.1",
         "::1"
@@ -363,7 +355,6 @@ public class AdminController : Controller
     {
         if (!string.IsNullOrWhiteSpace(ip))
         {
-            if (!_db.Mesas.Any(m => false)) { }
             if (!_db.ProxyIps.Any(p => p.IpOrCidr.Equals(ip, StringComparison.OrdinalIgnoreCase)))
             {
                 _db.ProxyIps.Add(new ProxyIp { IpOrCidr = ip.Trim() });
