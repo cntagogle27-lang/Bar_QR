@@ -28,4 +28,6 @@ public class LineaPedido
 	public int Cantidad { get; set; } = 1;
 	/// <summary>Precio puntual modificado por el encargado (null = usar Producto.Precio)</summary>
 	public decimal? PrecioOverride { get; set; }
+	/// <summary>True cuando esta línea ya fue enviada a imprimir en una comanda.</summary>
+	public bool Impresa { get; set; } = false;
 }

@@ -196,6 +196,9 @@ public static class DbInitializer
 			// Columna DestinoImpresion en Productos (0=Barra, 1=Cocina)
 			try { context.Database.ExecuteSqlRaw("ALTER TABLE Productos ADD COLUMN DestinoImpresion INTEGER NOT NULL DEFAULT 0"); } catch { }
 
+			// Columna Impresa en LineasPedido (para no reimprimir líneas ya enviadas)
+			try { context.Database.ExecuteSqlRaw("ALTER TABLE LineasPedido ADD COLUMN Impresa INTEGER NOT NULL DEFAULT 0"); } catch { }
+
 			context.Database.ExecuteSqlRaw(@"
 				CREATE TABLE IF NOT EXISTS Pluses (
 					Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,

@@ -88,31 +88,34 @@ public static class EscPosService
 
 	/// <summary>Genera una Factura Proforma.</summary>
 	public static byte[] GenerarProforma(
-		string cabecera,
+		IEnumerable<string> cabeceraLineas,
+		IEnumerable<string> pieLineas,
 		int numeroMesa,
 		string mesaNombre,
 		IEnumerable<(string Nombre, int Cantidad, decimal Precio)> lineas,
 		decimal total)
 	{
-		return GenerarFactura(cabecera, "FACTURA PROFORMA", numeroMesa, mesaNombre, lineas, total, null);
+		return GenerarFactura(cabeceraLineas, pieLineas, "FACTURA PROFORMA", numeroMesa, mesaNombre, lineas, total, null);
 	}
 
 	/// <summary>Genera una Factura Simplificada definitiva.</summary>
 	public static byte[] GenerarFacturaSimple(
-		string cabecera,
+		IEnumerable<string> cabeceraLineas,
+		IEnumerable<string> pieLineas,
 		int numeroMesa,
 		string mesaNombre,
 		IEnumerable<(string Nombre, int Cantidad, decimal Precio)> lineas,
 		decimal total,
 		MetodoPago metodoPago)
 	{
-		return GenerarFactura(cabecera, "FACTURA SIMPLE", numeroMesa, mesaNombre, lineas, total, metodoPago);
+		return GenerarFactura(cabeceraLineas, pieLineas, "FACTURA SIMPLE", numeroMesa, mesaNombre, lineas, total, metodoPago);
 	}
 
 	// ── Internos ─────────────────────────────────────────────────────────────
 
 	private static byte[] GenerarFactura(
-		string cabecera,
+		IEnumerable<string> cabeceraLineas,
+		IEnumerable<string> pieLineas,
 		string tipoLabel,
 		int numeroMesa,
 		string mesaNombre,
@@ -125,7 +128,7 @@ public static class EscPosService
 		ms.Write(Codepage1252);
 		ms.Write(Align_Center);
 		ms.Write(Bold_On);
-		foreach (var linCab in cabecera.Split('\n'))
+		foreach (var linCab in cabeceraLineas)
 			ms.WriteLine(Centrar(linCab));
 		ms.Write(Bold_Off);
 		ms.WriteLine(Separador('='));
@@ -150,10 +153,16 @@ public static class EscPosService
 			ms.WriteLine(Separador('-'));
 			ms.WriteLine($"Pago: {MetodoPagoLabel(metodoPago.Value)}");
 		}
+		// Pie de la plantilla
+		var pieList = pieLineas.ToList();
+		if (pieList.Any())
+		{
+			ms.WriteLine(Separador('-'));
+			ms.Write(Align_Center);
+			foreach (var linPie in pieList)
+				ms.WriteLine(Centrar(linPie));
+		}
 		ms.Write(LineFeed);
-		ms.Write(LineFeed);
-		ms.Write(Align_Center);
-		ms.WriteLine("¡Gracias por su visita!");
 		ms.Write(LineFeed);
 		ms.Write(Cut);
 		return ms.ToArray();

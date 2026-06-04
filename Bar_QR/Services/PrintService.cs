@@ -13,12 +13,10 @@ namespace Bar_QR.Services;
 public class PrintService
 {
 	private readonly AppDbContext _db;
-	private readonly string _cabecera;
 
-	public PrintService(AppDbContext db, IConfiguration cfg)
+	public PrintService(AppDbContext db)
 	{
 		_db = db;
-		_cabecera = cfg["Ticket:Cabecera"] ?? "Bar_QR\nTicket de consumo";
 	}
 
 	public async Task EnolarCuentaAsync(int mesaId, string mesaNombre, int numeroMesa, string zonaNombre)
@@ -51,7 +49,9 @@ public class PrintService
 		var mesaNombre = pedido.Mesa?.Nombre ?? $"{pedido.MesaId}";
 		int mesa       = pedido.MesaId;
 
-		var todasLineas = pedido.Lineas.Where(l => l.Producto != null).ToList();
+		var todasLineas = pedido.Lineas.Where(l => l.Producto != null && !l.Impresa).ToList();
+		if (!todasLineas.Any()) return; // todas ya impresas
+
 		var barra  = todasLineas.Where(l => l.Producto!.DestinoImpresion == DestinoImpresion.Barra).ToList();
 		var cocina = todasLineas.Where(l => l.Producto!.DestinoImpresion == DestinoImpresion.Cocina).ToList();
 
@@ -71,6 +71,8 @@ public class PrintService
 					todasLineas.Select(l => (l.Producto!.Nombre, l.Cantidad)));
 				await GuardarTrabajoAsync(TipoTrabajoPrint.ComandaBarra, RolImpresora.Todas, bytes,
 					$"Mesa {mesaNombre} – Pedido #{pedidoId}");
+				foreach (var l in todasLineas) l.Impresa = true;
+				await _db.SaveChangesAsync();
 			}
 			return;
 		}
@@ -81,6 +83,7 @@ public class PrintService
 				barra.Select(l => (l.Producto!.Nombre, l.Cantidad)));
 			await GuardarTrabajoAsync(TipoTrabajoPrint.ComandaBarra, RolImpresora.Barra, bytes,
 				$"Mesa {mesaNombre} – Pedido #{pedidoId}");
+			foreach (var l in barra) l.Impresa = true;
 		}
 
 		if (cocina.Any())
@@ -89,7 +92,11 @@ public class PrintService
 				cocina.Select(l => (l.Producto!.Nombre, l.Cantidad)));
 			await GuardarTrabajoAsync(TipoTrabajoPrint.ComandaCocina, RolImpresora.Cocina, bytes,
 				$"Mesa {mesaNombre} – Pedido #{pedidoId}");
+			foreach (var l in cocina) l.Impresa = true;
 		}
+
+		if (barra.Any() || cocina.Any())
+			await _db.SaveChangesAsync();
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -107,7 +114,8 @@ public class PrintService
 		var mesaNombre = mesa?.Nombre ?? $"{mesaId}";
 		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
 		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal, zonaId);
-		var bytes = EscPosService.GenerarProforma(_cabecera, mesaId, mesaNombre, lineasConPluses, total);
+		var (cab, pie) = await ObtenerTextoPlantillaAsync();
+		var bytes = EscPosService.GenerarProforma(cab, pie, mesaId, mesaNombre, lineasConPluses, total);
 		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.Proforma, bytes, $"Mesa {mesaNombre} – Proforma");
 	}
 
@@ -126,13 +134,43 @@ public class PrintService
 		var mesaNombre = mesa?.Nombre ?? $"{mesaId}";
 		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
 		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal, zonaId);
-		var bytes = EscPosService.GenerarFacturaSimple(_cabecera, mesaId, mesaNombre, lineasConPluses, total, metodoPago);
+		var (cab, pie) = await ObtenerTextoPlantillaAsync();
+		var bytes = EscPosService.GenerarFacturaSimple(cab, pie, mesaId, mesaNombre, lineasConPluses, total, metodoPago);
 		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.FacturaSimple, bytes, $"Mesa {mesaNombre} – Factura Simple");
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
 	// Helpers
 	// ─────────────────────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Lee la plantilla de ticket de la BD y extrae los textos de cabecera y pie.
+	/// Devuelve listas de strings (una por elemento de tipo 'texto').
+	/// </summary>
+	private async Task<(List<string> Cab, List<string> Pie)> ObtenerTextoPlantillaAsync()
+	{
+		var plantilla = await _db.TicketPlantillas.FirstOrDefaultAsync();
+		if (plantilla is null) return (new(), new());
+
+		static List<string> Extraer(string json)
+		{
+			var result = new List<string>();
+			try
+			{
+				var doc = System.Text.Json.JsonDocument.Parse(json);
+				foreach (var el in doc.RootElement.EnumerateArray())
+				{
+					if (el.TryGetProperty("tipo", out var tipo) && tipo.GetString() == "texto"
+						&& el.TryGetProperty("contenido", out var cont))
+						result.Add(cont.GetString() ?? "");
+				}
+			}
+			catch { }
+			return result;
+		}
+
+		return (Extraer(plantilla.CabeceraJson), Extraer(plantilla.PieJson));
+	}
 
 	private async Task<List<(string Nombre, int Cantidad, decimal Precio)>> ObtenerLineasAgrupadasAsync(int mesaId)
 	{
