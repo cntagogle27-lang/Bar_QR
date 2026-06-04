@@ -210,7 +210,7 @@ public class StaffController : Controller
 	// ─── ENVIAR ──────────────────────────────────────────────────────────────────
 
 	[HttpPost]
-	public IActionResult EnviarPedido(int pedidoId, int zonaId, int mesaId)
+	public async Task<IActionResult> EnviarPedido(int pedidoId, int zonaId, int mesaId)
 	{
 		var pedido = _db.PedidosMesa.FirstOrDefault(p => p.Id == pedidoId);
 		if (pedido != null && pedido.Estado == EstadoPedidoMesa.Abierto)
@@ -219,6 +219,9 @@ public class StaffController : Controller
 			var mesa = _db.Mesas.Find(pedido.MesaId);
 			if (mesa != null) mesa.Estado = EstadoMesa.Ocupada;
 			_db.SaveChanges();
+
+			// Imprimir comanda en barra/cocina
+			await _print.EnolarComandasAsync(pedidoId);
 		}
 		return RedirectToAction("MapaMesas", new { zonaId });
 	}

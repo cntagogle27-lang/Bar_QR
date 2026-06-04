@@ -36,21 +36,11 @@ public static class EscPosService
 		ms.Write(Font_Normal);
 		ms.Write(Bold_Off);
 		ms.WriteLine(Separador('='));
-		if (!string.IsNullOrWhiteSpace(zonaNombre))
-		{
-			ms.Write(Bold_On);
-			ms.WriteLine(Centrar(zonaNombre.ToUpperInvariant()));
-			ms.Write(Bold_Off);
-		}
-		ms.WriteLine(Separador('-'));
 		ms.Write(Align_Left);
 		ms.Write(Bold_On);
-		ms.WriteLine($"Mesa:   {mesaNombre}");
-		ms.WriteLine($"Número: {numeroMesa}");
+		ms.WriteLine($"Cuenta Mesa: {mesaNombre}");
 		ms.Write(Bold_Off);
 		ms.WriteLine(Separador('='));
-		ms.Write(Align_Center);
-		ms.WriteLine(Centrar("El cliente solicita la cuenta"));
 		ms.Write(LineFeed);
 		ms.Write(LineFeed);
 		ms.Write(Cut);
@@ -60,6 +50,7 @@ public static class EscPosService
 	/// <summary>Genera un ticket de comanda (Barra o Cocina).</summary>
 	public static byte[] GenerarComanda(
 		int numeroMesa,
+		string mesaNombre,
 		string zonaOpcional,
 		string destino,                     // "BARRA" | "COCINA"
 		IEnumerable<(string Nombre, int Cantidad)> lineas)
@@ -75,11 +66,17 @@ public static class EscPosService
 		ms.WriteLine(Separador('-'));
 		ms.Write(Align_Left);
 		ms.Write(Bold_On);
-		ms.WriteLine($"MESA {numeroMesa}  {zonaOpcional}".Trim());
+		ms.WriteLine($"M: {mesaNombre}");
+		if (!string.IsNullOrWhiteSpace(zonaOpcional))
+			ms.WriteLine(zonaOpcional);
 		ms.Write(Bold_Off);
 		ms.WriteLine(Separador('-'));
 		foreach (var (nombre, cant) in lineas)
-			ms.WriteLine(LineaProducto(cant.ToString(), nombre, null));
+		{
+			ms.Write(Bold_On);
+			ms.WriteLine($"M: {mesaNombre} : {cant}x {nombre}");
+			ms.Write(Bold_Off);
+		}
 		ms.Write(LineFeed);
 		ms.Write(Cut);
 		return ms.ToArray();
@@ -89,21 +86,23 @@ public static class EscPosService
 	public static byte[] GenerarProforma(
 		string cabecera,
 		int numeroMesa,
+		string mesaNombre,
 		IEnumerable<(string Nombre, int Cantidad, decimal Precio)> lineas,
 		decimal total)
 	{
-		return GenerarFactura(cabecera, "FACTURA PROFORMA", numeroMesa, lineas, total, null);
+		return GenerarFactura(cabecera, "FACTURA PROFORMA", numeroMesa, mesaNombre, lineas, total, null);
 	}
 
 	/// <summary>Genera una Factura Simplificada definitiva.</summary>
 	public static byte[] GenerarFacturaSimple(
 		string cabecera,
 		int numeroMesa,
+		string mesaNombre,
 		IEnumerable<(string Nombre, int Cantidad, decimal Precio)> lineas,
 		decimal total,
 		MetodoPago metodoPago)
 	{
-		return GenerarFactura(cabecera, "FACTURA SIMPLE", numeroMesa, lineas, total, metodoPago);
+		return GenerarFactura(cabecera, "FACTURA SIMPLE", numeroMesa, mesaNombre, lineas, total, metodoPago);
 	}
 
 	// ── Internos ─────────────────────────────────────────────────────────────
@@ -112,6 +111,7 @@ public static class EscPosService
 		string cabecera,
 		string tipoLabel,
 		int numeroMesa,
+		string mesaNombre,
 		IEnumerable<(string Nombre, int Cantidad, decimal Precio)> lineas,
 		decimal total,
 		MetodoPago? metodoPago)
@@ -127,7 +127,7 @@ public static class EscPosService
 		ms.WriteLine(Centrar(tipoLabel));
 		ms.WriteLine(Separador('='));
 		ms.Write(Align_Left);
-		ms.WriteLine($"Mesa: {numeroMesa}");
+		ms.WriteLine($"Mesa: {mesaNombre}");
 		ms.WriteLine($"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}");
 		ms.WriteLine(Separador('-'));
 		ms.Write(Bold_On);

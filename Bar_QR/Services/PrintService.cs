@@ -46,26 +46,27 @@ public class PrintService
 
 		if (pedido is null || !pedido.Lineas.Any()) return;
 
-		var zonaLabel = pedido.Mesa?.Zona?.Nombre ?? "";
-		int mesa      = pedido.MesaId;
+		var zonaLabel  = pedido.Mesa?.Zona?.Nombre ?? "";
+		var mesaNombre = pedido.Mesa?.Nombre ?? $"{pedido.MesaId}";
+		int mesa       = pedido.MesaId;
 
 		var barra  = pedido.Lineas.Where(l => l.Producto?.DestinoImpresion == DestinoImpresion.Barra).ToList();
 		var cocina = pedido.Lineas.Where(l => l.Producto?.DestinoImpresion == DestinoImpresion.Cocina).ToList();
 
 		if (barra.Any())
 		{
-			var bytes = EscPosService.GenerarComanda(mesa, zonaLabel, "BARRA",
+			var bytes = EscPosService.GenerarComanda(mesa, mesaNombre, zonaLabel, "BARRA",
 				barra.Select(l => (l.Producto!.Nombre, l.Cantidad)));
 			await GuardarTrabajoAsync(TipoTrabajoPrint.ComandaBarra, RolImpresora.Barra, bytes,
-				$"Mesa {mesa} – Pedido #{pedidoId}");
+				$"Mesa {mesaNombre} – Pedido #{pedidoId}");
 		}
 
 		if (cocina.Any())
 		{
-			var bytes = EscPosService.GenerarComanda(mesa, zonaLabel, "COCINA",
+			var bytes = EscPosService.GenerarComanda(mesa, mesaNombre, zonaLabel, "COCINA",
 				cocina.Select(l => (l.Producto!.Nombre, l.Cantidad)));
 			await GuardarTrabajoAsync(TipoTrabajoPrint.ComandaCocina, RolImpresora.Cocina, bytes,
-				$"Mesa {mesa} – Pedido #{pedidoId}");
+				$"Mesa {mesaNombre} – Pedido #{pedidoId}");
 		}
 	}
 
@@ -80,10 +81,11 @@ public class PrintService
 
 		var mesa = await _db.Mesas.FindAsync(mesaId);
 		var zonaId = mesa?.ZonaId ?? 0;
+		var mesaNombre = mesa?.Nombre ?? $"{mesaId}";
 		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
 		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal, zonaId);
-		var bytes = EscPosService.GenerarProforma(_cabecera, mesaId, lineasConPluses, total);
-		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.Proforma, bytes, $"Mesa {mesaId} – Proforma");
+		var bytes = EscPosService.GenerarProforma(_cabecera, mesaId, mesaNombre, lineasConPluses, total);
+		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.Proforma, bytes, $"Mesa {mesaNombre} – Proforma");
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -97,10 +99,11 @@ public class PrintService
 
 		var mesa = await _db.Mesas.FindAsync(mesaId);
 		var zonaId = mesa?.ZonaId ?? 0;
+		var mesaNombre = mesa?.Nombre ?? $"{mesaId}";
 		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
 		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal, zonaId);
-		var bytes = EscPosService.GenerarFacturaSimple(_cabecera, mesaId, lineasConPluses, total, metodoPago);
-		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.FacturaSimple, bytes, $"Mesa {mesaId} – Factura Simple");
+		var bytes = EscPosService.GenerarFacturaSimple(_cabecera, mesaId, mesaNombre, lineasConPluses, total, metodoPago);
+		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.FacturaSimple, bytes, $"Mesa {mesaNombre} – Factura Simple");
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
