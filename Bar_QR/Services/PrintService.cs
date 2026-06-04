@@ -264,7 +264,7 @@ public class PrintService
 
 				/// <summary>
 				/// Encola un trabajo de factura (Proforma o FacturaSimple) para todas las impresoras
-				/// que tengan ImprimeFacturas=true. Si no hay ninguna, usa cualquier impresora activa con rol Todas.
+				/// que tengan ImprimeFacturas=true. Si no hay ninguna, no imprime nada.
 				/// </summary>
 				private async Task GuardarTrabajoFacturaAsync(TipoTrabajoPrint tipo, byte[] bytes, string referencia)
 				{
@@ -272,14 +272,8 @@ public class PrintService
 						.Where(i => i.Activa && i.ImprimeFacturas)
 						.ToListAsync();
 
-					// Fallback: si no hay ninguna con ImprimeFacturas, enrutar a rol Todas (comportamiento anterior)
-					if (!impresoras.Any())
-					{
-						await GuardarTrabajoAsync(tipo, RolImpresora.Todas, bytes, referencia);
-						return;
-					}
+					if (!impresoras.Any()) return; // ninguna impresora tiene facturas habilitadas → no imprimir
 
-					// Crear un trabajo por cada impresora configurada para facturas
 					foreach (var imp in impresoras)
 					{
 						_db.TrabajosPrint.Add(new TrabajoPrint
