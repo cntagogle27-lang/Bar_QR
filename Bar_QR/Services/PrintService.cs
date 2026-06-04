@@ -23,6 +23,7 @@ public class PrintService
 
 	public async Task EnolarCuentaAsync(int mesaId, string mesaNombre, int numeroMesa, string zonaNombre)
 	{
+		if (!await _db.Impresoras.AnyAsync(i => i.Activa)) return;
 		var bytes = EscPosService.GenerarSolicitudCuenta(zonaNombre, mesaNombre, numeroMesa);
 		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.SolicitudCuenta, bytes,
 			$"Cuenta – Mesa {mesaNombre}");
@@ -54,7 +55,10 @@ public class PrintService
 		var barra  = todasLineas.Where(l => l.Producto!.DestinoImpresion == DestinoImpresion.Barra).ToList();
 		var cocina = todasLineas.Where(l => l.Producto!.DestinoImpresion == DestinoImpresion.Cocina).ToList();
 
-		// Si hay impresora específica de Barra/Cocina, separar; si solo hay "Todas", mandar todo junto
+		// Si no hay ninguna impresora activa, no imprimir nada
+		bool hayAlgunaImpresora = await _db.Impresoras.AnyAsync(i => i.Activa);
+		if (!hayAlgunaImpresora) return;
+
 		bool hayImpresoraBarra  = await _db.Impresoras.AnyAsync(i => i.Activa && i.Rol == RolImpresora.Barra);
 		bool hayImpresoraCocina = await _db.Impresoras.AnyAsync(i => i.Activa && i.Rol == RolImpresora.Cocina);
 
@@ -94,6 +98,7 @@ public class PrintService
 
 	public async Task EnolarProformaAsync(int mesaId)
 	{
+		if (!await _db.Impresoras.AnyAsync(i => i.Activa)) return;
 		var lineas = await ObtenerLineasAgrupadasAsync(mesaId);
 		if (!lineas.Any()) return;
 
@@ -112,6 +117,7 @@ public class PrintService
 
 	public async Task EnolarFacturaSimpleAsync(int mesaId, MetodoPago metodoPago)
 	{
+		if (!await _db.Impresoras.AnyAsync(i => i.Activa)) return;
 		var lineas = await ObtenerLineasAgrupadasAsync(mesaId);
 		if (!lineas.Any()) return;
 
