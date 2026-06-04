@@ -24,8 +24,8 @@ public class PrintService
 	public async Task EnolarCuentaAsync(int mesaId, string mesaNombre, int numeroMesa, string zonaNombre)
 	{
 		var bytes = EscPosService.GenerarSolicitudCuenta(zonaNombre, mesaNombre, numeroMesa);
-		await GuardarTrabajoAsync(TipoTrabajoPrint.SolicitudCuenta, RolImpresora.Todas, bytes,
-			$"Cuenta – Mesa {numeroMesa}");
+		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.SolicitudCuenta, bytes,
+			$"Cuenta – Mesa {mesaNombre}");
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -50,8 +50,26 @@ public class PrintService
 		var mesaNombre = pedido.Mesa?.Nombre ?? $"{pedido.MesaId}";
 		int mesa       = pedido.MesaId;
 
-		var barra  = pedido.Lineas.Where(l => l.Producto?.DestinoImpresion == DestinoImpresion.Barra).ToList();
-		var cocina = pedido.Lineas.Where(l => l.Producto?.DestinoImpresion == DestinoImpresion.Cocina).ToList();
+		var todasLineas = pedido.Lineas.Where(l => l.Producto != null).ToList();
+		var barra  = todasLineas.Where(l => l.Producto!.DestinoImpresion == DestinoImpresion.Barra).ToList();
+		var cocina = todasLineas.Where(l => l.Producto!.DestinoImpresion == DestinoImpresion.Cocina).ToList();
+
+		// Si hay impresora específica de Barra/Cocina, separar; si solo hay "Todas", mandar todo junto
+		bool hayImpresoraBarra  = await _db.Impresoras.AnyAsync(i => i.Activa && i.Rol == RolImpresora.Barra);
+		bool hayImpresoraCocina = await _db.Impresoras.AnyAsync(i => i.Activa && i.Rol == RolImpresora.Cocina);
+
+		if (!hayImpresoraBarra && !hayImpresoraCocina)
+		{
+			// Solo impresora "Todas": un único ticket con todos los productos
+			if (todasLineas.Any())
+			{
+				var bytes = EscPosService.GenerarComanda(mesa, mesaNombre, zonaLabel, "PEDIDO",
+					todasLineas.Select(l => (l.Producto!.Nombre, l.Cantidad)));
+				await GuardarTrabajoAsync(TipoTrabajoPrint.ComandaBarra, RolImpresora.Todas, bytes,
+					$"Mesa {mesaNombre} – Pedido #{pedidoId}");
+			}
+			return;
+		}
 
 		if (barra.Any())
 		{
