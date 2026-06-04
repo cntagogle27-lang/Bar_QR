@@ -220,8 +220,8 @@ public class StaffController : Controller
 			if (mesa != null) mesa.Estado = EstadoMesa.Ocupada;
 			_db.SaveChanges();
 
-			// Imprimir comanda en barra/cocina
-			await _print.EnolarComandasAsync(pedidoId);
+			// Imprimir comanda en barra/cocina (si falla la impresión, el pedido ya se guardó)
+			try { await _print.EnolarComandasAsync(pedidoId); } catch { }
 		}
 		return RedirectToAction("MapaMesas", new { zonaId });
 	}

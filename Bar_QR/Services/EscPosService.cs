@@ -196,8 +196,13 @@ public static class EscPosService
 // ── Extensión para MemoryStream ──────────────────────────────────────────────
 file static class MemoryStreamExtensions
 {
-	// Windows-1252 coincide con el codepage ESC t 16 enviado al inicio del ticket
-	private static readonly Encoding Enc = Encoding.GetEncoding(1252);
+	// Windows-1252 coincide con ESC t 16; en Linux requiere CodePagesEncodingProvider registrado
+	private static readonly Encoding Enc = GetEnc();
+	private static Encoding GetEnc()
+	{
+		try { return Encoding.GetEncoding(1252); }
+		catch { return Encoding.Latin1; } // fallback si el sistema no lo tiene
+	}
 
 	public static void Write(this MemoryStream ms, byte[] bytes)   => ms.Write(bytes, 0, bytes.Length);
 	public static void WriteLine(this MemoryStream ms, string text) => ms.Write(Enc.GetBytes(text + "\n"));

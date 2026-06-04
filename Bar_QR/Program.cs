@@ -3,6 +3,11 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
+
+// Necesario para Encoding.GetEncoding(1252) en Linux (Railway)
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Asegurar que las variables de entorno se cargan (Railway las inyecta como env vars del SO)

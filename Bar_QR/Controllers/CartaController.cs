@@ -99,8 +99,8 @@ public class CartaController : Controller
 		mesa.Estado = EstadoMesa.Ocupada;
 		await _db.SaveChangesAsync();
 
-		// Imprimir comandas
-		await _print.EnolarComandasAsync(pedido.Id);
+		// Imprimir comandas (si falla la impresión, el pedido ya se guardó)
+		try { await _print.EnolarComandasAsync(pedido.Id); } catch { }
 
 		return Json(new { success = true, message = "¡Pedido enviado!" });
 	}
