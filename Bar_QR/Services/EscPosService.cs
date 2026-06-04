@@ -148,7 +148,7 @@ public static class EscPosService
 		if (imprimirDesglose)
 		{
 			ms.Write(Bold_On);
-			ms.WriteLine(LineaProducto("Cant", "Descripción", "Precio"));
+			ms.WriteLine(LineaProducto("Uds.", "Descripción", "Importe"));
 			ms.Write(Bold_Off);
 			ms.WriteLine(Separador('-'));
 			foreach (var (nombre, cant, precio) in lineasList)
@@ -198,15 +198,18 @@ public static class EscPosService
 	private static string Centrar(string texto, int cols = COLS) =>
 		texto.Length >= cols ? texto[..cols] : texto.PadLeft((cols + texto.Length) / 2).PadRight(cols);
 
+	private const int CANT_W = 5; // "Uds." + 1 espacio → 5 chars
+
 	private static string LineaProducto(string cant, string nombre, string? precio)
 	{
-		int priceCols = precio is null ? 0 : precio.Length + 1;
-		int cantCols  = cant.Length + 1;
-		int nombreCols = COLS - cantCols - priceCols;
+		int priceCols  = precio is null ? 0 : precio.Length + 1;
+		int nombreCols = COLS - CANT_W - priceCols;
+		if (nombreCols < 1) nombreCols = 1;
+		string cantPad  = cant.PadRight(CANT_W);
 		string nomTrunc = nombre.Length > nombreCols ? nombre[..nombreCols] : nombre.PadRight(nombreCols);
 		return precio is null
-			? $"{cant,-4}{nomTrunc}"
-			: $"{cant,-4}{nomTrunc}{precio.PadLeft(priceCols)}";
+			? $"{cantPad}{nomTrunc}"
+			: $"{cantPad}{nomTrunc}{precio.PadLeft(priceCols)}";
 	}
 
 	private static string LineaTotal(string etiqueta, string valor)
