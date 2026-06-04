@@ -151,16 +151,15 @@ public class AdminController : Controller
             return BadRequest();
         using var ms = new MemoryStream();
         await imagen.CopyToAsync(ms);
-        var ti = new Models.TicketImagen
-        {
-            Nombre   = Path.GetFileNameWithoutExtension(imagen.FileName),
-            Data     = ms.ToArray(),
-            MimeType = imagen.ContentType,
-            Zona     = zona ?? "cabecera"
-        };
+        var bytes    = ms.ToArray();
+        var nombre   = Path.GetFileNameWithoutExtension(imagen.FileName);
+        var mime     = imagen.ContentType;
+        var dataUrl  = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+        // Guardamos también en BD como respaldo (para la URL legacy)
+        var ti = new Models.TicketImagen { Nombre = nombre, Data = bytes, MimeType = mime, Zona = zona ?? "cabecera" };
         _db.TicketImagenes.Add(ti);
         _db.SaveChanges();
-        return Json(new { id = ti.Id, nombre = ti.Nombre });
+        return Json(new { id = ti.Id, nombre, dataUrl });
     }
 
     [AllowAnonymous]

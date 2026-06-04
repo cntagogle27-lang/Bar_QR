@@ -8,212 +8,233 @@
 
 @section Scripts {
 <script>
-// ── Estado del editor (lista ordenada, sin coordenadas) ───────────
+// ── Estado ────────────────────────────────────────────────────────
 const estado = { cabecera: [], pie: [] };
 
 function cargarZona(zona, json) {
     try { estado[zona] = JSON.parse(json) || []; } catch { estado[zona] = []; }
     renderZona(zona);
 }
-
 function inicializarEditor() {
     const ci = document.getElementById('cabeceraJson');
     const pi = document.getElementById('pieJson');
     if (ci && pi) { cargarZona('cabecera', ci.value); cargarZona('pie', pi.value); }
 }
-
-// ── Serializar ────────────────────────────────────────────────────
 function serializarZona(zona) {
     document.getElementById(zona + 'Json').value = JSON.stringify(estado[zona]);
 }
 
-// ── Render de una zona (lista vertical) ───────────────────────────
+// ── Render ────────────────────────────────────────────────────────
 function renderZona(zona) {
     const cont = document.getElementById('zona-' + zona);
     cont.innerHTML = '';
     estado[zona].forEach((el, i) => {
-        const row = document.createElement('div');
-        row.className = 'ticket-item d-flex align-items-center gap-2 mb-1';
+        const card = document.createElement('div');
+        card.className = 'ticket-item border rounded p-2 mb-2 bg-white';
 
         if (el.tipo === 'texto') {
+            // Fila 1: input texto
+            const row1 = document.createElement('div');
+            row1.className = 'd-flex align-items-center gap-2 mb-1';
             const inp = document.createElement('input');
-            inp.type = 'text';
-            inp.className = 'form-control form-control-sm flex-grow-1';
+            inp.type = 'text'; inp.className = 'form-control form-control-sm flex-grow-1';
             inp.value = el.contenido || '';
             inp.addEventListener('input', () => { estado[zona][i].contenido = inp.value; serializarZona(zona); actualizarPreview(); });
-            row.appendChild(inp);
+            row1.appendChild(inp);
+            row1.appendChild(botonesOrden(zona, i));
+            card.appendChild(row1);
+
+            // Fila 2: alineación + tamaño fuente
+            const row2 = document.createElement('div');
+            row2.className = 'd-flex align-items-center gap-2 flex-wrap';
+            row2.innerHTML = `
+                <small class="text-muted">Alineación:</small>
+                ${['izquierda','centro','derecha'].map(a =>
+                    `<button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 ${(el.align||'centro')===a?'active':''}"
+                        onclick="setAlign('${zona}',${i},'${a}')">${a==='izquierda'?'⬅':a==='centro'?'↔':'➡'}</button>`
+                ).join('')}
+                <small class="text-muted ms-2">Tamaño:</small>
+                <input type="range" min="8" max="24" value="${el.fs||12}" style="width:80px"
+                    oninput="setFs('${zona}',${i},+this.value); this.nextElementSibling.innerText=this.value+'px'">
+                <small>${el.fs||12}px</small>`;
+            card.appendChild(row2);
+
         } else {
-            const imgWrap = document.createElement('div');
-            imgWrap.className = 'flex-grow-1 d-flex align-items-center gap-2';
-            imgWrap.innerHTML = `<img src="/Admin/ImagenTicket/${el.imgId}" style="max-height:40px;max-width:80px;object-fit:contain;border:1px solid #ddd;border-radius:4px;" /><span class="text-muted small">${el.nombre || 'imagen'}</span>`;
-            row.appendChild(imgWrap);
+            // Imagen
+            const imgSrc = el.dataUrl || `/Admin/ImagenTicket/${el.imgId}`;
+            const row1 = document.createElement('div');
+            row1.className = 'd-flex align-items-center gap-2 mb-1';
+            row1.innerHTML = `<img src="${imgSrc}" style="max-height:48px;max-width:90px;object-fit:contain;border:1px solid #ddd;border-radius:4px;" />
+                              <span class="text-muted small flex-grow-1">${el.nombre||'imagen'}</span>`;
+            row1.appendChild(botonesOrden(zona, i));
+            card.appendChild(row1);
+
+            // Fila 2: tamaño imagen + alineación
+            const row2 = document.createElement('div');
+            row2.className = 'd-flex align-items-center gap-2 flex-wrap';
+            row2.innerHTML = `
+                <small class="text-muted">Alineación:</small>
+                ${['izquierda','centro','derecha'].map(a =>
+                    `<button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 ${(el.align||'centro')===a?'active':''}"
+                        onclick="setAlign('${zona}',${i},'${a}')">${a==='izquierda'?'⬅':a==='centro'?'↔':'➡'}</button>`
+                ).join('')}
+                <small class="text-muted ms-2">Ancho:</small>
+                <input type="range" min="20" max="200" value="${el.imgW||80}" style="width:80px"
+                    oninput="setImgW('${zona}',${i},+this.value); this.nextElementSibling.innerText=this.value+'px'">
+                <small>${el.imgW||80}px</small>`;
+            card.appendChild(row2);
         }
 
-        // Botones ↑ ↓ y eliminar
-        const btnUp = document.createElement('button');
-        btnUp.type = 'button'; btnUp.className = 'btn btn-sm btn-outline-secondary py-0 px-1';
-        btnUp.innerHTML = '↑'; btnUp.title = 'Subir';
-        btnUp.disabled = i === 0;
-        btnUp.onclick = () => { [estado[zona][i-1], estado[zona][i]] = [estado[zona][i], estado[zona][i-1]]; serializarZona(zona); renderZona(zona); };
-
-        const btnDn = document.createElement('button');
-        btnDn.type = 'button'; btnDn.className = 'btn btn-sm btn-outline-secondary py-0 px-1';
-        btnDn.innerHTML = '↓'; btnDn.title = 'Bajar';
-        btnDn.disabled = i === estado[zona].length - 1;
-        btnDn.onclick = () => { [estado[zona][i], estado[zona][i+1]] = [estado[zona][i+1], estado[zona][i]]; serializarZona(zona); renderZona(zona); };
-
-        const btnDel = document.createElement('button');
-        btnDel.type = 'button'; btnDel.className = 'btn btn-sm btn-outline-danger py-0 px-1';
-        btnDel.innerHTML = '✕'; btnDel.title = 'Eliminar';
-        btnDel.onclick = () => { estado[zona].splice(i, 1); serializarZona(zona); renderZona(zona); };
-
-        row.appendChild(btnUp); row.appendChild(btnDn); row.appendChild(btnDel);
-        cont.appendChild(row);
+        cont.appendChild(card);
     });
     actualizarPreview();
 }
 
-// ── Añadir texto ──────────────────────────────────────────────────
-function agregarTexto(zona) {
-    estado[zona].push({ tipo: 'texto', contenido: 'Texto' });
-    serializarZona(zona);
-    renderZona(zona);
+function botonesOrden(zona, i) {
+    const wrap = document.createElement('div');
+    wrap.className = 'd-flex gap-1';
+
+    const btnUp = document.createElement('button');
+    btnUp.type='button'; btnUp.className='btn btn-sm btn-outline-secondary py-0 px-1';
+    btnUp.innerHTML='↑'; btnUp.disabled = i===0;
+    btnUp.onclick = () => { [estado[zona][i-1],estado[zona][i]]=[estado[zona][i],estado[zona][i-1]]; serializarZona(zona); renderZona(zona); };
+
+    const btnDn = document.createElement('button');
+    btnDn.type='button'; btnDn.className='btn btn-sm btn-outline-secondary py-0 px-1';
+    btnDn.innerHTML='↓'; btnDn.disabled = i===estado[zona].length-1;
+    btnDn.onclick = () => { [estado[zona][i],estado[zona][i+1]]=[estado[zona][i+1],estado[zona][i]]; serializarZona(zona); renderZona(zona); };
+
+    const btnDel = document.createElement('button');
+    btnDel.type='button'; btnDel.className='btn btn-sm btn-outline-danger py-0 px-1';
+    btnDel.innerHTML='✕';
+    btnDel.onclick = () => { estado[zona].splice(i,1); serializarZona(zona); renderZona(zona); };
+
+    wrap.appendChild(btnUp); wrap.appendChild(btnDn); wrap.appendChild(btnDel);
+    return wrap;
 }
 
-// ── Subir imagen ──────────────────────────────────────────────────
+function setAlign(zona, i, val) { estado[zona][i].align = val; serializarZona(zona); renderZona(zona); }
+function setFs(zona, i, val)    { estado[zona][i].fs    = val; serializarZona(zona); actualizarPreview(); }
+function setImgW(zona, i, val)  { estado[zona][i].imgW  = val; serializarZona(zona); actualizarPreview(); }
+
+// ── Añadir texto ──────────────────────────────────────────────────
+function agregarTexto(zona) {
+    estado[zona].push({ tipo:'texto', contenido:'Texto', align:'centro', fs:12 });
+    serializarZona(zona); renderZona(zona);
+}
+
+// ── Subir imagen (guarda dataUrl en el JSON → no depende del servidor) ──
 function subirImagen(input, zona) {
     const file = input.files[0];
     if (!file) return;
-    const fd = new FormData();
-    fd.append('imagen', file);
-    fd.append('zona', zona);
-    const tok = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-    fetch('/Admin/SubirImagenTicket', { method: 'POST', body: fd, headers: { 'RequestVerificationToken': tok } })
-        .then(r => r.json()).then(data => {
-            estado[zona].push({ tipo: 'imagen', imgId: data.id, nombre: data.nombre });
-            serializarZona(zona); renderZona(zona);
-        });
+    const reader = new FileReader();
+    reader.onload = e => {
+        const dataUrl = e.target.result;
+        const fd = new FormData();
+        fd.append('imagen', file); fd.append('zona', zona);
+        const tok = document.querySelector('input[name="__RequestVerificationToken"]')?.value||'';
+        fetch('/Admin/SubirImagenTicket', { method:'POST', body:fd, headers:{'RequestVerificationToken':tok} })
+            .then(r => r.json())
+            .then(data => {
+                estado[zona].push({ tipo:'imagen', imgId:data.id, dataUrl, nombre:data.nombre, align:'centro', imgW:80 });
+                serializarZona(zona); renderZona(zona);
+            })
+            .catch(() => {
+                // fallback: solo dataUrl si el servidor falla
+                estado[zona].push({ tipo:'imagen', dataUrl, nombre:file.name, align:'centro', imgW:80 });
+                serializarZona(zona); renderZona(zona);
+            });
+    };
+    reader.readAsDataURL(file);
     input.value = '';
 }
 
 // ── Vista previa ──────────────────────────────────────────────────
 const PREVIEW_ITEMS = [
-    { uds: 2, nombre: 'Coca cola',           precio: 3.50,  total: 7.00  },
-    { uds: 1, nombre: 'Whisky',              precio: 2.50,  total: 2.50  },
-    { uds: 1, nombre: 'Red Bull',            precio: 6.30,  total: 6.30  },
-    { uds: 1, nombre: 'Solomillo al oporto', precio: 18.32, total: 18.32 },
-    { uds: 1, nombre: 'Menu del dia',        precio: 10.00, total: 10.00 },
+    { uds:2, nombre:'Coca cola',           precio:3.50,  total:7.00  },
+    { uds:1, nombre:'Whisky',              precio:2.50,  total:2.50  },
+    { uds:1, nombre:'Red Bull',            precio:6.30,  total:6.30  },
+    { uds:1, nombre:'Solomillo al oporto', precio:18.32, total:18.32 },
+    { uds:1, nombre:'Menu del dia',        precio:10.00, total:10.00 },
 ];
-
-function fmtEur(v) { return v.toFixed(2) + ' \u20ac'; }
-const ANCHO = 42;
-const SEP_G = '='.repeat(ANCHO);
-const SEP_F = '-'.repeat(ANCHO);
+function fmtEur(v) { return v.toFixed(2)+' \u20ac'; }
+const ANCHO=42, SEP_G='='.repeat(ANCHO), SEP_F='-'.repeat(ANCHO);
 function padR(s,n){ s=String(s); return s.length>=n?s.substring(0,n):s.padEnd(n); }
 function padL(s,n){ s=String(s); return s.length>=n?s.substring(0,n):s.padStart(n); }
+function lineaProd(uds,nombre,precio){ return padR(String(uds),5)+padR(nombre,ANCHO-5-9)+padL(precio,9); }
 
-function lineaProd(uds, nombre, precio) {
-    const uStr   = padR(String(uds), 5);
-    const pStr   = padL(precio, 9);
-    const nStr   = padR(nombre, ANCHO - 5 - 9);
-    return uStr + nStr + pStr;
+function alignStyle(a) {
+    return a==='izquierda'?'left': a==='derecha'?'right':'center';
+}
+
+function renderZonaPreview(divId, elementos) {
+    const div = document.getElementById(divId);
+    div.innerHTML = '';
+    elementos.forEach(el => {
+        if (el.tipo === 'texto') {
+            const d = document.createElement('div');
+            const fs = el.fs || 12;
+            d.style.cssText = `font-family:"Courier New",monospace;font-size:${fs}px;text-align:${alignStyle(el.align||'centro')};font-weight:bold;white-space:pre-wrap;word-break:break-word;line-height:1.3;`;
+            d.innerText = el.contenido || '';
+            div.appendChild(d);
+        } else if (el.tipo === 'imagen') {
+            const imgSrc = el.dataUrl || (el.imgId ? `/Admin/ImagenTicket/${el.imgId}` : null);
+            if (!imgSrc) return;
+            const w = el.imgW || 80;
+            const d = document.createElement('div');
+            d.style.cssText = `text-align:${alignStyle(el.align||'centro')};margin:3px 0;`;
+            d.innerHTML = `<img src="${imgSrc}" style="width:${w}px;max-width:100%;object-fit:contain;" />`;
+            div.appendChild(d);
+        }
+    });
 }
 
 function actualizarPreview() {
-    // ── Cabecera ─────────────────────────────────────────────────
-    const cabDiv = document.getElementById('prev-cabecera');
-    cabDiv.innerHTML = '';
-    estado.cabecera.forEach(el => {
-        if (el.tipo === 'texto') {
-            const d = document.createElement('div');
-            d.style.cssText = 'font-family:"Courier New",monospace;font-size:11px;text-align:center;font-weight:bold;white-space:pre-wrap;word-break:break-word;';
-            d.innerText = el.contenido || '';
-            cabDiv.appendChild(d);
-        } else if (el.tipo === 'imagen') {
-            const d = document.createElement('div');
-            d.style.cssText = 'text-align:center;margin:4px 0;';
-            d.innerHTML = `<img src="/Admin/ImagenTicket/${el.imgId}" style="max-height:60px;max-width:200px;object-fit:contain;" />`;
-            cabDiv.appendChild(d);
-        }
-    });
+    renderZonaPreview('prev-cabecera', estado.cabecera);
 
-    // ── Cuerpo ────────────────────────────────────────────────────
     const cuerpo = document.getElementById('prev-cuerpo');
     const mostrarHora     = document.getElementById('chkHora')?.checked;
     const mostrarUsuario  = document.getElementById('chkUsuario')?.checked;
     const mostrarDesglose = document.getElementById('chkDesglose')?.checked;
     const mostrarImpuesto = document.getElementById('chkImpuestos')?.checked;
-
     const ahora = new Date();
-    const dd  = String(ahora.getDate()).padStart(2,'0');
-    const mm  = String(ahora.getMonth()+1).padStart(2,'0');
-    const yyyy= ahora.getFullYear();
-    const hh  = String(ahora.getHours()).padStart(2,'0');
-    const min = String(ahora.getMinutes()).padStart(2,'0');
+    const dd=String(ahora.getDate()).padStart(2,'0'), mm=String(ahora.getMonth()+1).padStart(2,'0');
+    const yyyy=ahora.getFullYear(), hh=String(ahora.getHours()).padStart(2,'0'), min=String(ahora.getMinutes()).padStart(2,'0');
 
-    let lineas = [];
+    let lineas=[];
     lineas.push(SEP_G);
-    lineas.push(padR('FACTURA SIMPLIFICADA'.padStart((ANCHO+20)/2), ANCHO));
+    lineas.push(padR('FACTURA SIMPLIFICADA'.padStart((ANCHO+20)/2),ANCHO));
     lineas.push(SEP_G);
-    lineas.push(`Mesa: Mesa 1`);
-    if (mostrarHora) lineas.push(`Fecha: ${dd}/${mm}/${yyyy} ${hh}:${min}`);
-    else             lineas.push(`Fecha: ${dd}/${mm}/${yyyy}`);
-    if (mostrarUsuario) lineas.push('Camarero: [nombre]');
+    lineas.push('Mesa: Mesa 1');
+    lineas.push(`Fecha: ${dd}/${mm}/${yyyy}${mostrarHora?' '+hh+':'+min:''}`);
+    if(mostrarUsuario) lineas.push('Camarero: [nombre]');
     lineas.push(SEP_F);
-
-    let total = 0;
-    if (mostrarDesglose) {
-        lineas.push(lineaProd('Uds.', 'Descripcion', 'Importe'));
+    let total=0;
+    if(mostrarDesglose){
+        lineas.push(lineaProd('Uds.','Descripcion','Importe'));
         lineas.push(SEP_F);
-        PREVIEW_ITEMS.forEach(it => {
-            total += it.total;
-            lineas.push(lineaProd(it.uds, it.nombre, fmtEur(it.precio)));
-        });
-    } else {
-        PREVIEW_ITEMS.forEach(it => { total += it.total; });
-    }
+        PREVIEW_ITEMS.forEach(it=>{ total+=it.total; lineas.push(lineaProd(it.uds,it.nombre,fmtEur(it.precio))); });
+    } else { PREVIEW_ITEMS.forEach(it=>{total+=it.total;}); }
     lineas.push(SEP_G);
-    lineas.push(padL('TOTAL  ' + fmtEur(total), ANCHO));
-
-    if (mostrarImpuesto) {
-        const base  = total / 1.10;
-        const cuota = total - base;
+    lineas.push(padL('TOTAL  '+fmtEur(total),ANCHO));
+    if(mostrarImpuesto){
+        const base=total/1.10, cuota=total-base;
         lineas.push(SEP_F);
         lineas.push(`10% Base: ${fmtEur(base).padStart(8)}  Cuota: ${fmtEur(cuota).padStart(7)}`);
         lineas.push(`Total (Imp. Incl.) ${fmtEur(total).padStart(ANCHO-18)}`);
     }
     lineas.push(SEP_G);
+    cuerpo.innerHTML = lineas.map(l=>`<div style="font-family:'Courier New',monospace;font-size:10px;line-height:1.35;white-space:pre;">${l}</div>`).join('');
 
-    cuerpo.innerHTML = lineas.map(l =>
-        `<div style="font-family:'Courier New',monospace;font-size:10px;line-height:1.35;white-space:pre;">${l}</div>`
-    ).join('');
-
-    // ── Pie ───────────────────────────────────────────────────────
-    const pieDiv = document.getElementById('prev-pie');
-    pieDiv.innerHTML = '';
-    estado.pie.forEach(el => {
-        if (el.tipo === 'texto') {
-            const d = document.createElement('div');
-            d.style.cssText = 'font-family:"Courier New",monospace;font-size:11px;text-align:center;font-weight:bold;white-space:pre-wrap;word-break:break-word;';
-            d.innerText = el.contenido || '';
-            pieDiv.appendChild(d);
-        } else if (el.tipo === 'imagen') {
-            const d = document.createElement('div');
-            d.style.cssText = 'text-align:center;margin:4px 0;';
-            d.innerHTML = `<img src="/Admin/ImagenTicket/${el.imgId}" style="max-height:50px;max-width:200px;object-fit:contain;" />`;
-            pieDiv.appendChild(d);
-        }
-    });
+    renderZonaPreview('prev-pie', estado.pie);
 }
 
-// ── Inicializar ───────────────────────────────────────────────────
-if (location.hash === '#tickets') document.getElementById('tickets-tab')?.click();
-inicializarEditor();
-actualizarPreview();
-
-document.addEventListener('DOMContentLoaded', function() {
-    const t = document.getElementById('tickets-tab');
-    if (t) t.addEventListener('click', () => setTimeout(() => { inicializarEditor(); actualizarPreview(); }, 100));
+// ── Init ──────────────────────────────────────────────────────────
+if(location.hash==='#tickets') document.getElementById('tickets-tab')?.click();
+inicializarEditor(); actualizarPreview();
+document.addEventListener('DOMContentLoaded',()=>{
+    const t=document.getElementById('tickets-tab');
+    if(t) t.addEventListener('click',()=>setTimeout(()=>{inicializarEditor();actualizarPreview();},100));
 });
 </script>
 }
@@ -411,14 +432,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="tab-pane fade" id="tickets-tab-pane" role="tabpanel">
                 <style>
                     .ticket-zona {
-                        min-height: 60px;
+                        min-height: 50px;
                         border: 2px dashed #aaa;
                         border-radius: 8px;
                         background: #f9f9f9;
                         padding: 8px;
                     }
-                    .ticket-item input[type="text"] { font-size: 13px; }
-                    /* Vista previa */
+                    .btn-xs { font-size: 11px; line-height: 1.2; padding: 1px 5px; }
+                    .btn-xs.active { background:#6c757d; color:#fff; }
                     #ticket-preview {
                         width: 300px;
                         min-height: 400px;
@@ -457,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <input type="file" class="d-none" accept="image/*" onchange="subirImagen(this,'cabecera')" />
                                     </label>
                                 </div>
-                                <div class="ticket-zona" id="zona-cabecera" style="height:130px;"></div>
+                                <div class="ticket-zona" id="zona-cabecera"></div>
                             </div>
 
                             <div class="mb-3">
@@ -491,7 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <input type="file" class="d-none" accept="image/*" onchange="subirImagen(this,'pie')" />
                                     </label>
                                 </div>
-                                <div class="ticket-zona" id="zona-pie" style="height:130px;"></div>
+                                <div class="ticket-zona" id="zona-pie"></div>
                             </div>
 
                             <button type="submit" class="btn btn-success w-100 fw-bold">💾 Guardar plantilla</button>
