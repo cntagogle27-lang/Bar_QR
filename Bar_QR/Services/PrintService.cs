@@ -50,22 +50,22 @@ public class PrintService
 		int mesa       = pedido.MesaId;
 
 		var todasLineas = pedido.Lineas.Where(l => l.Producto != null && !l.Impresa).ToList();
-		if (!todasLineas.Any()) return; // todas ya impresas
+		if (!todasLineas.Any()) return;
 
-		var barra  = todasLineas.Where(l => l.Producto!.DestinoImpresion == DestinoImpresion.Barra).ToList();
-		var cocina = todasLineas.Where(l => l.Producto!.DestinoImpresion == DestinoImpresion.Cocina).ToList();
-
-		// Si no hay ninguna impresora activa, no imprimir nada
 		bool hayAlgunaImpresora = await _db.Impresoras.AnyAsync(i => i.Activa);
 		if (!hayAlgunaImpresora) return;
 
-		bool hayImpresoraBarra  = await _db.Impresoras.AnyAsync(i => i.Activa && i.Rol == RolImpresora.Barra);
-		bool hayImpresoraCocina = await _db.Impresoras.AnyAsync(i => i.Activa && i.Rol == RolImpresora.Cocina);
+		bool hayBarra  = await _db.Impresoras.AnyAsync(i => i.Activa && i.Rol == RolImpresora.Barra);
+		bool hayCocina = await _db.Impresoras.AnyAsync(i => i.Activa && i.Rol == RolImpresora.Cocina);
+		bool hayTodas  = await _db.Impresoras.AnyAsync(i => i.Activa && i.Rol == RolImpresora.Todas);
 
-		if (!hayImpresoraBarra && !hayImpresoraCocina)
+		var lineasBarra  = todasLineas.Where(l => l.Producto!.DestinoImpresion == DestinoImpresion.Barra).ToList();
+		var lineasCocina = todasLineas.Where(l => l.Producto!.DestinoImpresion == DestinoImpresion.Cocina).ToList();
+
+		if (!hayBarra && !hayCocina)
 		{
-			// Solo impresora "Todas": un único ticket con todos los productos
-			if (todasLineas.Any())
+			// Sin impresoras específicas → todo va a "Todas" si existe
+			if (hayTodas && todasLineas.Any())
 			{
 				var bytes = EscPosService.GenerarComanda(mesa, mesaNombre, zonaLabel, "PEDIDO",
 					todasLineas.Select(l => (l.Producto!.Nombre, l.Cantidad)));
@@ -77,26 +77,40 @@ public class PrintService
 			return;
 		}
 
-		if (barra.Any())
+		// Hay impresoras específicas → enrutar estrictamente por destino.
+		// Los productos para un destino sin impresora configurada se descartan
+		// (se marcan como impresos para no reintentarlos).
+		bool saved = false;
+
+		if (lineasBarra.Any())
 		{
-			var bytes = EscPosService.GenerarComanda(mesa, mesaNombre, zonaLabel, "BARRA",
-				barra.Select(l => (l.Producto!.Nombre, l.Cantidad)));
-			await GuardarTrabajoAsync(TipoTrabajoPrint.ComandaBarra, RolImpresora.Barra, bytes,
-				$"Mesa {mesaNombre} – Pedido #{pedidoId}");
-			foreach (var l in barra) l.Impresa = true;
+			if (hayBarra)
+			{
+				var bytes = EscPosService.GenerarComanda(mesa, mesaNombre, zonaLabel, "BARRA",
+					lineasBarra.Select(l => (l.Producto!.Nombre, l.Cantidad)));
+				await GuardarTrabajoAsync(TipoTrabajoPrint.ComandaBarra, RolImpresora.Barra, bytes,
+					$"Mesa {mesaNombre} – Pedido #{pedidoId}");
+			}
+			// Si no hay impresora de Barra → descartamos sin imprimir
+			foreach (var l in lineasBarra) l.Impresa = true;
+			saved = true;
 		}
 
-		if (cocina.Any())
+		if (lineasCocina.Any())
 		{
-			var bytes = EscPosService.GenerarComanda(mesa, mesaNombre, zonaLabel, "COCINA",
-				cocina.Select(l => (l.Producto!.Nombre, l.Cantidad)));
-			await GuardarTrabajoAsync(TipoTrabajoPrint.ComandaCocina, RolImpresora.Cocina, bytes,
-				$"Mesa {mesaNombre} – Pedido #{pedidoId}");
-			foreach (var l in cocina) l.Impresa = true;
+			if (hayCocina)
+			{
+				var bytes = EscPosService.GenerarComanda(mesa, mesaNombre, zonaLabel, "COCINA",
+					lineasCocina.Select(l => (l.Producto!.Nombre, l.Cantidad)));
+				await GuardarTrabajoAsync(TipoTrabajoPrint.ComandaCocina, RolImpresora.Cocina, bytes,
+					$"Mesa {mesaNombre} – Pedido #{pedidoId}");
+			}
+			// Si no hay impresora de Cocina → descartamos sin imprimir
+			foreach (var l in lineasCocina) l.Impresa = true;
+			saved = true;
 		}
 
-		if (barra.Any() || cocina.Any())
-			await _db.SaveChangesAsync();
+		if (saved) await _db.SaveChangesAsync();
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
