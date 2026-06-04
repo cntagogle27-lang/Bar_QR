@@ -94,20 +94,15 @@ public class PrintWorker : BackgroundService
 	/// </summary>
 	private string ObtenerNombreImpresora(int rolDestino)
 	{
-		// Buscar en las impresoras cargadas desde la app
 		var exacta = _impresoras.FirstOrDefault(i => i.Rol == rolDestino);
 		if (exacta is not null) return exacta.Nombre;
 
 		var todas = _impresoras.FirstOrDefault(i => i.Rol == 2);
 		if (todas is not null) return todas.Nombre;
 
-		// Fallback al appsettings local (compatibilidad)
-		string seccion = rolDestino switch { 0 => "Barra", 1 => "Cocina", _ => "Todas" };
-		return _cfg[$"Printers:{seccion}"]
-			?? _cfg["Printers:Todas"]
-			?? throw new InvalidOperationException(
-				$"No hay impresora configurada para el rol '{seccion}'. " +
-				"Añádela en la pantalla Impresoras de la app.");
+		throw new InvalidOperationException(
+			$"No hay impresora configurada para el rol {rolDestino}. " +
+			"Añádela en la pantalla Impresoras de la app.");
 	}
 
 	private static void Imprimir(byte[] bytes, string nombreImpresora, string docNombre)
