@@ -18,6 +18,17 @@ public class PrintApiController : ControllerBase
 	private readonly AppDbContext _db;
 	public PrintApiController(AppDbContext db) => _db = db;
 
+	/// <summary>Devuelve las impresoras activas para que el PrintAgent local las use.</summary>
+	[HttpGet("impresoras")]
+	public async Task<IActionResult> Impresoras()
+	{
+		var impresoras = await _db.Impresoras
+			.Where(i => i.Activa)
+			.Select(i => new { i.Id, i.Nombre, i.Direccion, Rol = (int)i.Rol, i.ImprimeFacturas })
+			.ToListAsync();
+		return Ok(impresoras);
+	}
+
 	[HttpGet("pendientes")]
 	public async Task<IActionResult> Pendientes()
 	{

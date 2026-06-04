@@ -8,13 +8,15 @@
 	<a href="@Url.Action("Ajustes","Admin")" class="btn btn-outline-secondary btn-sm mb-3">← Volver a Ajustes</a>
 	<h2 class="mb-4">🖨️ Gestión de Impresoras</h2>
 
-	<div class="alert alert-warning">
-		<strong>ℹ️ Nota:</strong> Esta lista es solo informativa. El <strong>PrintAgent</strong> (instalado como servicio en tu PC) usa su propio archivo <code>appsettings.json</code> para saber qué impresora física usar. Añadir impresoras aquí no afecta directamente a la impresión; debes configurar también el <code>PrintAgent\appsettings.json</code>.
+	<div class="alert alert-info">
+		<strong>ℹ️ Cómo funciona:</strong> El <strong>PrintAgent</strong> (servicio en tu PC) lee esta lista automáticamente.
+		El campo <strong>Nombre</strong> debe coincidir exactamente con el nombre de la impresora en Windows
+		(Panel de Control → Dispositivos e impresoras).
 	</div>
 
 	@if (!Model.Any())
 	{
-		<div class="alert alert-info">No hay impresoras configuradas en la base de datos.</div>
+		<div class="alert alert-warning">No hay impresoras configuradas. Añade al menos una con el rol <strong>Todas</strong>.</div>
 	}
 	else
 	{
