@@ -68,7 +68,7 @@ function crearElementoDOM(zona, el, i) {
     const btnDel = document.createElement('button');
     btnDel.className = 'btn btn-danger btn-del';
     btnDel.innerHTML = '✕';
-    btnDel.onclick = () => { estado[zona].splice(i, 1); renderZona(zona); };
+    btnDel.onclick = () => { estado[zona].splice(i, 1); serializarZona(zona); renderZona(zona); };
     div.appendChild(btnDel);
 
     cont.appendChild(div);
@@ -112,6 +112,7 @@ function serializarZona(zona) {
 // ── Añadir texto ──────────────────────────────────────────────────
 function agregarTexto(zona) {
     estado[zona].push({ tipo: 'texto', contenido: 'Texto', x: 10, y: 10 + estado[zona].length * 40, w: 180, h: 36 });
+    serializarZona(zona);
     renderZona(zona);
 }
 
@@ -260,19 +261,15 @@ if (location.hash === '#tickets') {
     document.getElementById('tickets-tab')?.click();
 }
 
-// Renderizar preview inicial al cargar la página
-window.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM cargado, inicializando...');
-    inicializarEditor();
-    actualizarPreview();
-});
+// Inicializar editor directamente (el script ya está al final del body)
+inicializarEditor();
+actualizarPreview();
 
-// También actualizar cuando se active la pestaña de tickets
+// También re-inicializar cuando se active la pestaña de tickets
 document.addEventListener('DOMContentLoaded', function() {
     const ticketsTab = document.getElementById('tickets-tab');
     if (ticketsTab) {
         ticketsTab.addEventListener('click', function() {
-            console.log('Pestaña Tickets activada');
             setTimeout(function() {
                 inicializarEditor();
                 actualizarPreview();

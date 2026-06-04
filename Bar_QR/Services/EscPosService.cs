@@ -11,6 +11,7 @@ public static class EscPosService
 {
 	// ── Comandos ESC/POS ────────────────────────────────────────────────────
 	private static readonly byte[] Init           = { 0x1B, 0x40 };           // ESC @
+	private static readonly byte[] Codepage1252   = { 0x1B, 0x74, 0x10 };    // ESC t 16 → WPC1252 (ó,á,é,í,ú,ñ,¡,¿...)
 	private static readonly byte[] Bold_On        = { 0x1B, 0x45, 0x01 };
 	private static readonly byte[] Bold_Off       = { 0x1B, 0x45, 0x00 };
 	private static readonly byte[] Align_Center   = { 0x1B, 0x61, 0x01 };
@@ -20,7 +21,8 @@ public static class EscPosService
 	private static readonly byte[] Cut            = { 0x1D, 0x56, 0x41, 0x03 }; // corte parcial
 	private static readonly byte[] LineFeed       = { 0x0A };
 
-	private const int COLS = 48;
+	private const int COLS        = 48;
+	private const int COLS_DOUBLE = 24; // con Font_Double cada carácter ocupa 2 columnas
 
 	// ── API pública ─────────────────────────────────────────────────────────
 
@@ -29,10 +31,11 @@ public static class EscPosService
 	{
 		using var ms = new MemoryStream();
 		ms.Write(Init);
+		ms.Write(Codepage1252);
 		ms.Write(Align_Center);
 		ms.Write(Bold_On);
 		ms.Write(Font_Double);
-		ms.WriteLine(Centrar("⚡ CUENTA"));
+		ms.WriteLine(Centrar("CUENTA", COLS_DOUBLE));
 		ms.Write(Font_Normal);
 		ms.Write(Bold_Off);
 		ms.WriteLine(Separador('='));
@@ -57,10 +60,11 @@ public static class EscPosService
 	{
 		using var ms = new MemoryStream();
 		ms.Write(Init);
+		ms.Write(Codepage1252);
 		ms.Write(Align_Center);
 		ms.Write(Bold_On);
 		ms.Write(Font_Double);
-		ms.WriteLine($"-- {destino} --");
+		ms.WriteLine(Centrar($"-- {destino} --", COLS_DOUBLE));
 		ms.Write(Font_Normal);
 		ms.Write(Bold_Off);
 		ms.WriteLine(Separador('-'));
@@ -68,7 +72,7 @@ public static class EscPosService
 		ms.Write(Bold_On);
 		ms.WriteLine($"M: {mesaNombre}");
 		if (!string.IsNullOrWhiteSpace(zonaOpcional))
-			ms.WriteLine(zonaOpcional);
+			ms.WriteLine($"Salon: {zonaOpcional}");
 		ms.Write(Bold_Off);
 		ms.WriteLine(Separador('-'));
 		foreach (var (nombre, cant) in lineas)
@@ -118,6 +122,7 @@ public static class EscPosService
 	{
 		using var ms = new MemoryStream();
 		ms.Write(Init);
+		ms.Write(Codepage1252);
 		ms.Write(Align_Center);
 		ms.Write(Bold_On);
 		foreach (var linCab in cabecera.Split('\n'))
@@ -158,8 +163,8 @@ public static class EscPosService
 
 	private static string Separador(char c) => new string(c, COLS);
 
-	private static string Centrar(string texto) =>
-		texto.Length >= COLS ? texto[..COLS] : texto.PadLeft((COLS + texto.Length) / 2).PadRight(COLS);
+	private static string Centrar(string texto, int cols = COLS) =>
+		texto.Length >= cols ? texto[..cols] : texto.PadLeft((cols + texto.Length) / 2).PadRight(cols);
 
 	private static string LineaProducto(string cant, string nombre, string? precio)
 	{
@@ -191,7 +196,8 @@ public static class EscPosService
 // ── Extensión para MemoryStream ──────────────────────────────────────────────
 file static class MemoryStreamExtensions
 {
-	private static readonly Encoding Enc = Encoding.GetEncoding("ISO-8859-1");
+	// Windows-1252 coincide con el codepage ESC t 16 enviado al inicio del ticket
+	private static readonly Encoding Enc = Encoding.GetEncoding(1252);
 
 	public static void Write(this MemoryStream ms, byte[] bytes)   => ms.Write(bytes, 0, bytes.Length);
 	public static void WriteLine(this MemoryStream ms, string text) => ms.Write(Enc.GetBytes(text + "\n"));
