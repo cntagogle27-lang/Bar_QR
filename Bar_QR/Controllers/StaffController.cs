@@ -128,7 +128,8 @@ public class StaffController : Controller
 
 		if (cantidad < 1) cantidad = 1;
 
-		var linea = pedido.Lineas.FirstOrDefault(l => l.ProductoId == productoId && l.PrecioOverride == null);
+		// Solo agrupar en una línea que aún no haya sido impresa
+		var linea = pedido.Lineas.FirstOrDefault(l => l.ProductoId == productoId && l.PrecioOverride == null && !l.Impresa);
 		if (linea != null)
 			linea.Cantidad += cantidad;
 		else

@@ -114,8 +114,8 @@ public class PrintService
 		var mesaNombre = mesa?.Nombre ?? $"{mesaId}";
 		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
 		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal, zonaId);
-		var (cab, pie) = await ObtenerTextoPlantillaAsync();
-		var bytes = EscPosService.GenerarProforma(cab, pie, mesaId, mesaNombre, lineasConPluses, total);
+		var (cab, pie, desglose, impuestos) = await ObtenerTextoPlantillaAsync();
+		var bytes = EscPosService.GenerarProforma(cab, pie, mesaId, mesaNombre, lineasConPluses, total, desglose, impuestos);
 		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.Proforma, bytes, $"Mesa {mesaNombre} – Proforma");
 	}
 
@@ -134,8 +134,8 @@ public class PrintService
 		var mesaNombre = mesa?.Nombre ?? $"{mesaId}";
 		var subtotal = lineas.Sum(l => l.Cantidad * l.Precio);
 		var (lineasConPluses, total) = await AplicarPlusesAsync(lineas, subtotal, zonaId);
-		var (cab, pie) = await ObtenerTextoPlantillaAsync();
-		var bytes = EscPosService.GenerarFacturaSimple(cab, pie, mesaId, mesaNombre, lineasConPluses, total, metodoPago);
+		var (cab, pie, desglose, impuestos) = await ObtenerTextoPlantillaAsync();
+		var bytes = EscPosService.GenerarFacturaSimple(cab, pie, mesaId, mesaNombre, lineasConPluses, total, metodoPago, desglose, impuestos);
 		await GuardarTrabajoFacturaAsync(TipoTrabajoPrint.FacturaSimple, bytes, $"Mesa {mesaNombre} – Factura Simple");
 	}
 
@@ -147,10 +147,10 @@ public class PrintService
 	/// Lee la plantilla de ticket de la BD y extrae los textos de cabecera y pie.
 	/// Devuelve listas de strings (una por elemento de tipo 'texto').
 	/// </summary>
-	private async Task<(List<string> Cab, List<string> Pie)> ObtenerTextoPlantillaAsync()
+	private async Task<(List<string> Cab, List<string> Pie, bool Desglose, bool Impuestos)> ObtenerTextoPlantillaAsync()
 	{
 		var plantilla = await _db.TicketPlantillas.FirstOrDefaultAsync();
-		if (plantilla is null) return (new(), new());
+		if (plantilla is null) return (new(), new(), true, false);
 
 		static List<string> Extraer(string json)
 		{
@@ -169,7 +169,8 @@ public class PrintService
 			return result;
 		}
 
-		return (Extraer(plantilla.CabeceraJson), Extraer(plantilla.PieJson));
+		return (Extraer(plantilla.CabeceraJson), Extraer(plantilla.PieJson),
+			plantilla.ImprimirDesglose, plantilla.ImprimirImpuestos);
 	}
 
 	private async Task<List<(string Nombre, int Cantidad, decimal Precio)>> ObtenerLineasAgrupadasAsync(int mesaId)

@@ -93,9 +93,11 @@ public static class EscPosService
 		int numeroMesa,
 		string mesaNombre,
 		IEnumerable<(string Nombre, int Cantidad, decimal Precio)> lineas,
-		decimal total)
+		decimal total,
+		bool imprimirDesglose = true,
+		bool imprimirImpuestos = false)
 	{
-		return GenerarFactura(cabeceraLineas, pieLineas, "FACTURA PROFORMA", numeroMesa, mesaNombre, lineas, total, null);
+		return GenerarFactura(cabeceraLineas, pieLineas, "FACTURA PROFORMA", numeroMesa, mesaNombre, lineas, total, null, imprimirDesglose, imprimirImpuestos);
 	}
 
 	/// <summary>Genera una Factura Simplificada definitiva.</summary>
@@ -106,9 +108,11 @@ public static class EscPosService
 		string mesaNombre,
 		IEnumerable<(string Nombre, int Cantidad, decimal Precio)> lineas,
 		decimal total,
-		MetodoPago metodoPago)
+		MetodoPago metodoPago,
+		bool imprimirDesglose = true,
+		bool imprimirImpuestos = false)
 	{
-		return GenerarFactura(cabeceraLineas, pieLineas, "FACTURA SIMPLE", numeroMesa, mesaNombre, lineas, total, metodoPago);
+		return GenerarFactura(cabeceraLineas, pieLineas, "FACTURA SIMPLE", numeroMesa, mesaNombre, lineas, total, metodoPago, imprimirDesglose, imprimirImpuestos);
 	}
 
 	// ── Internos ─────────────────────────────────────────────────────────────
@@ -121,7 +125,9 @@ public static class EscPosService
 		string mesaNombre,
 		IEnumerable<(string Nombre, int Cantidad, decimal Precio)> lineas,
 		decimal total,
-		MetodoPago? metodoPago)
+		MetodoPago? metodoPago,
+		bool imprimirDesglose = true,
+		bool imprimirImpuestos = false)
 	{
 		using var ms = new MemoryStream();
 		ms.Write(Init);
@@ -138,16 +144,33 @@ public static class EscPosService
 		ms.WriteLine($"Mesa: {mesaNombre}");
 		ms.WriteLine($"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}");
 		ms.WriteLine(Separador('-'));
-		ms.Write(Bold_On);
-		ms.WriteLine(LineaProducto("Cant", "Descripción", "Precio"));
-		ms.Write(Bold_Off);
-		ms.WriteLine(Separador('-'));
-		foreach (var (nombre, cant, precio) in lineas)
-			ms.WriteLine(LineaProducto(cant.ToString(), nombre, $"{precio:0.00}€"));
-		ms.WriteLine(Separador('='));
+		var lineasList = lineas.ToList();
+		if (imprimirDesglose)
+		{
+			ms.Write(Bold_On);
+			ms.WriteLine(LineaProducto("Cant", "Descripción", "Precio"));
+			ms.Write(Bold_Off);
+			ms.WriteLine(Separador('-'));
+			foreach (var (nombre, cant, precio) in lineasList)
+				ms.WriteLine(LineaProducto(cant.ToString(), nombre, $"{precio:0.00}€"));
+			ms.WriteLine(Separador('='));
+		}
+		else
+		{
+			ms.WriteLine(Separador('='));
+		}
 		ms.Write(Bold_On);
 		ms.WriteLine(LineaTotal("TOTAL", $"{total:0.00}€"));
 		ms.Write(Bold_Off);
+		if (imprimirImpuestos && total > 0)
+		{
+			const decimal iva = 0.10m;
+			var baseImp = Math.Round(total / (1 + iva), 2);
+			var cuota   = Math.Round(total - baseImp, 2);
+			ms.WriteLine(Separador('-'));
+			ms.WriteLine($"10% Base: {baseImp,8:0.00}€  Cuota: {cuota,6:0.00}€");
+			ms.WriteLine($"Total (Imp. Incl.)       {total,8:0.00}€");
+		}
 		if (metodoPago.HasValue)
 		{
 			ms.WriteLine(Separador('-'));

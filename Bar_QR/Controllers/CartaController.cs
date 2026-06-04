@@ -83,16 +83,17 @@ public class CartaController : Controller
 			var producto = await _db.Productos.FindAsync(item.ProductoId);
 			if (producto == null) continue;
 
-			var linea = pedido.Lineas.FirstOrDefault(l => l.ProductoId == item.ProductoId);
-			if (linea != null)
-				linea.Cantidad += item.Cantidad;
-			else
-				pedido.Lineas.Add(new LineaPedido
-				{
-					PedidoMesaId = pedido.Id,
-					ProductoId   = item.ProductoId,
-					Cantidad     = item.Cantidad
-				});
+			// Solo agrupar en líneas que aún no se han imprimido (Impresa=false)
+				var linea = pedido.Lineas.FirstOrDefault(l => l.ProductoId == item.ProductoId && !l.Impresa);
+				if (linea != null)
+					linea.Cantidad += item.Cantidad;
+				else
+					pedido.Lineas.Add(new LineaPedido
+					{
+						PedidoMesaId = pedido.Id,
+						ProductoId   = item.ProductoId,
+						Cantidad     = item.Cantidad
+					});
 		}
 
 		// Marcar mesa como Ocupada
