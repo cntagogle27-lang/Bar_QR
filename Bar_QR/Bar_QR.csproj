@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Bar_QR\Models\" />
     <Folder Include="Tools\ApplyMigration\" />
   </ItemGroup>
 
